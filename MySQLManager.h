@@ -14,9 +14,16 @@ private:
 	void PushMysqlPacket(); // Push Mysqlk Packet
 
 private:
+	// 4 bytes
+	int MysqlResult;
+
+	// 8 bytes
+	MYSQL_ROW Row;
+
+	// 104 bytes
+	MYSQL_RES* Result;
+
+	// 1096 bytes
 	MYSQL Conn;
 	MYSQL* ConnPtr = NULL;
-	MYSQL_RES* Result;
-	MYSQL_ROW Row;
-	int MysqlResult;
 };

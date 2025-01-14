@@ -15,8 +15,8 @@ enum class TaskType {
 };
 
 struct OverlappedEx {
-	WSAOVERLAPPED wsaOverlapped;
-	WSABUF wsaBuf; // WSASend, WSARecv에 필요한 버퍼
 	TaskType taskType; // ACCPET, RECV, SEND INFO
 	UINT32 UserIdx; // User Idx for distinguish user
+	WSABUF wsaBuf; // WSASend, WSARecv에 필요한 버퍼
+	WSAOVERLAPPED wsaOverlapped;
 };

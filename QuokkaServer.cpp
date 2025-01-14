@@ -62,6 +62,12 @@ bool QuokkaServer::StartWork(UINT32 maxClientCount_) {
         return false;
     }
 
+    check = CreateAccepterThread();
+    if (!check) {
+        std::cout << "CreateAccepterThread 积己 角菩" << std::endl;
+        return false;
+    }
+
     for (int i = 0; i < maxClientCount_; i++) { // UserPool 钱 积己
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
         
@@ -77,9 +83,9 @@ bool QuokkaServer::StartWork(UINT32 maxClientCount_) {
     std::cout << "Created UserPool : " << ConnUsers.size() << std::endl;
 
     p_RedisManager->Run(MaxThreadCnt-1); // Run Redis Threads (The number of mater nodes)
+    p_MySQLManager->Run(); // Run MySQL Threads
 
     maxClientCount = maxClientCount_;
-    WorkThread();
     return true;
 }
 

@@ -6,6 +6,8 @@ void MySQLManager::Run() {
 
 	if (ConnPtr == NULL) std::cout << "MySQL 연결 실패" << std::endl; // mysql 연결 실패
 	else std::cout << "MySQL 연결 성공" << std::endl; // mysql 연결 성공
+
+
 }
 
 void MySQLManager::CloseMySQL() { // mysql 종료

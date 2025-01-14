@@ -22,6 +22,7 @@ public :
 		userOvlap.UserIdx = userIdx;
 		userOvlap.wsaBuf.buf = nullptr;
 		userOvlap.wsaBuf.len = 0;
+
 		DWORD bytes = 0;
 		DWORD flags = 0;
 
@@ -73,16 +74,18 @@ public :
 	}
 
 private:
+	// 1 bytes
 	bool isConn = 0;
-
 	char AcceptBuf[64];
 	char RecvBuf[MAX_SOCK];
 
+	// 4 bytes
 	UINT32 userIdx = 0;
 
+	// 8 bytes
 	SOCKET userSkt;
-
 	HANDLE userIocpHandle = INVALID_HANDLE_VALUE;
 
+	// 56 bytes
 	OverlappedEx userOvlap = {};
 };
