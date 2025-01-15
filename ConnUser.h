@@ -6,7 +6,7 @@
 
 class ConnUser {
 public:
-	ConnUser(SOCKET UserSkt_,UINT32 UserIdx_) : userSkt(UserSkt_), userIdx(UserIdx_) {}
+	ConnUser(SOCKET UserSkt_, UINT32 UserIdx_) : userSkt(UserSkt_), userIdx(UserIdx_) {}
 
 public :
 	bool IsConn() { // check connection status

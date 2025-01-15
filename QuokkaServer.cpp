@@ -68,7 +68,7 @@ bool QuokkaServer::StartWork(UINT32 maxClientCount_) {
         return false;
     }
 
-    for (int i = 0; i < maxClientCount_; i++) { // UserPool Ç® »ý¼º
+    for (int i = 1; i <= maxClientCount_; i++) {
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
         
         if (TempSkt == INVALID_SOCKET) {
@@ -76,7 +76,7 @@ bool QuokkaServer::StartWork(UINT32 maxClientCount_) {
             return false;
         }
 
-        auto TempConnUser = std::make_unique<ConnUser>(TempSkt);
+        auto TempConnUser = std::make_unique<ConnUser>(TempSkt,i);
         ConnUsers.emplace_back(std::move(TempConnUser));
     }
 
@@ -128,8 +128,8 @@ void QuokkaServer::WorkThread() {
 
         if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) {
             std::cout << "socket " << connUser->GetSktNum() << " Connection Lost" << std::endl;
-
-            UserCnt.fetch_sub(1); // UserCnt -1 (atomic)
+            UserMaxCheck = false;
+            UserCnt.fetch_sub(1); // UserCnt -1
             CloseSocket(connUser);
             continue;
         }
@@ -137,6 +137,10 @@ void QuokkaServer::WorkThread() {
         if (pOverlappedEx->taskType == TaskType::ACCEPT) {
             connUser = GetClientInfo(pOverlappedEx->taskType);
             std::cout << "User Accept req" << std::endl;
+
+            if (UserMaxCheck.load()) { // Max User Check
+                
+            }
 
             if (connUser->BindUser()) {
                 if (connUser->ConnUserRecv()) {
@@ -164,10 +168,19 @@ void QuokkaServer::AccepterThread() {
     while (AccepterRun) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-        for (int i = 0; i < maxClientCount; i++) {
+        for (int i = 1; i <= maxClientCount; i++) {
+            if (UserMaxCheck.load()) {
+                while (1) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+                    continue;
+                }
+            }
+
             if (ConnUsers[i]->IsConn()) continue; // User Connection check
 
             ConnUsers[i]->PrepareAccept(ServerSKT); // Prepare Accept
         }
+
     }
 }

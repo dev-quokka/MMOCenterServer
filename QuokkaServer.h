@@ -30,7 +30,6 @@ private:
     bool CreateAccepterThread();
 
     void WorkThread(); // IOCP Complete Event Thread
-    void WaittingThread(); // Waitting User Deque
     void RedisThread(); // Redis req Thread
     void AccepterThread(); // Accept req Thread
 
@@ -43,7 +42,7 @@ private:
     // 1 bytes
     bool WorkRun = true;
     bool AccepterRun = true;
-    std::atomic<bool> UserMaxCheck = 0;
+    std::atomic<bool> UserMaxCheck = false;
 
     // 2 bytes
     UINT16 MaxThreadCnt = 0;
@@ -66,7 +65,9 @@ private:
     std::vector<std::unique_ptr<ConnUser>> ConnUsers; // Connetion User List
 
     // 40 bytes
-    std::deque<SOCKET> WaitDeque;
+    std::queue<SOCKET> SocketPool; // Socket Pool For Waitting User
+
+    std::queue<SOCKET> WaittingQueue; // Waitting User List
 
     // 80 bytes
     std::mutex usercnt_mutex;
