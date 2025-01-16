@@ -76,11 +76,8 @@ bool QuokkaServer::StartWork(UINT32 maxClientCount_) {
             return false;
         }
 
-        auto TempConnUser = std::make_unique<ConnUser>(TempSkt,i);
-        ConnUsers.emplace_back(std::move(TempConnUser));
+        AcceptQueue.push(TempSkt); // Push init Socket
     }
-
-    std::cout << "Created UserPool : " << ConnUsers.size() << std::endl;
 
     p_RedisManager->Run(MaxThreadCnt-1); // Run Redis Threads (The number of mater nodes)
     p_MySQLManager->Run(); // Run MySQL Threads

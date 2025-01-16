@@ -12,14 +12,16 @@
 #include <mutex>
 #include <deque>
 #include <queue>
+#include <tbb/concurrent_hash_map.h>
+#include <boost/lockfree/queue.hpp>
 
 #pragma comment(lib, "ws2_32.lib") // 소켓 프로그래밍용
 #pragma comment(lib, "mswsock.lib") // AcceptEx 사용용
 
 class QuokkaServer {
 public:
-    QuokkaServer();
-    ~QuokkaServer();
+    QuokkaServer(UINT32 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_/2) {}
+    ~QuokkaServer() {}
 
     bool init(const UINT16 MaxThreadCnt_, int port_);
     bool StartWork(UINT32 maxClientCount_);
@@ -62,13 +64,11 @@ private:
 
     // 32 bytes
     std::vector<std::thread> WorkThreads;
-    std::vector<std::unique_ptr<ConnUser>> ConnUsers; // Connetion User List
 
-    // 40 bytes
-    std::queue<SOCKET> SocketPool; // Socket Pool For Waitting User
+    // 136 bytes 
+    boost::lockfree::queue<SOCKET> AcceptQueue; // For Aceept User
+    boost::lockfree::queue<AcceptInfo*> WaittingQueue; // Waitting User List
 
-    std::queue<SOCKET> WaittingQueue; // Waitting User List
-
-    // 80 bytes
-    std::mutex usercnt_mutex;
+    // 576 bytes
+    tbb::concurrent_hash_map<SOCKET, ConnUser*> ConnUsers;
 };

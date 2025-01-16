@@ -24,3 +24,14 @@ struct OverlappedEx {
 
 	WSAOVERLAPPED wsaOverlapped;
 };
+
+struct AcceptInfo {
+	// 4 bytes
+	UINT32 a_Idx;
+	
+	// 8 bytes
+	SOCKET a_Socket;
+
+	// 56 bytes
+	OverlappedEx a_OvLap;
+};
