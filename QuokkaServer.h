@@ -24,7 +24,7 @@ public:
     ~QuokkaServer() {}
 
     bool init(const UINT16 MaxThreadCnt_, int port_);
-    bool StartWork(UINT32 maxClientCount_);
+    bool StartWork();
 
 private:
     bool CreateWorkThread();
@@ -66,8 +66,8 @@ private:
     std::vector<std::thread> WorkThreads;
 
     // 136 bytes 
-    boost::lockfree::queue<SOCKET> AcceptQueue; // For Aceept User
-    boost::lockfree::queue<AcceptInfo*> WaittingQueue; // Waitting User List
+    boost::lockfree::queue<ConnUser*> AcceptQueue; // For Aceept User Queue
+    boost::lockfree::queue<ConnUser*> WaittingQueue; // Waitting User Queue
 
     // 576 bytes
     tbb::concurrent_hash_map<SOCKET, ConnUser*> ConnUsers;

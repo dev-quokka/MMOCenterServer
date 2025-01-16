@@ -1,10 +1,5 @@
 #include "QuokkaServer.h"
 
-QuokkaServer::QuokkaServer() {}
-QuokkaServer::~QuokkaServer() {
-    WSACleanup();
-}
-
 bool QuokkaServer::init(const UINT16 MaxThreadCnt_, int port_) {
     WSADATA wsadata;
     int check = 0;
@@ -55,7 +50,7 @@ bool QuokkaServer::init(const UINT16 MaxThreadCnt_, int port_) {
     return true;
 }
 
-bool QuokkaServer::StartWork(UINT32 maxClientCount_) {
+bool QuokkaServer::StartWork() {
     bool check = CreateWorkThread();
     if (!check) {
         std::cout << "WorkThread 생성 실패" << std::endl;
@@ -68,21 +63,22 @@ bool QuokkaServer::StartWork(UINT32 maxClientCount_) {
         return false;
     }
 
-    for (int i = 1; i <= maxClientCount_; i++) {
+    for (int i = 1; i <= maxClientCount; i++) {
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
         
         if (TempSkt == INVALID_SOCKET) {
             std::cout << "Client socket Error : " << GetLastError() << std::endl;
             return false;
         }
+        ConnUser* connUser = new ConnUser(TempSkt);
 
-        AcceptQueue.push(TempSkt); // Push init Socket
+        AcceptQueue.push(connUser); // Push ConnUser
     }
 
     p_RedisManager->Run(MaxThreadCnt-1); // Run Redis Threads (The number of mater nodes)
     p_MySQLManager->Run(); // Run MySQL Threads
 
-    maxClientCount = maxClientCount_;
+    maxClientCount = maxClientCount;
     return true;
 }
 
@@ -142,7 +138,7 @@ void QuokkaServer::WorkThread() {
             if (connUser->BindUser()) {
                 if (connUser->ConnUserRecv()) {
                     UserCnt.fetch_add(1); // UserCnt +1
-                    OnConnect(pOverlappedEx->UserIdx);
+                    //OnConnect(pOverlappedEx->UserIdx);
                     std::cout << "socket " << connUser->GetSktNum() << " Connect" << std::endl;
                 }
             }
@@ -164,20 +160,6 @@ void QuokkaServer::WorkThread() {
 void QuokkaServer::AccepterThread() {
     while (AccepterRun) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-        for (int i = 1; i <= maxClientCount; i++) {
-            if (UserMaxCheck.load()) {
-                while (1) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-                    continue;
-                }
-            }
-
-            if (ConnUsers[i]->IsConn()) continue; // User Connection check
-
-            ConnUsers[i]->PrepareAccept(ServerSKT); // Prepare Accept
-        }
 
     }
 }

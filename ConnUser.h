@@ -6,7 +6,7 @@
 
 class ConnUser {
 public:
-	ConnUser(SOCKET UserSkt_, UINT32 UserIdx_) : userSkt(UserSkt_), userIdx(UserIdx_) {}
+	ConnUser(SOCKET UserSkt_) : userSkt(UserSkt_) {}
 
 public :
 	bool IsConn() { // check connection status
@@ -17,9 +17,8 @@ public :
 		return userSkt;
 	}
 
-	bool PrepareAccept(SOCKET ServerSkt_) {
+	bool PostAccept(SOCKET ServerSkt_) {
 		userOvlap.taskType = TaskType::ACCEPT;
-		userOvlap.UserIdx = userIdx;
 		userOvlap.wsaBuf.buf = nullptr;
 		userOvlap.wsaBuf.len = 0;
 
@@ -78,9 +77,6 @@ private:
 	bool isConn = 0;
 	char AcceptBuf[64];
 	char RecvBuf[MAX_SOCK];
-
-	// 4 bytes
-	UINT32 userIdx = 0;
 
 	// 8 bytes
 	SOCKET userSkt;
