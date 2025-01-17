@@ -7,7 +7,19 @@ void MySQLManager::Run() {
 	if (ConnPtr == NULL) std::cout << "MySQL 연결 실패" << std::endl; // mysql 연결 실패
 	else std::cout << "MySQL 연결 성공" << std::endl; // mysql 연결 성공
 
+	CreateMySQLThread();
+}
 
+void MySQLManager::MySQLThread() {
+	while (mySQLRun) {
+		
+	}
+}
+
+bool MySQLManager::CreateMySQLThread() {
+	mySQLThread = std::thread([this]() {MySQLThread();});
+	std::cout << "Create MySQLThread" << std::endl;
+	return true;
 }
 
 void MySQLManager::CloseMySQL() { // mysql 종료

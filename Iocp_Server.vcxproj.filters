@@ -53,8 +53,5 @@
     <ClInclude Include="MySQLManager.h">
       <Filter>헤더 파일\MySQL</Filter>
     </ClInclude>
-    <ClInclude Include="ThreadPool.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

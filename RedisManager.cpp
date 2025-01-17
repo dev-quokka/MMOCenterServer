@@ -13,22 +13,25 @@ void RedisManager::Run(const UINT16 RedisThreadCnt_) { // Connect Redis Server
 
         redisRun = 1;
 
-        for (int i = 0; i < RedisThreadCnt_; i++) {
-            redisPool.emplace_back(std::thread([this]() {ProcRedisPacket();}));
-        }
-
+        CreateRedisThread(RedisThreadCnt_);
     }
     catch (const  sw::redis::Error& err) {
         std::cout << "Redis 에러 발생: " << err.what() << std::endl;
     }
 }
 
-void RedisManager::ProcRedisPacket() { 
+bool RedisManager::CreateRedisThread(const UINT16 RedisThreadCnt_) {
+    for (int i = 0; i < RedisThreadCnt_; i++) {
+        redisPool.emplace_back(std::thread([this]() {RedisThread(); }));
+    }
+};
+
+void RedisManager::RedisThread() {
     while (redisRun) {
         std::unique_lock<std::mutex> lock(redisMu);
-        
+
     }
-}
+};
 
 void RedisManager::PushRedisPacket() {
     

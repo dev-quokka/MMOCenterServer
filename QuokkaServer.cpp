@@ -63,7 +63,7 @@ bool QuokkaServer::StartWork() {
         return false;
     }
 
-    for (int i = 1; i <= maxClientCount; i++) {
+    for (int i = 1; i <= maxClientCount; i++) { // Make ConnUsers Queue
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
         
         // For Reuse Socket
@@ -87,6 +87,29 @@ bool QuokkaServer::StartWork() {
         ConnUsers.insert({ TempSkt , nullptr }); // Init ConnUsers
     }
 
+    for (int i = 1; i <= maxClientCount; i++) { // Make Waittint Users Queue
+        SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
+
+        // For Reuse Socket
+        int optval = 1;
+        setsockopt(TempSkt, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
+
+        int recvBufSize = MAX_SOCK;
+        setsockopt(TempSkt, SOL_SOCKET, SO_RCVBUF, (char*)&recvBufSize, sizeof(recvBufSize));
+
+        int sendBufSize = MAX_SOCK;
+        setsockopt(TempSkt, SOL_SOCKET, SO_SNDBUF, (char*)&sendBufSize, sizeof(sendBufSize));
+
+        if (TempSkt == INVALID_SOCKET) {
+            std::cout << "Client socket Error : " << GetLastError() << std::endl;
+            return false;
+        }
+
+        ConnUser* connUser = new ConnUser(TempSkt);
+
+        WaittingQueue.push(connUser); // Push ConnUser
+    }
+
     p_RedisManager->Run(MaxThreadCnt); // Run Redis Threads (The number of mater nodes + 1)
     p_MySQLManager->Run(); // Run MySQL Threads
 
@@ -97,16 +120,16 @@ bool QuokkaServer::StartWork() {
 bool QuokkaServer::CreateWorkThread() {
     auto threadCnt = MaxThreadCnt - 1; // core - 1
     for (int i = 0; i < threadCnt; i++) {
-        WorkThreads.emplace_back([this]() { WorkThread(); });
+        workThreads.emplace_back([this]() { WorkThread(); });
     }
     std::cout << "WorkThread start" << std::endl;
     return true;
 }
 
 bool QuokkaServer::CreateAccepterThread() {
-    auto threadCnt = MaxThreadCnt/4; // core/4
+    auto threadCnt = MaxThreadCnt/4; // (core/4)
     for (int i = 0; i < threadCnt; i++) {
-        AcceptThread.emplace_back([this]() {AccepterThread(); });
+        acceptThreads.emplace_back([this]() {AccepterThread();});
     }
     std::cout << "AcceptThread ½ÃÀÛ" << std::endl;
     return true;
@@ -180,7 +203,14 @@ void QuokkaServer::AccepterThread() {
             }
         }
         else { // AcceptQueue empty
+            if (WaittingQueue.pop(connUser)) { // WaittingQueue not empty
+                if (!connUser->PostAccept(ServerSKT)) {
+                    AcceptQueue.push(connUser);
+                }
+            }
+            else { 
 
+            }
         }
     }
 }

@@ -20,7 +20,7 @@
 
 class QuokkaServer {
 public:
-    QuokkaServer(UINT32 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_/2) {}
+    QuokkaServer(UINT32 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {}
     ~QuokkaServer() {}
 
     bool init(const UINT16 MaxThreadCnt_, int port_);
@@ -60,8 +60,8 @@ private:
     std::unique_ptr<MySQLManager> p_MySQLManager;
 
     // 32 bytes
-    std::vector<std::thread> WorkThreads;
-    std::vector<std::thread> AcceptThread;
+    std::vector<std::thread> workThreads;
+    std::vector<std::thread> acceptThreads;
 
     // 136 bytes 
     boost::lockfree::queue<ConnUser*> AcceptQueue; // For Aceept User Queue
@@ -69,5 +69,5 @@ private:
 
     // 576 bytes
     tbb::concurrent_hash_map<SOCKET, ConnUser*>::accessor accessor;
-    tbb::concurrent_hash_map<SOCKET, ConnUser*> ConnUsers;
+    tbb::concurrent_hash_map<SOCKET, ConnUser*> ConnUsers; // ConnUsers Info
 };

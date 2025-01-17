@@ -146,7 +146,6 @@
     <ClInclude Include="MySQLManager.h" />
     <ClInclude Include="QuokkaServer.h" />
     <ClInclude Include="RedisManager.h" />
-    <ClInclude Include="ThreadPool.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

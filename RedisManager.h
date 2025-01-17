@@ -10,15 +10,19 @@ public:
     void EndRedisThreads(); // End Redis Threads
 
 private:
-    void ProcRedisPacket(); // Process Redis Packet
     void PushRedisPacket(); // Push Redis Packet
+    bool CreateRedisThread(const UINT16 RedisThreadCnt_);
+    void RedisThread();
 
-private:
+
     // 1 bytes
     bool redisRun = 0;
 
     // 8 bytes
     sw::redis::RedisCluster redis;
+
+    // 16 bytes
+    std::thread redisThread;
 
     // 32 bytes
     std::vector<std::thread> redisPool;
