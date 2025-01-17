@@ -34,7 +34,7 @@ bool QuokkaServer::init(const UINT16 MaxThreadCnt_, int port_) {
         return false;
     }
 
-    sIOCPHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, MaxThreadCnt+1);
+    sIOCPHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, MaxThreadCnt-1);
     if (sIOCPHandle == NULL) {
         std::cout << "iocp 핸들 생성 실패" << std::endl;
         return false;
@@ -66,16 +66,28 @@ bool QuokkaServer::StartWork() {
     for (int i = 1; i <= maxClientCount; i++) {
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
         
+        // For Reuse Socket
+        int optval = 1;
+        setsockopt(TempSkt, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
+
+        int recvBufSize = MAX_SOCK;
+        setsockopt(TempSkt, SOL_SOCKET, SO_RCVBUF, (char*)&recvBufSize, sizeof(recvBufSize));
+
+        int sendBufSize = MAX_SOCK;
+        setsockopt(TempSkt, SOL_SOCKET, SO_SNDBUF, (char*)&sendBufSize, sizeof(sendBufSize));
+
         if (TempSkt == INVALID_SOCKET) {
             std::cout << "Client socket Error : " << GetLastError() << std::endl;
             return false;
         }
+
         ConnUser* connUser = new ConnUser(TempSkt);
 
         AcceptQueue.push(connUser); // Push ConnUser
+        ConnUsers.insert({ TempSkt , nullptr }); // Init ConnUsers
     }
 
-    p_RedisManager->Run(MaxThreadCnt-1); // Run Redis Threads (The number of mater nodes)
+    p_RedisManager->Run(MaxThreadCnt); // Run Redis Threads (The number of mater nodes + 1)
     p_MySQLManager->Run(); // Run MySQL Threads
 
     maxClientCount = maxClientCount;
@@ -83,7 +95,7 @@ bool QuokkaServer::StartWork() {
 }
 
 bool QuokkaServer::CreateWorkThread() {
-    auto threadCnt = MaxThreadCnt + 1; // core +1
+    auto threadCnt = MaxThreadCnt - 1; // core - 1
     for (int i = 0; i < threadCnt; i++) {
         WorkThreads.emplace_back([this]() { WorkThread(); });
     }
@@ -92,7 +104,10 @@ bool QuokkaServer::CreateWorkThread() {
 }
 
 bool QuokkaServer::CreateAccepterThread() {
-    AcceptThread = std::thread([this]() { AccepterThread(); });
+    auto threadCnt = MaxThreadCnt/4; // core/4
+    for (int i = 0; i < threadCnt; i++) {
+        AcceptThread.emplace_back([this]() {AccepterThread(); });
+    }
     std::cout << "AcceptThread 시작" << std::endl;
     return true;
 }
@@ -119,32 +134,31 @@ void QuokkaServer::WorkThread() {
 
         auto pOverlappedEx = (OverlappedEx*)lpOverlapped;
 
-        if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) {
-            std::cout << "socket " << connUser->GetSktNum() << " Connection Lost" << std::endl;
+        if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) { // User Disconnect
+            ConnUsers.erase(connUser->GetSktNum());
+            connUser->Reset();
+            std::cout << "socket " << connUser->GetSktNum() << " Logout" << std::endl;
             UserMaxCheck = false;
             UserCnt.fetch_sub(1); // UserCnt -1
             CloseSocket(connUser);
             continue;
         }
 
-        if (pOverlappedEx->taskType == TaskType::ACCEPT) {
-            connUser = GetClientInfo(pOverlappedEx->taskType);
-            std::cout << "User Accept req" << std::endl;
+        if (pOverlappedEx->taskType == TaskType::ACCEPT) { // User Connect
+            if (ConnUsers.find(accessor, connUser->GetSktNum())) {
+                accessor->second = connUser; // Insert ConnUser Info
 
-            if (UserMaxCheck.load()) { // Max User Check
-                
-            }
-
-            if (connUser->BindUser()) {
-                if (connUser->ConnUserRecv()) {
-                    UserCnt.fetch_add(1); // UserCnt +1
-                    //OnConnect(pOverlappedEx->UserIdx);
-                    std::cout << "socket " << connUser->GetSktNum() << " Connect" << std::endl;
+                if (connUser->BindUser()) {
+                        UserCnt.fetch_add(1); // UserCnt +1
+                        //OnConnect(pOverlappedEx->UserIdx);
+                        std::cout << "socket " << connUser->GetSktNum() << " Connect" << std::endl;
                 }
-            }
 
-            else {
-                CloseSocket(connUser, true);
+                else { // Bind Fail
+                    CloseSocket(connUser, true);
+                    connUser->Reset(); // Reset ConnUser
+                    AcceptQueue.push(connUser);
+                }
             }
 
         }
@@ -158,8 +172,15 @@ void QuokkaServer::WorkThread() {
 }
 
 void QuokkaServer::AccepterThread() {
+    ConnUser* connUser = nullptr;
     while (AccepterRun) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        if (AcceptQueue.pop(connUser)) { // AcceptQueue not empty
+            if (!connUser->PostAccept(ServerSKT)) {
+                AcceptQueue.push(connUser);
+            }
+        }
+        else { // AcceptQueue empty
 
+        }
     }
 }

@@ -17,6 +17,14 @@ public :
 		return userSkt;
 	}
 
+	void Reset() {
+		isConn = false;
+		memset(AcceptBuf, 0, sizeof(AcceptBuf));
+		memset(RecvBuf, 0, sizeof(RecvBuf));
+		userOvlap = {};
+		userIocpHandle = INVALID_HANDLE_VALUE;
+	}
+
 	bool PostAccept(SOCKET ServerSkt_) {
 		userOvlap.taskType = TaskType::ACCEPT;
 		userOvlap.wsaBuf.buf = nullptr;
@@ -46,7 +54,7 @@ public :
 			return false;
 		}
 
-		return true;
+		return ConnUserRecv();
 	}
 
 	bool ConnUserRecv() {
@@ -74,7 +82,7 @@ public :
 
 private:
 	// 1 bytes
-	bool isConn = 0;
+	bool isConn = false;
 	char AcceptBuf[64];
 	char RecvBuf[MAX_SOCK];
 

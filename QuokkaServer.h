@@ -59,16 +59,15 @@ private:
     std::unique_ptr<RedisManager> p_RedisManager;
     std::unique_ptr<MySQLManager> p_MySQLManager;
 
-    // 16 bytes
-    std::thread AcceptThread;
-
     // 32 bytes
     std::vector<std::thread> WorkThreads;
+    std::vector<std::thread> AcceptThread;
 
     // 136 bytes 
     boost::lockfree::queue<ConnUser*> AcceptQueue; // For Aceept User Queue
     boost::lockfree::queue<ConnUser*> WaittingQueue; // Waitting User Queue
 
     // 576 bytes
+    tbb::concurrent_hash_map<SOCKET, ConnUser*>::accessor accessor;
     tbb::concurrent_hash_map<SOCKET, ConnUser*> ConnUsers;
 };

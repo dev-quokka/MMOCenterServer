@@ -22,7 +22,6 @@ public:
 				while (1) { // stop 신호나 큐가 들어올때까지 conditional_wait 실행
 					if (!work_queue.empty()) break; // 큐가 들어오면 task 실행을 위해 break
 					if (stop && work_queue.empty()) return; // 쓰레드 종료
-					cv.wait(lock);
 				}
 
 				task = work_queue.front();
@@ -47,15 +46,11 @@ private:
 	int threadcnt = 0;
 
 	std::mutex queue_mu;
-	std::condition_variable cv;
 	std::vector<std::thread> threadpool;
 	std::queue<std::function<void()>> work_queue;
 
 	void Pushqueue() {
 		for (int i = 0; i < ; i++) {
-
-
-			cv.notify_one();
 		}
 	}
 };
