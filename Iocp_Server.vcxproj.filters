@@ -19,9 +19,6 @@
     <Filter Include="헤더 파일\Redis">
       <UniqueIdentifier>{4f70c36f-c0c1-4b0d-9a89-57339c5fe71c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일\MySQL">
-      <UniqueIdentifier>{6bc839b4-c45e-49cc-8acc-0583386bd76e}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -32,9 +29,6 @@
     </ClCompile>
     <ClCompile Include="RedisManager.cpp">
       <Filter>헤더 파일\Redis</Filter>
-    </ClCompile>
-    <ClCompile Include="MySQLManager.cpp">
-      <Filter>헤더 파일\MySQL</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -49,9 +43,6 @@
     </ClInclude>
     <ClInclude Include="RedisManager.h">
       <Filter>헤더 파일\Redis</Filter>
-    </ClInclude>
-    <ClInclude Include="MySQLManager.h">
-      <Filter>헤더 파일\MySQL</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

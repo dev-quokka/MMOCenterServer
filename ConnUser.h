@@ -86,10 +86,16 @@ private:
 	char AcceptBuf[64];
 	char RecvBuf[MAX_SOCK];
 
+	// 4 bytes
+	UINT32 userPk = 0;
+
 	// 8 bytes
 	SOCKET userSkt;
 	HANDLE userIocpHandle = INVALID_HANDLE_VALUE;
 
 	// 56 bytes
 	OverlappedEx userOvlap = {};
+
+	// 136 bytes 
+	// boost::lockfree::queue<>
 };

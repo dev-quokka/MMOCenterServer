@@ -110,15 +110,14 @@ bool QuokkaServer::StartWork() {
         WaittingQueue.push(connUser); // Push ConnUser
     }
 
-    p_RedisManager->Run(MaxThreadCnt); // Run Redis Threads (The number of mater nodes + 1)
-    p_MySQLManager->Run(); // Run MySQL Threads
+    p_RedisManager->RedisRun(MaxThreadCnt); // Run Redis Threads (The number of Clsuter Master Nodes + 1)
+    p_RedisManager->MysqlRun(); // Run MySQL
 
-    maxClientCount = maxClientCount;
     return true;
 }
 
 bool QuokkaServer::CreateWorkThread() {
-    auto threadCnt = MaxThreadCnt - 1; // core - 1
+    auto threadCnt = MaxThreadCnt; // core
     for (int i = 0; i < threadCnt; i++) {
         workThreads.emplace_back([this]() { WorkThread(); });
     }
@@ -172,9 +171,8 @@ void QuokkaServer::WorkThread() {
                 accessor->second = connUser; // Insert ConnUser Info
 
                 if (connUser->BindUser()) {
-                        UserCnt.fetch_add(1); // UserCnt +1
-                        //OnConnect(pOverlappedEx->UserIdx);
-                        std::cout << "socket " << connUser->GetSktNum() << " Connect" << std::endl;
+                    UserCnt.fetch_add(1); // UserCnt +1
+                    std::cout << "socket " << connUser->GetSktNum() << " Connect" << std::endl;
                 }
 
                 else { // Bind Fail
@@ -186,7 +184,8 @@ void QuokkaServer::WorkThread() {
 
         }
         else if (pOverlappedEx->taskType == TaskType::RECV) {
-            
+            p_RedisManager;
+            connUser->ConnUserRecv();
         }
         else if (pOverlappedEx->taskType == TaskType::SEND) {
             
@@ -208,7 +207,7 @@ void QuokkaServer::AccepterThread() {
                     AcceptQueue.push(connUser);
                 }
             }
-            else { 
+            else { // WaittingQueue empty
 
             }
         }

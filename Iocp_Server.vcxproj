@@ -136,14 +136,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MySQLManager.cpp" />
     <ClCompile Include="QuokkaServer.cpp" />
     <ClCompile Include="RedisManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConnUser.h" />
     <ClInclude Include="Define.h" />
-    <ClInclude Include="MySQLManager.h" />
     <ClInclude Include="QuokkaServer.h" />
     <ClInclude Include="RedisManager.h" />
   </ItemGroup>

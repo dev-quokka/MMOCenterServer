@@ -57,7 +57,6 @@ private:
     SOCKET ServerSKT = INVALID_SOCKET;
     HANDLE sIOCPHandle = INVALID_HANDLE_VALUE;
     std::unique_ptr<RedisManager> p_RedisManager;
-    std::unique_ptr<MySQLManager> p_MySQLManager;
 
     // 32 bytes
     std::vector<std::thread> workThreads;
