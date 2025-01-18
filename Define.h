@@ -18,6 +18,9 @@ struct OverlappedEx {
 	// 4 bytes
 	TaskType taskType; // ACCPET, RECV, SEND INFO
 
+	// 8 bytes
+	SOCKET userSkt;
+
 	// 16 bytes
 	WSABUF wsaBuf; // WSASend, WSARecv에 필요한 버퍼
 

@@ -3,7 +3,6 @@
 #include "Define.h"
 #include "ConnUser.h"
 #include "RedisManager.h"
-#include "MySQLManager.h"
 
 #include <atomic>
 #include <iostream>

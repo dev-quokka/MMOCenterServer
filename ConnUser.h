@@ -13,9 +13,9 @@ public :
 		return isConn;
 	}
 
-	SOCKET GetSktNum() {
-		return userSkt;
-	}
+	//SOCKET GetSktNum() {
+	//	return userSkt;
+	//}
 
 	void Reset() {
 		isConn = false;
@@ -27,6 +27,7 @@ public :
 
 	bool PostAccept(SOCKET ServerSkt_) {
 		userOvlap.taskType = TaskType::ACCEPT;
+		userOvlap.userSkt = userSkt;
 		userOvlap.wsaBuf.buf = nullptr;
 		userOvlap.wsaBuf.len = 0;
 
@@ -65,6 +66,7 @@ public :
 
 		userOvlap.wsaBuf.len = MAX_SOCK;
 		userOvlap.wsaBuf.buf = RecvBuf;
+		userOvlap.userSkt = userSkt;
 		userOvlap.taskType = TaskType::RECV;
 
 		int tempR = WSARecv(userSkt,&(userOvlap.wsaBuf),1,&dwRecvBytes, &dwFlag,(LPWSAOVERLAPPED)&(userOvlap),NULL);

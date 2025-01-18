@@ -157,9 +157,9 @@ void QuokkaServer::WorkThread() {
         auto pOverlappedEx = (OverlappedEx*)lpOverlapped;
 
         if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) { // User Disconnect
-            ConnUsers.erase(connUser->GetSktNum());
+            ConnUsers.erase(pOverlappedEx->userSkt);
             connUser->Reset();
-            std::cout << "socket " << connUser->GetSktNum() << " Logout" << std::endl;
+            std::cout << "socket " << pOverlappedEx->userSkt << " Logout" << std::endl;
             UserMaxCheck = false;
             UserCnt.fetch_sub(1); // UserCnt -1
             CloseSocket(connUser);
@@ -167,12 +167,12 @@ void QuokkaServer::WorkThread() {
         }
 
         if (pOverlappedEx->taskType == TaskType::ACCEPT) { // User Connect
-            if (ConnUsers.find(accessor, connUser->GetSktNum())) {
+            if (ConnUsers.find(accessor, pOverlappedEx->userSkt)) {
                 accessor->second = connUser; // Insert ConnUser Info
 
                 if (connUser->BindUser()) {
                     UserCnt.fetch_add(1); // UserCnt +1
-                    std::cout << "socket " << connUser->GetSktNum() << " Connect" << std::endl;
+                    std::cout << "socket " << pOverlappedEx->userSkt << " Connect" << std::endl;
                 }
 
                 else { // Bind Fail
