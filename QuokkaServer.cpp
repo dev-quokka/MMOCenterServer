@@ -66,7 +66,7 @@ bool QuokkaServer::StartWork() {
     for (int i = 1; i <= maxClientCount; i++) { // Make ConnUsers Queue
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
         
-        // For Reuse Socket
+        // For Reuse Socket Set
         int optval = 1;
         setsockopt(TempSkt, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
 
@@ -157,6 +157,7 @@ void QuokkaServer::WorkThread() {
         auto pOverlappedEx = (OverlappedEx*)lpOverlapped;
 
         if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) { // User Disconnect
+            p_RedisManager; // SYNCRONIZE
             ConnUsers.erase(pOverlappedEx->userSkt);
             connUser->Reset();
             std::cout << "socket " << pOverlappedEx->userSkt << " Logout" << std::endl;
@@ -181,7 +182,6 @@ void QuokkaServer::WorkThread() {
                     AcceptQueue.push(connUser);
                 }
             }
-
         }
         else if (pOverlappedEx->taskType == TaskType::RECV) {
             p_RedisManager;
