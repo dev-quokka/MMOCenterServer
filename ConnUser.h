@@ -3,6 +3,7 @@
 #include "Define.h"
 
 #include <iostream>
+#include <boost/lockfree/queue.hpp>
 
 class ConnUser {
 public:
@@ -13,14 +14,10 @@ public :
 		return isConn;
 	}
 
-	//SOCKET GetSktNum() {
-	//	return userSkt;
-	//}
-
 	void Reset() {
 		isConn = false;
-		memset(AcceptBuf, 0, sizeof(AcceptBuf));
-		memset(RecvBuf, 0, sizeof(RecvBuf));
+		memset(acceptBuf, 0, sizeof(acceptBuf));
+		memset(recvBuf, 0, sizeof(recvBuf));
 		userOvlap = {};
 		userIocpHandle = INVALID_HANDLE_VALUE;
 	}
@@ -34,7 +31,7 @@ public :
 		DWORD bytes = 0;
 		DWORD flags = 0;
 
-		if (AcceptEx(ServerSkt_, userSkt, AcceptBuf,0,sizeof(SOCKADDR_IN)+16, sizeof(SOCKADDR_IN) + 16,&bytes,(LPWSAOVERLAPPED)&userOvlap )==0) {
+		if (AcceptEx(ServerSkt_, userSkt, acceptBuf,0,sizeof(SOCKADDR_IN)+16, sizeof(SOCKADDR_IN) + 16,&bytes,(LPWSAOVERLAPPED)&userOvlap )==0) {
 			if (WSAGetLastError() != WSA_IO_PENDING) {
 				std::cout << "AcceptEx Error : " << GetLastError() << std::endl;
 				return false;
@@ -65,7 +62,7 @@ public :
 		userOvlap = {};
 
 		userOvlap.wsaBuf.len = MAX_SOCK;
-		userOvlap.wsaBuf.buf = RecvBuf;
+		userOvlap.wsaBuf.buf = recvBuf;
 		userOvlap.userSkt = userSkt;
 		userOvlap.taskType = TaskType::RECV;
 
@@ -79,14 +76,77 @@ public :
 		}
 
 		return true;
+	}
 
+	void PushSendMsg(const UINT32 dataSize_, char* sendMsg) {
+		auto sendOverlapped = new OverlappedEx;
+		ZeroMemory(sendOverlapped, sizeof(OverlappedEx));
+		sendOverlapped->wsaBuf.len = dataSize_;
+		sendOverlapped->wsaBuf.buf = new char[dataSize_];
+		CopyMemory(sendOverlapped->wsaBuf.buf, sendMsg, dataSize_);
+		sendOverlapped->taskType = TaskType::SEND;
+
+		sendQueue.push(sendOverlapped); // Push Send Msg To User
+
+		if (!isSending.exchange(true)) { // 현재 isSending값 반환하면서 true로 변경
+			ProcSend();
+		}
+	}
+
+	void SendComplete() {
+		OverlappedEx* deleteOverlapped = nullptr;
+
+		while (deleteSendQueue.pop(deleteOverlapped)) {
+			delete[] deleteOverlapped->wsaBuf.buf;
+			delete deleteOverlapped;
+		}
+
+		isSending = false;
 	}
 
 private:
+	void ProcSend() {
+		auto sendOverlapped = new OverlappedEx;
+
+		if (sendQueue.pop(sendOverlapped)) {
+			DWORD dwRecvNumBytes = 0;
+			int sCheck = WSASend(userSkt,
+				&(sendOverlapped->wsaBuf),
+				1,
+				&dwRecvNumBytes,
+				0,
+				(LPWSAOVERLAPPED)sendOverlapped,
+				NULL);
+
+			// -- WSASend Fail --
+			if (sCheck == SOCKET_ERROR && (WSAGetLastError() != ERROR_IO_PENDING))
+			{
+				std::cout << "WSASend Fail : " << WSAGetLastError() << std::endl;
+				sendOverlapped->retryCnt++;
+
+				if (sendOverlapped->retryCnt == MAX_RETRY_COUNT) {
+					delete[] sendOverlapped->wsaBuf.buf;
+					delete sendOverlapped;
+					return;
+				}
+
+				sendQueue.push(sendOverlapped); // If Wsasend Fail, Try Wsasend Again
+				return;
+			}
+
+			// -- Wsasend Success --
+			deleteSendQueue.push(sendOverlapped);
+			isSending = true;
+		}
+
+		else isSending = false; // sendQueue Empty
+	}
+
 	// 1 bytes
 	bool isConn = false;
-	char AcceptBuf[64];
-	char RecvBuf[MAX_SOCK];
+	std::atomic<bool> isSending = false;
+	char acceptBuf[64];
+	char recvBuf[MAX_SOCK];
 
 	// 4 bytes
 	UINT32 userPk = 0;
@@ -99,5 +159,6 @@ private:
 	OverlappedEx userOvlap = {};
 
 	// 136 bytes 
-	// boost::lockfree::queue<>
+	boost::lockfree::queue<OverlappedEx*> sendQueue;
+	boost::lockfree::queue<OverlappedEx*> deleteSendQueue;
 };

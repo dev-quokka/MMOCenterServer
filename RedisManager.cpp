@@ -26,12 +26,21 @@ void RedisManager::MysqlRun() {
     else std::cout << "MySQL Connect Success" << std::endl; // mysql 연결 성공
 }
 
+void RedisManager::SetConnUserManager(ConnUsersManager* connUsersManager_) {
+    connUsersManager = connUsersManager_;
+}
+
 bool RedisManager::CreateRedisThread(const UINT16 RedisThreadCnt_) {
     redisRun = true;
     for (int i = 0; i < RedisThreadCnt_; i++) {
         redisPool.emplace_back(std::thread([this]() {RedisThread(); }));
     }
     return true;
+};
+
+void RedisManager::SendMsg(SOCKET tempSkt_) {
+    ConnUser* TempConnUser = connUsersManager->FindUser(tempSkt_);
+    //TempConnUser->PushSendMsg();
 };
 
 void RedisManager::RedisThread() {

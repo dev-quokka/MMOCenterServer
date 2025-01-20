@@ -7,6 +7,7 @@
 #include <mswsock.h>
 
 const UINT32 MAX_SOCK = 1024; // Set Max Socket Buf
+const short MAX_RETRY_COUNT = 3;
 
 enum class TaskType {
 	ACCEPT,
@@ -15,6 +16,9 @@ enum class TaskType {
 };
 
 struct OverlappedEx {
+	// 2 bytes
+	short retryCnt = 0; // Retry Count For Send Proc
+
 	// 4 bytes
 	TaskType taskType; // ACCPET, RECV, SEND INFO
 

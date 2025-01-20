@@ -63,6 +63,8 @@ bool QuokkaServer::StartWork() {
         return false;
     }
 
+    p_ConnUsersManagerManager = std::make_unique<ConnUsersManager>();
+
     for (int i = 1; i <= maxClientCount; i++) { // Make ConnUsers Queue
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
         
@@ -84,7 +86,7 @@ bool QuokkaServer::StartWork() {
         ConnUser* connUser = new ConnUser(TempSkt);
 
         AcceptQueue.push(connUser); // Push ConnUser
-        ConnUsers.insert({ TempSkt , nullptr }); // Init ConnUsers
+        p_ConnUsersManagerManager->InsertUser(TempSkt); // Init ConnUsers
     }
 
     for (int i = 1; i <= maxClientCount; i++) { // Make Waittint Users Queue
@@ -112,6 +114,7 @@ bool QuokkaServer::StartWork() {
 
     p_RedisManager->RedisRun(MaxThreadCnt); // Run Redis Threads (The number of Clsuter Master Nodes + 1)
     p_RedisManager->MysqlRun(); // Run MySQL
+    p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager.get()); // 
 
     return true;
 }
@@ -155,10 +158,10 @@ void QuokkaServer::WorkThread() {
         }
 
         auto pOverlappedEx = (OverlappedEx*)lpOverlapped;
+        connUser = p_ConnUsersManagerManager->FindUser(pOverlappedEx->userSkt);
 
         if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) { // User Disconnect
             p_RedisManager; // SYNCRONIZE
-            ConnUsers.erase(pOverlappedEx->userSkt);
             connUser->Reset();
             std::cout << "socket " << pOverlappedEx->userSkt << " Logout" << std::endl;
             UserMaxCheck = false;
@@ -168,9 +171,7 @@ void QuokkaServer::WorkThread() {
         }
 
         if (pOverlappedEx->taskType == TaskType::ACCEPT) { // User Connect
-            if (ConnUsers.find(accessor, pOverlappedEx->userSkt)) {
-                accessor->second = connUser; // Insert ConnUser Info
-
+            if (connUser) {
                 if (connUser->BindUser()) {
                     UserCnt.fetch_add(1); // UserCnt +1
                     std::cout << "socket " << pOverlappedEx->userSkt << " Connect" << std::endl;

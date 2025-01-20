@@ -3,6 +3,7 @@
 #include "Define.h"
 #include "ConnUser.h"
 #include "RedisManager.h"
+#include "ConnUsersManager.h"
 
 #include <atomic>
 #include <iostream>
@@ -34,12 +35,12 @@ private:
     void RedisThread(); // Redis req Thread
     void AccepterThread(); // Accept req Thread
 
-    ConnUser* GetClientInfo(TaskType taskType);
-    void CloseSocket(ConnUser* connUser, bool isForce_ = false);
     void OnConnect(const UINT32 clientIndex_);
     void OnReceive(const UINT32 clientIndex_, const DWORD size_, char* pData_);
+    void CloseSocket(ConnUser* connUser, bool isForce_ = false);
 
-private:
+    ConnUser* GetClientInfo(TaskType taskType);
+
     // 1 bytes
     bool WorkRun = true;
     bool AccepterRun = true;
@@ -50,12 +51,13 @@ private:
 
     // 4 bytes
     UINT32 maxClientCount = 0;
-    std::atomic<int> UserCnt = 0;
+    std::atomic<int> UserCnt = 0; //Check Current UserCnt
 
     // 8 bytes
     SOCKET ServerSKT = INVALID_SOCKET;
     HANDLE sIOCPHandle = INVALID_HANDLE_VALUE;
     std::unique_ptr<RedisManager> p_RedisManager;
+    std::unique_ptr<ConnUsersManager> p_ConnUsersManagerManager;
 
     // 32 bytes
     std::vector<std::thread> workThreads;
@@ -64,8 +66,4 @@ private:
     // 136 bytes 
     boost::lockfree::queue<ConnUser*> AcceptQueue; // For Aceept User Queue
     boost::lockfree::queue<ConnUser*> WaittingQueue; // Waitting User Queue
-
-    // 576 bytes
-    tbb::concurrent_hash_map<SOCKET, ConnUser*>::accessor accessor;
-    tbb::concurrent_hash_map<SOCKET, ConnUser*> ConnUsers; // ConnUsers Info
 };

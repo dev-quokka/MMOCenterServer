@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -135,12 +135,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ConnUsersManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="QuokkaServer.cpp" />
     <ClCompile Include="RedisManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConnUser.h" />
+    <ClInclude Include="ConnUsersManager.h" />
     <ClInclude Include="Define.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="QuokkaServer.h" />

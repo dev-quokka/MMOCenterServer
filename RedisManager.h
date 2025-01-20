@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ConnUsersManager.h"
+
 #include <mysql.h>
 #include <sw/redis++/redis++.h>
 #include <iostream>
@@ -12,9 +14,11 @@ public:
     void RedisRun(const UINT16 RedisThreadCnt_);
     void MysqlRun();
     void EndRedisThreads(); // End Redis Threads
+    void SetConnUserManager(ConnUsersManager* connUsersManager_);
 
 private:
     void PushRedisPacket(); // Push Redis Packet
+    void SendMsg(SOCKET TempSkt_);
     bool CreateRedisThread(const UINT16 RedisThreadCnt_);
     void RedisThread();
     void CloseMySQL(); // Close mysql
@@ -24,6 +28,7 @@ private:
 
     // 8 bytes
     sw::redis::RedisCluster redis;
+    ConnUsersManager* connUsersManager;
 
     // 16 bytes
     std::thread redisThread;
