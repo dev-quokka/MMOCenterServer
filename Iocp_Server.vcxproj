@@ -135,6 +135,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="ConnUsersManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="QuokkaServer.cpp" />
@@ -147,6 +148,7 @@
     <ClInclude Include="Packet.h" />
     <ClInclude Include="QuokkaServer.h" />
     <ClInclude Include="RedisManager.h" />
+    <ClInclude Include="CircularBuffer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -14,6 +14,14 @@ public :
 		return isConn;
 	}
 
+	bool WriteData() {
+
+	}
+
+	char* GetRecvBuffer() {
+		return recvBuf;
+	}
+
 	void Reset() {
 		isConn = false;
 		memset(acceptBuf, 0, sizeof(acceptBuf));
@@ -68,10 +76,9 @@ public :
 
 		int tempR = WSARecv(userSkt,&(userOvlap.wsaBuf),1,&dwRecvBytes, &dwFlag,(LPWSAOVERLAPPED)&(userOvlap),NULL);
 		
-		//socket_error이면 client socket이 끊어진걸로 처리한다.
 		if (tempR == SOCKET_ERROR && (WSAGetLastError() != ERROR_IO_PENDING))
 		{
-			std::cout << "WSARecv()함수 실패 : " << WSAGetLastError() << std::endl;
+			std::cout << userSkt << " WSARecv() Fail : " << WSAGetLastError() << std::endl;
 			return false;
 		}
 
@@ -121,7 +128,7 @@ private:
 			// -- WSASend Fail --
 			if (sCheck == SOCKET_ERROR && (WSAGetLastError() != ERROR_IO_PENDING))
 			{
-				std::cout << "WSASend Fail : " << WSAGetLastError() << std::endl;
+				std::cout << userSkt << " WSASend Fail : " << WSAGetLastError() << std::endl;
 				sendOverlapped->retryCnt++;
 
 				if (sendOverlapped->retryCnt == MAX_RETRY_COUNT) {
@@ -147,11 +154,16 @@ private:
 	std::atomic<bool> isSending = false;
 	char acceptBuf[64];
 	char recvBuf[MAX_SOCK];
+	char* recvCircleBuf;
 
 	// 4 bytes
 	UINT32 userPk = 0;
 
 	// 8 bytes
+	size_t writePos = 0;    // 쓰기 위치
+	size_t readPos = 0;     // 읽기 위치
+	size_t currentSize = 0; // 현재 데이터 크기
+
 	SOCKET userSkt;
 	HANDLE userIocpHandle = INVALID_HANDLE_VALUE;
 

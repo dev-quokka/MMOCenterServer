@@ -15,9 +15,9 @@ public:
     void MysqlRun();
     void EndRedisThreads(); // End Redis Threads
     void SetConnUserManager(ConnUsersManager* connUsersManager_);
+    void PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_); // Push Redis Packet
 
 private:
-    void PushRedisPacket(); // Push Redis Packet
     void SendMsg(SOCKET TempSkt_);
     bool CreateRedisThread(const UINT16 RedisThreadCnt_);
     void RedisThread();
@@ -46,7 +46,7 @@ private:
     MYSQL_RES* Result;
 
     // 136 bytes 
-    // boost::lockfree::queue<> // 나중에 병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환
+    boost::lockfree::queue<SOCKET> procSktQueue;// 나중에 병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환
 
     // 242 bytes
     sw::redis::ConnectionOptions connection_options;

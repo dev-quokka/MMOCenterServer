@@ -38,20 +38,21 @@ bool RedisManager::CreateRedisThread(const UINT16 RedisThreadCnt_) {
     return true;
 };
 
-void RedisManager::SendMsg(SOCKET tempSkt_) {
-    ConnUser* TempConnUser = connUsersManager->FindUser(tempSkt_);
-    //TempConnUser->PushSendMsg();
+void RedisManager::SendMsg(SOCKET tempSkt_) { // Send Proccess Message To User
+   ConnUser* TempConnUser = connUsersManager->FindUser(tempSkt_);
+    //TempConnUser->PushSendMsg(); (const UINT32 dataSize_, char* sendMsg)
 };
 
 void RedisManager::RedisThread() {
     while (redisRun) {
-        std::unique_lock<std::mutex> lock(redisMu);
-
+        
     }
 };
 
-void RedisManager::PushRedisPacket() {
-    
+void RedisManager::PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_) {
+
+    procSktQueue.push(userSkt);
+
 };
 
 void RedisManager::CloseMySQL() {

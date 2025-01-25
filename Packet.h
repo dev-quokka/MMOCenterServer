@@ -1,13 +1,13 @@
 #pragma once
-
 #define WIN32_LEAN_AND_MEAN
+
 #include <windows.h>
 #include <string>
+#include <ws2tcpip.h>
 
-// 立加 眉农 备炼眉
 struct PacketInfo
 {
-	UINT32 ClientIndex = 0;
+	SOCKET UserSkt = 0;
 	UINT16 PacketId = 0;
 	UINT16 DataSize = 0;
 	char* pDataPtr = nullptr;
@@ -20,7 +20,7 @@ struct PACKET_HEADER
 	std::string uuid; // User UUID
 };
 
-enum class Packet_NUM : UINT16{
+enum class Packet_Id : UINT16{
 	//SYSTEM
 	USER_CONNECT = 11,
 	USER_DISCONNECT = 12,

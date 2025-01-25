@@ -161,7 +161,7 @@ void QuokkaServer::WorkThread() {
         connUser = p_ConnUsersManagerManager->FindUser(pOverlappedEx->userSkt);
 
         if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) { // User Disconnect
-            p_RedisManager; // SYNCRONIZE
+            p_RedisManager; // Redis data to Mysql for Syncronize
             connUser->Reset();
             std::cout << "socket " << pOverlappedEx->userSkt << " Logout" << std::endl;
             UserMaxCheck = false;
@@ -185,11 +185,12 @@ void QuokkaServer::WorkThread() {
             }
         }
         else if (pOverlappedEx->taskType == TaskType::RECV) {
-            p_RedisManager;
-            connUser->ConnUserRecv();
+            p_RedisManager->PushRedisPacket(pOverlappedEx->userSkt, dwIoSize, connUser->GetRecvBuffer()); // Proccess In Redismanager
+            connUser->ConnUserRecv(); // Wsarecv Again
         }
         else if (pOverlappedEx->taskType == TaskType::SEND) {
-            
+
+            connUser->SendComplete();
         }
     }
 }
