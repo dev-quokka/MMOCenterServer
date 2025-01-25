@@ -7,6 +7,7 @@
 #include <mswsock.h>
 
 const UINT32 MAX_SOCK = 1024; // Set Max Socket Buf
+const UINT32 MAX_RECV_DATA = 8096;
 
 const short MAX_RETRY_COUNT = 3;
 

@@ -9,54 +9,12 @@ public:
 	}
 
     // Write Data
-    bool Write(const char* data, size_t size) {
-        std::lock_guard<std::mutex> guard(bufferMutex);
-        
-        if ((bufferSize - currentSize) < size) { // Empty Space
-            return false;
-        }
-
-        size_t endSpace = bufferSize - writePos;
-        if (endSpace >= size) {
-            std::memcpy(buffer + writePos, data, size);
-        }
-        else {
-            std::memcpy(buffer + writePos, data, endSpace);
-            std::memcpy(buffer, data + endSpace, size - endSpace);
-        }
-
-        writePos = (writePos + size) % bufferSize;
-        currentSize += size;
-
-        return true;
-    }
+    bool Write(const char* data, size_t size_) {}
 
     // Read Data
-    bool Read(char* dest, size_t size) {
-        std::lock_guard<std::mutex> guard(bufferMutex);
+    bool Read(char* readData_, size_t size_) {}
 
-        if (currentSize < size) {
-            return false;
-        }
-
-        size_t endSpace = bufferSize - readPos;
-        if (endSpace >= size) {
-            std::memcpy(dest, buffer + readPos, size);
-        }
-        else {
-            std::memcpy(dest, buffer + readPos, endSpace);
-            std::memcpy(dest + endSpace, buffer, size - endSpace);
-        }
-
-        readPos = (readPos + size) % bufferSize;
-        currentSize -= size;
-
-        return true;
-    }
-
-    size_t DataSize() const {
-        return currentSize;
-    }
+    size_t DataSize() const {}
 
 private:
 	// 8 bytes

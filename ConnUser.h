@@ -1,20 +1,24 @@
 #pragma once
 
 #include "Define.h"
-
+#include "CircularBuffer.h"
 #include <iostream>
 #include <boost/lockfree/queue.hpp>
 
 class ConnUser {
 public:
-	ConnUser(SOCKET UserSkt_) : userSkt(UserSkt_) {}
+	ConnUser(SOCKET UserSkt_, size_t bufferSize) : userSkt(UserSkt_), circularBuffer(bufferSize) {}
 
 public :
 	bool IsConn() { // check connection status
 		return isConn;
 	}
 
-	bool WriteData() {
+	bool WriteRecvData(const char* data, size_t size_) {
+
+	}
+
+	bool ReadRecvData(const char* readData, size_t size_) {
 
 	}
 
@@ -160,15 +164,14 @@ private:
 	UINT32 userPk = 0;
 
 	// 8 bytes
-	size_t writePos = 0;    // 쓰기 위치
-	size_t readPos = 0;     // 읽기 위치
-	size_t currentSize = 0; // 현재 데이터 크기
-
 	SOCKET userSkt;
 	HANDLE userIocpHandle = INVALID_HANDLE_VALUE;
 
 	// 56 bytes
 	OverlappedEx userOvlap = {};
+
+	// 120 bytes
+	CircularBuffer circularBuffer; // Make Circular Recv Buffer
 
 	// 136 bytes 
 	boost::lockfree::queue<OverlappedEx*> sendQueue;

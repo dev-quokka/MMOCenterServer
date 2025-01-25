@@ -83,7 +83,7 @@ bool QuokkaServer::StartWork() {
             return false;
         }
 
-        ConnUser* connUser = new ConnUser(TempSkt);
+        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA);
 
         AcceptQueue.push(connUser); // Push ConnUser
         p_ConnUsersManagerManager->InsertUser(TempSkt); // Init ConnUsers
@@ -107,7 +107,7 @@ bool QuokkaServer::StartWork() {
             return false;
         }
 
-        ConnUser* connUser = new ConnUser(TempSkt);
+        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA);
 
         WaittingQueue.push(connUser); // Push ConnUser
     }
