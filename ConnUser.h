@@ -7,19 +7,19 @@
 
 class ConnUser {
 public:
-	ConnUser(SOCKET UserSkt_, size_t bufferSize) : userSkt(UserSkt_), circularBuffer(bufferSize) {}
+	ConnUser(SOCKET UserSkt_, UINT32 bufferSize) : userSkt(UserSkt_), circularBuffer(bufferSize) {}
 
 public :
 	bool IsConn() { // check connection status
 		return isConn;
 	}
 
-	bool WriteRecvData(const char* data, size_t size_) {
-
+	bool WriteRecvData(const char* data_, size_t size_) {
+		return circularBuffer.Write(data_,size_);
 	}
 
-	bool ReadRecvData(const char* readData, size_t size_) {
-
+	bool ReadRecvData(char* readData_, size_t size_) {
+		return circularBuffer.Read(readData_, size_);
 	}
 
 	char* GetRecvBuffer() {

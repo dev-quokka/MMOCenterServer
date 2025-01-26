@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ConnUsersManager.h"
+#include "Packet.h"
 
 #include <mysql.h>
 #include <sw/redis++/redis++.h>
@@ -8,6 +9,8 @@
 #include <windef.h>
 
 #pragma comment (lib, "libmysql.lib") // mysql 연동
+
+
 
 class RedisManager {
 public:
@@ -46,7 +49,7 @@ private:
     MYSQL_RES* Result;
 
     // 136 bytes 
-    boost::lockfree::queue<SOCKET> procSktQueue;// 나중에 병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환
+    boost::lockfree::queue<DataPacket> procSktQueue;// 나중에 병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환
 
     // 242 bytes
     sw::redis::ConnectionOptions connection_options;

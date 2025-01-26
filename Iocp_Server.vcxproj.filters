@@ -19,6 +19,12 @@
     <Filter Include="헤더 파일\Redis">
       <UniqueIdentifier>{4f70c36f-c0c1-4b0d-9a89-57339c5fe71c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="헤더 파일\ConnUsers">
+      <UniqueIdentifier>{a4fea4b7-ee8a-4142-92a1-93257acbf2ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\Network\CircularRecvBuf">
+      <UniqueIdentifier>{2ab19ce5-49a1-4e8f-947c-94cbab24f74a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -31,10 +37,10 @@
       <Filter>헤더 파일\Redis</Filter>
     </ClCompile>
     <ClCompile Include="ConnUsersManager.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>헤더 파일\ConnUsers</Filter>
     </ClCompile>
     <ClCompile Include="CircularBuffer.cpp">
-      <Filter>헤더 파일</Filter>
+      <Filter>헤더 파일\Network\CircularRecvBuf</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -54,10 +60,10 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ConnUsersManager.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>헤더 파일\ConnUsers</Filter>
     </ClInclude>
     <ClInclude Include="CircularBuffer.h">
-      <Filter>헤더 파일</Filter>
+      <Filter>헤더 파일\Network\CircularRecvBuf</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

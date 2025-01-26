@@ -5,6 +5,12 @@
 #include <string>
 #include <ws2tcpip.h>
 
+struct DataPacket {
+	UINT32 dataSize;
+	SOCKET userSkt;
+	DataPacket(UINT32 dataSize_,SOCKET userSkt_) : dataSize(dataSize_), userSkt(userSkt_) {}
+};
+
 struct PacketInfo
 {
 	SOCKET UserSkt = 0;

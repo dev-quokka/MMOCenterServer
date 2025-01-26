@@ -39,20 +39,25 @@ bool RedisManager::CreateRedisThread(const UINT16 RedisThreadCnt_) {
 };
 
 void RedisManager::SendMsg(SOCKET tempSkt_) { // Send Proccess Message To User
-   ConnUser* TempConnUser = connUsersManager->FindUser(tempSkt_);
-    //TempConnUser->PushSendMsg(); (const UINT32 dataSize_, char* sendMsg)
+    ConnUser* TempConnUser = connUsersManager->FindUser(tempSkt_);        
+    //TempConnUser->PushSendMsg();
 };
 
 void RedisManager::RedisThread() {
+    DataPacket tempD(0,0);
+    ConnUser* TempConnUser = nullptr;
     while (redisRun) {
-        
+        if (procSktQueue.pop(tempD)) {
+            
+        }
     }
 };
 
-void RedisManager::PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_) {
-
-    procSktQueue.push(userSkt);
-
+void RedisManager::PushRedisPacket(const SOCKET userSkt_, const UINT32 size_, char* recvData_) {
+    DataPacket tempD(size_,userSkt_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt_);
+    TempConnUser->WriteRecvData(recvData_,size_); // Push Data in Circualr Buffer
+    procSktQueue.push(tempD);
 };
 
 void RedisManager::CloseMySQL() {
