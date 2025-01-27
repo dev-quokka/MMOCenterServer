@@ -5,6 +5,8 @@
 #include <string>
 #include <ws2tcpip.h>
 
+const UINT16 PACKET_ID_SIZE = 28; // Last Packet_ID Num + 1
+
 struct DataPacket {
 	UINT32 dataSize;
 	SOCKET userSkt;
@@ -13,10 +15,10 @@ struct DataPacket {
 
 struct PacketInfo
 {
-	SOCKET UserSkt = 0;
-	UINT16 PacketId = 0;
-	UINT16 DataSize = 0;
-	char* pDataPtr = nullptr;
+	UINT16 packetId = 0;
+	UINT16 dataSize = 0;
+	SOCKET userSkt = 0;
+	char* pData = nullptr;
 };
 
 struct PACKET_HEADER
@@ -26,21 +28,25 @@ struct PACKET_HEADER
 	std::string uuid; // User UUID
 };
 
-enum class Packet_Id : UINT16{
+enum class PACKET_ID : UINT16{
 	//SYSTEM
-	USER_CONNECT = 11,
-	USER_DISCONNECT = 12,
+	LOGIN = 1,
+	LOGOUT = 2,
+	USER_DISCONNECT = 3,
+	SERVER_END = 4,
 
 	// USER STATUS
-	LEVEL_UP,
-	LEVEL_DOWN,
-	EXP_UP,
-	EXP_DOWN,
-	HP_UP,
-	HP_DOWN,
-	MP_UP,
-	MP_DOWN,
+	LEVEL_UP = 11,
+	LEVEL_DOWN = 12,
+	EXP_UP = 13,
+	EXP_DOWN = 14,
+	HP_UP = 15,
+	HP_DOWN = 16,
+	MP_UP = 17,
+	MP_DOWN = 18,
 
 	// INVENTORY
-	
+	ADDITEM = 25,
+	DELITEM = 26,
+	MOVEITEM = 27
 };

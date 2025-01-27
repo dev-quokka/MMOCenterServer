@@ -7,24 +7,48 @@
 #include <sw/redis++/redis++.h>
 #include <iostream>
 #include <windef.h>
+#include <unordered_map>
 
 #pragma comment (lib, "libmysql.lib") // mysql 연동
 
-
-
 class RedisManager {
 public:
-    void RedisRun(const UINT16 RedisThreadCnt_);
-    void MysqlRun();
+    void init(const UINT16 RedisThreadCnt_);
     void EndRedisThreads(); // End Redis Threads
     void SetConnUserManager(ConnUsersManager* connUsersManager_);
     void PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_); // Push Redis Packet
 
 private:
+    void RedisRun(const UINT16 RedisThreadCnt_);
+    void MysqlRun();
     void SendMsg(SOCKET TempSkt_);
     bool CreateRedisThread(const UINT16 RedisThreadCnt_);
     void RedisThread();
     void CloseMySQL(); // Close mysql
+
+    //SYSTEM
+    void Login(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 로그인
+
+    void Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 정상종료
+
+    void UserDisConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 의도치 않은 유저 종료
+
+    void ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+
+    // USER STATUS
+    void LevelUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void LevelDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void Exp_Up(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void Exp_Down(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void HpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void HpDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void MpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void MpDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+
+    // INVENTORY
+    void AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void DelItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // 1 bytes
     bool redisRun = 0;
@@ -37,8 +61,10 @@ private:
     std::thread redisThread;
 
     // 32 bytes
+    typedef void(RedisManager::*RECV_PACKET_FUNCTION)(SOCKET, UINT16, char*); 
+    std::vector<RECV_PACKET_FUNCTION> packetIDTable;
     std::vector<std::thread> redisPool;
-
+    
     // 72 bytes
     std::condition_variable cv;
 

@@ -1,5 +1,33 @@
 #include "RedisManager.h"
 
+void RedisManager::init(const UINT16 RedisThreadCnt_) {
+    packetIDTable = std::vector<RECV_PACKET_FUNCTION>(PACKET_ID_SIZE, nullptr);
+
+    //SYSTEM
+    packetIDTable[1] = &RedisManager::Login;
+    packetIDTable[2] = &RedisManager::Logout;
+    packetIDTable[3] = &RedisManager::UserDisConnect;
+    packetIDTable[4] = &RedisManager::ServerEnd;
+
+    // USER STATUS
+    packetIDTable[11] = &RedisManager::LevelUp;
+    packetIDTable[12] = &RedisManager::LevelDown;
+    packetIDTable[13] = &RedisManager::Exp_Up;
+    packetIDTable[14] = &RedisManager::Exp_Down;
+    packetIDTable[15] = &RedisManager::HpUp;
+    packetIDTable[16] = &RedisManager::HpDown;
+    packetIDTable[17] = &RedisManager::MpUp;
+    packetIDTable[18] = &RedisManager::MpDown;
+
+    // INVENTORY
+    packetIDTable[25] = &RedisManager::AddItem;
+    packetIDTable[26] = &RedisManager::DelItem;
+    packetIDTable[27] = &RedisManager::MoveItem;
+
+    RedisManager::RedisRun(RedisThreadCnt_);
+    RedisManager::MysqlRun();
+}
+
 void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Server
     try {
         connection_options.host = "127.0.0.1";  // Redis Cluster IP
@@ -36,31 +64,101 @@ bool RedisManager::CreateRedisThread(const UINT16 RedisThreadCnt_) {
         redisPool.emplace_back(std::thread([this]() {RedisThread(); }));
     }
     return true;
-};
+}
 
 void RedisManager::SendMsg(SOCKET tempSkt_) { // Send Proccess Message To User
     ConnUser* TempConnUser = connUsersManager->FindUser(tempSkt_);        
     //TempConnUser->PushSendMsg();
-};
+}
 
 void RedisManager::RedisThread() {
     DataPacket tempD(0,0);
     ConnUser* TempConnUser = nullptr;
+    char* tempData = nullptr;
     while (redisRun) {
         if (procSktQueue.pop(tempD)) {
-            
+            TempConnUser = connUsersManager->FindUser(tempD.userSkt);
+            PacketInfo packetInfo = TempConnUser->ReadRecvData(tempData,tempD.dataSize); // GetData
+            *(packetIDTable[packetInfo.packetId])(packetInfo.userSkt, packetInfo.dataSize,packetInfo.pData);
+        }
+        else { // Empty Queue
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
-};
+}
 
 void RedisManager::PushRedisPacket(const SOCKET userSkt_, const UINT32 size_, char* recvData_) {
     DataPacket tempD(size_,userSkt_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt_);
     TempConnUser->WriteRecvData(recvData_,size_); // Push Data in Circualr Buffer
     procSktQueue.push(tempD);
-};
+}
 
 void RedisManager::CloseMySQL() {
     
     mysql_close(ConnPtr);
+}
+
+// ------------------------------------------------------------------------------
+
+//SYSTEM
+void RedisManager::Login(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::UserDisConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+// USER STATUS
+void RedisManager::LevelUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::LevelDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+void RedisManager::Exp_Up(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::Exp_Down(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::HpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::HpDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::MpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::MpDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+// INVENTORY
+void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::DelItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
 }

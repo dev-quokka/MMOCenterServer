@@ -2,12 +2,14 @@
 
 #include "Define.h"
 #include "CircularBuffer.h"
+#include "Packet.h"
+
 #include <iostream>
 #include <boost/lockfree/queue.hpp>
 
 class ConnUser {
 public:
-	ConnUser(SOCKET UserSkt_, UINT32 bufferSize) : userSkt(UserSkt_), circularBuffer(bufferSize) {}
+	ConnUser(SOCKET UserSkt_, UINT32 bufferSize_) : userSkt(UserSkt_), circularBuffer(bufferSize_) {}
 
 public :
 	bool IsConn() { // check connection status
@@ -18,8 +20,18 @@ public :
 		return circularBuffer.Write(data_,size_);
 	}
 
-	bool ReadRecvData(char* readData_, size_t size_) {
-		return circularBuffer.Read(readData_, size_);
+	PacketInfo ReadRecvData(char* readData_, size_t size_) {
+		auto pHeader = (PACKET_HEADER*)readData_;
+
+		if (circularBuffer.Read(readData_, size_)) {
+			PacketInfo packetInfo;
+			packetInfo.PacketId = pHeader->PacketId;
+			packetInfo.DataSize = pHeader->PacketLength;
+			packetInfo.UserSkt = userSkt;
+			packetInfo.pDataPtr = readData_;
+
+			return packetInfo;
+		}
 	}
 
 	char* GetRecvBuffer() {
