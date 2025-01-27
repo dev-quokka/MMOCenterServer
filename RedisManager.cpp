@@ -79,7 +79,7 @@ void RedisManager::RedisThread() {
         if (procSktQueue.pop(tempD)) {
             TempConnUser = connUsersManager->FindUser(tempD.userSkt);
             PacketInfo packetInfo = TempConnUser->ReadRecvData(tempData,tempD.dataSize); // GetData
-            *(packetIDTable[packetInfo.packetId])(packetInfo.userSkt, packetInfo.dataSize,packetInfo.pData);
+            (this->*packetIDTable[packetInfo.packetId])(packetInfo.userSkt, packetInfo.dataSize,packetInfo.pData); // Proccess Packet
         }
         else { // Empty Queue
             std::this_thread::sleep_for(std::chrono::milliseconds(1));

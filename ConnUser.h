@@ -25,10 +25,10 @@ public :
 
 		if (circularBuffer.Read(readData_, size_)) {
 			PacketInfo packetInfo;
-			packetInfo.PacketId = pHeader->PacketId;
-			packetInfo.DataSize = pHeader->PacketLength;
-			packetInfo.UserSkt = userSkt;
-			packetInfo.pDataPtr = readData_;
+			packetInfo.packetId = pHeader->PacketId;
+			packetInfo.dataSize = pHeader->PacketLength;
+			packetInfo.userSkt = userSkt;
+			packetInfo.pData = readData_;
 
 			return packetInfo;
 		}
