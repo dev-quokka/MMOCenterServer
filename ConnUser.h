@@ -16,6 +16,14 @@ public :
 		return isConn;
 	}
 
+	void SetUuid(std::string userUuid_) {
+		userUuid = userUuid_;
+	}
+
+	std::string GetUuid() {
+		return userUuid;
+	}
+
 	bool WriteRecvData(const char* data_, size_t size_) {
 		return circularBuffer.Write(data_,size_);
 	}
@@ -178,6 +186,9 @@ private:
 	// 8 bytes
 	SOCKET userSkt;
 	HANDLE userIocpHandle = INVALID_HANDLE_VALUE;
+
+	// 40 bytes
+	std::string userUuid;
 
 	// 56 bytes
 	OverlappedEx userOvlap = {};

@@ -159,10 +159,8 @@ void QuokkaServer::WorkThread() {
         connUser = p_ConnUsersManagerManager->FindUser(pOverlappedEx->userSkt);
 
         if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) { // User Disconnect
-            p_RedisManager; // Redis data to Mysql for Syncronize
-            connUser->Reset();
-            std::cout << "socket " << pOverlappedEx->userSkt << " Logout" << std::endl;
-            UserMaxCheck = false;
+            p_RedisManager->Disconnect(pOverlappedEx->userSkt);
+            std::cout << "socket " << pOverlappedEx->userSkt << " Disconnect" << std::endl;
             UserCnt.fetch_sub(1); // UserCnt -1
             CloseSocket(connUser);
             continue;

@@ -4,24 +4,16 @@ void RedisManager::init(const UINT16 RedisThreadCnt_) {
     packetIDTable = std::vector<RECV_PACKET_FUNCTION>(PACKET_ID_SIZE, nullptr);
 
     //SYSTEM
-    packetIDTable[1] = &RedisManager::Login;
+    packetIDTable[1] = &RedisManager::UserConnect;
     packetIDTable[2] = &RedisManager::Logout;
     packetIDTable[3] = &RedisManager::UserDisConnect;
     packetIDTable[4] = &RedisManager::ServerEnd;
 
     // USER STATUS
-    packetIDTable[11] = &RedisManager::LevelUp;
-    packetIDTable[12] = &RedisManager::LevelDown;
-    packetIDTable[13] = &RedisManager::Exp_Up;
-    packetIDTable[14] = &RedisManager::Exp_Down;
-    packetIDTable[15] = &RedisManager::HpUp;
-    packetIDTable[16] = &RedisManager::HpDown;
-    packetIDTable[17] = &RedisManager::MpUp;
-    packetIDTable[18] = &RedisManager::MpDown;
 
     // INVENTORY
     packetIDTable[25] = &RedisManager::AddItem;
-    packetIDTable[26] = &RedisManager::DelItem;
+    packetIDTable[26] = &RedisManager::DeleteItem;
     packetIDTable[27] = &RedisManager::MoveItem;
 
     RedisManager::RedisRun(RedisThreadCnt_);
@@ -52,6 +44,10 @@ void RedisManager::MysqlRun() {
 
     if (ConnPtr == NULL) std::cout << "MySQL Connect Fail" << std::endl; // mysql 연결 실패
     else std::cout << "MySQL Connect Success" << std::endl; // mysql 연결 성공
+}
+
+void RedisManager::Disconnect(SOCKET userSkt) {
+    this->UserDisConnect(userSkt);
 }
 
 void RedisManager::SetConnUserManager(ConnUsersManager* connUsersManager_) {
@@ -99,66 +95,103 @@ void RedisManager::CloseMySQL() {
     mysql_close(ConnPtr);
 }
 
-// ------------------------------------------------------------------------------
+// ---------------------------- PACKET -----------------------------------
 
-//SYSTEM
-void RedisManager::Login(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+// USER STATUS
 
+void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto uuidCheck = reinterpret_cast<USERINFO_REQUEST_PACKET*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    TempConnUser->SetUuid(uuidCheck->uuId);
+
+    redis.persist("user:" + uuidCheck->uuId); // Remove TTL Time
+
+    // 이거 클라이언트로 옮겨서 거기서 체크하기
+    //try {
+    //    auto existUserInfo = redis.exists("user:" + uuidCheck->uuId); // Check If a UserInfo Value Exists
+    //    auto existUserInven = redis.exists("user:" + uuidCheck->uuId); // Check If a UserInventory Value Exists
+
+    //    USERINFO_RESPONSE_PACKET urp;
+    //    urp.PacketId = (UINT16)PACKET_ID::USERINFO_RESPONSE;
+    //    urp.PacketLength = sizeof(USERINFO_RESPONSE_PACKET);
+
+    //    if (existUserInfo > 0 && existUserInven>0) {
+    //        /*urp.userInfo = ;
+    //        urp.inventory = ;*/
+    //        TempConnUser->PushSendMsg(sizeof(USERINFO_RESPONSE_PACKET), (char*)&urp);
+    //    }
+
+    //    else TempConnUser->PushSendMsg(sizeof(USERINFO_RESPONSE_PACKET), (char*)&urp); // Send Nullptr If User Does Not Exist In Redis (Connect Fail)
+    //}
+    //catch (const sw::redis::Error& e) {
+    //    std::cerr << "Redis Error: " << e.what() << std::endl;
+    //}
 }
 
-void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-
+void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Normal Disconnect
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    auto inventory_data = redis.hgetall("inventory:uuid123:equipment");
+    
+    TempConnUser->Reset();
+    redis.expire("user:"+ TempConnUser->GetUuid(), 180); // Set TTL (Short Time)
 }
 
-void RedisManager::UserDisConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    auto inventory_data = redis.hgetall("inventory:uuid123:equipment");
 
+    TempConnUser->Reset();
+    redis.expire("user:" + TempConnUser->GetUuid(), 600); // Set TTL (Long Time)
 }
 
 void RedisManager::ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 
-// USER STATUS
-void RedisManager::LevelUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-
-}
-
-void RedisManager::LevelDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-
-}
-void RedisManager::Exp_Up(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-
-}
-
-void RedisManager::Exp_Down(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-
-}
-
-void RedisManager::HpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-
-}
-
-void RedisManager::HpDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-
-}
-
-void RedisManager::MpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-
-}
-
-void RedisManager::MpDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-
-}
 
 // INVENTORY
+
 void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    std::string inventory_key = "inventory:uuid123:equipment";
+
+    if (redis.hset(inventory_key, "101:0", "10")) { // AddItem Success
+
+    }
+    else { // AddItem Fail
+
+    }
 
 }
 
-void RedisManager::DelItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    std::string inventory_key = "inventory:uuid123:equipment";
 
+    if (redis.hdel(inventory_key, "101:0")) { // DeleteItem Success
+    
+    }
+    else { // DeleteItem Fail
+
+    }
 }
 
 void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    std::string inventory_key = "inventory:uuid123:equipment";
 
+    if (redis.hset(inventory_key, "101:0", "20")) { // MoveItem Success
+    
+    }
+    else { // MoveItem Fail
+
+    }
+}
+
+void RedisManager::ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    std::string inventory_key = "inventory:uuid123:equipment";
+
+    if (redis.hset(inventory_key, "101:0", "20")) { // ModifyItem Success
+
+    }
+    else {// ModifyItem Fail
+
+    }
 }

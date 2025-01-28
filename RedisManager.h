@@ -17,6 +17,7 @@ public:
     void EndRedisThreads(); // End Redis Threads
     void SetConnUserManager(ConnUsersManager* connUsersManager_);
     void PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_); // Push Redis Packet
+    void Disconnect(SOCKET userSkt);
 
 private:
     void RedisRun(const UINT16 RedisThreadCnt_);
@@ -27,28 +28,21 @@ private:
     void CloseMySQL(); // Close mysql
 
     //SYSTEM
-    void Login(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 로그인
+    void UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // User Connect
 
-    void Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 정상종료
+    void Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // Normal Disconnect
 
-    void UserDisConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 의도치 않은 유저 종료
+    void UserDisConnect(SOCKET userSkt); // Abnormal Disconnect
 
     void ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // USER STATUS
-    void LevelUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void LevelDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void Exp_Up(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void Exp_Down(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void HpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void HpDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void MpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void MpDown(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // INVENTORY
     void AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void DelItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // 1 bytes
     bool redisRun = 0;
