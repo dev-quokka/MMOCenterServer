@@ -160,7 +160,7 @@ void QuokkaServer::WorkThread() {
 
         if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) { // User Disconnect
             p_RedisManager->Disconnect(pOverlappedEx->userSkt);
-            std::cout << "socket " << pOverlappedEx->userSkt << " Disconnect" << std::endl;
+            std::cout << "socket " << pOverlappedEx->userSkt << " Disconnect && Data Update Fail" << std::endl;
             UserCnt.fetch_sub(1); // UserCnt -1
             CloseSocket(connUser);
             continue;
@@ -172,7 +172,6 @@ void QuokkaServer::WorkThread() {
                     UserCnt.fetch_add(1); // UserCnt +1
                     std::cout << "socket " << pOverlappedEx->userSkt << " Connect" << std::endl;
                 }
-
                 else { // Bind Fail
                     CloseSocket(connUser, true);
                     connUser->Reset(); // Reset ConnUser

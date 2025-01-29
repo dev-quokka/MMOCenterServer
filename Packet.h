@@ -28,13 +28,24 @@ struct PACKET_HEADER
 	std::string uuId; // UUID For User Check
 };
 
-struct USERINFO_REQUEST_PACKET : PACKET_HEADER {
+struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
 
 };
 
-struct USERINFO_RESPONSE_PACKET : PACKET_HEADER {
+struct USER_CONNECT_RESPONSE_PACKET : PACKET_HEADER {
 	char* userInfo = nullptr;
 	char* inventory = nullptr;
+};
+
+struct ADD_ITEM_REQUEST : PACKET_HEADER {
+	uint8_t itemType; // Max 3
+	uint8_t slotPos; // Max 50
+	short itemCount; // Max 999
+	short itemCode; // Max 5000
+};
+
+struct ADD_ITEM_RESPONSE : PACKET_HEADER {
+
 };
 
 enum class PACKET_ID : UINT16{
@@ -45,9 +56,10 @@ enum class PACKET_ID : UINT16{
 	SERVER_END = 4,
 
 	// USER STATUS (11~)
-	USERINFO_REQUEST = 11,
-	USERINFO_RESPONSE = 12,
-	USER_DISCONNECT = 13,
+	USER_CONNECT_REQUEST = 11,
+	USER_CONNECT_RESPONSE = 12,
+	USER_DISCONNECT_REQUEST = 13,
+	USER_DISCONNECT_RESPONSE = 14,
 
 	// INVENTORY (25~)
 	ADDITEM_REQUEST = 25,

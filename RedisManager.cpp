@@ -1,12 +1,13 @@
 #include "RedisManager.h"
 
 void RedisManager::init(const UINT16 RedisThreadCnt_) {
+
+    // ---------- SET PACKET PROCESS ---------- 
     packetIDTable = std::vector<RECV_PACKET_FUNCTION>(PACKET_ID_SIZE, nullptr);
 
     //SYSTEM
     packetIDTable[1] = &RedisManager::UserConnect;
     packetIDTable[2] = &RedisManager::Logout;
-    packetIDTable[3] = &RedisManager::UserDisConnect;
     packetIDTable[4] = &RedisManager::ServerEnd;
 
     // USER STATUS
@@ -15,6 +16,12 @@ void RedisManager::init(const UINT16 RedisThreadCnt_) {
     packetIDTable[25] = &RedisManager::AddItem;
     packetIDTable[26] = &RedisManager::DeleteItem;
     packetIDTable[27] = &RedisManager::MoveItem;
+
+
+    // ---------- SET ITEM TYPE ---------- 
+    itemType[1] = "equipment";
+    itemType[2] = "consumables ";
+    itemType[3] = "materials";
 
     RedisManager::RedisRun(RedisThreadCnt_);
     RedisManager::MysqlRun();
@@ -97,50 +104,93 @@ void RedisManager::CloseMySQL() {
 
 // ---------------------------- PACKET -----------------------------------
 
-// USER STATUS
-
+// SYSTEM
 void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    auto uuidCheck = reinterpret_cast<USERINFO_REQUEST_PACKET*>(pPacket_);
+    auto uuidCheck = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
     TempConnUser->SetUuid(uuidCheck->uuId);
 
     redis.persist("user:" + uuidCheck->uuId); // Remove TTL Time
-
-    // 이거 클라이언트로 옮겨서 거기서 체크하기
-    //try {
-    //    auto existUserInfo = redis.exists("user:" + uuidCheck->uuId); // Check If a UserInfo Value Exists
-    //    auto existUserInven = redis.exists("user:" + uuidCheck->uuId); // Check If a UserInventory Value Exists
-
-    //    USERINFO_RESPONSE_PACKET urp;
-    //    urp.PacketId = (UINT16)PACKET_ID::USERINFO_RESPONSE;
-    //    urp.PacketLength = sizeof(USERINFO_RESPONSE_PACKET);
-
-    //    if (existUserInfo > 0 && existUserInven>0) {
-    //        /*urp.userInfo = ;
-    //        urp.inventory = ;*/
-    //        TempConnUser->PushSendMsg(sizeof(USERINFO_RESPONSE_PACKET), (char*)&urp);
-    //    }
-
-    //    else TempConnUser->PushSendMsg(sizeof(USERINFO_RESPONSE_PACKET), (char*)&urp); // Send Nullptr If User Does Not Exist In Redis (Connect Fail)
-    //}
-    //catch (const sw::redis::Error& e) {
-    //    std::cerr << "Redis Error: " << e.what() << std::endl;
-    //}
 }
 
 void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Normal Disconnect
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
-    auto inventory_data = redis.hgetall("inventory:uuid123:equipment");
+
+    // Get Update Data From Redis 
+    std::unordered_map<std::string, std::string> userInfoMap;
+    std::unordered_map<std::string, std::string> invenMap;
+    redis.hgetall("user:" + TempConnUser->GetUuid(), std::inserter(userInfoMap, userInfoMap.begin()));
+    redis.hgetall("inventory:" + TempConnUser->GetUuid(), std::inserter(invenMap, invenMap.begin()));
+
+    // Update UserInfo In Mysql
+    std::string userInfoQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
+
+    const char* Query = &*userInfoQuery.begin();
+    MysqlResult = mysql_query(ConnPtr, Query);
+
+    if (MysqlResult != 0) { 
+        std::cerr << "MySQL UPDATE UserInfo Query Error: " << mysql_error(ConnPtr) << std::endl;
+        mysql_query(ConnPtr, "ROLLBACK;"); // 무결성 오류 방지 ROLLBACK
+        return;
+    }
     
-    TempConnUser->Reset();
+    // Update Inven Data From Redis
+    std::string invenQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
+
+    const char* Query = &*invenQuery.begin();
+    MysqlResult = mysql_query(ConnPtr, Query);
+
+    if (MysqlResult != 0) {
+        std::cerr << "MySQL UPDATE UserInfo Query Error: " << mysql_error(ConnPtr) << std::endl;
+        mysql_query(ConnPtr, "ROLLBACK;"); // 무결성 오류 방지 ROLLBACK
+        return;
+    }
+
+    mysql_query(ConnPtr, "COMMIT;");
+
+    TempConnUser->Reset(); // Initializes the ConnUser object
+
     redis.expire("user:"+ TempConnUser->GetUuid(), 180); // Set TTL (Short Time)
+    return;
 }
 
 void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
-    auto inventory_data = redis.hgetall("inventory:uuid123:equipment");
 
-    TempConnUser->Reset();
+    // Get Update Data From Redis 
+    std::unordered_map<std::string, std::string> userInfoMap;
+    std::unordered_map<std::string, std::string> invenMap;
+    redis.hgetall("user:" + TempConnUser->GetUuid(), std::inserter(userInfoMap, userInfoMap.begin()));
+    redis.hgetall("inventory:" + TempConnUser->GetUuid(), std::inserter(invenMap, invenMap.begin()));
+
+    // Update UserInfo In Mysql
+    std::string userInfoQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
+
+    const char* Query = &*userInfoQuery.begin();
+    MysqlResult = mysql_query(ConnPtr, Query);
+
+    if (MysqlResult != 0) {
+        std::cerr << "MySQL UPDATE UserInfo Query Error: " << mysql_error(ConnPtr) << std::endl;
+        mysql_query(ConnPtr, "ROLLBACK;"); // 무결성 오류 방지 ROLLBACK
+        return;
+    }
+
+    // Update Inven Data From Redis
+    std::string invenQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
+
+    const char* Query = &*invenQuery.begin();
+    MysqlResult = mysql_query(ConnPtr, Query);
+
+    if (MysqlResult != 0) {
+        std::cerr << "MySQL UPDATE UserInfo Query Error: " << mysql_error(ConnPtr) << std::endl;
+        mysql_query(ConnPtr, "ROLLBACK;"); // 무결성 오류 방지 ROLLBACK
+        return;
+    }
+
+    mysql_query(ConnPtr, "COMMIT;");
+
+    TempConnUser->Reset(); // Initializes the ConnUser object
+
     redis.expire("user:" + TempConnUser->GetUuid(), 600); // Set TTL (Long Time)
 }
 
@@ -148,13 +198,18 @@ void RedisManager::ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_)
 
 }
 
+// USER_STATUS
+
 
 // INVENTORY
-
 void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    std::string inventory_key = "inventory:uuid123:equipment";
+    auto uuidCheck = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    TempConnUser->SetUuid(uuidCheck->uuId);
 
-    if (redis.hset(inventory_key, "101:0", "10")) { // AddItem Success
+    std::string inventory_key = "inventory:uuid123:"+ itemType[uuidCheck->itemType];
+
+    if (redis.hset(inventory_key, "101:0", "10")) { // AddItem Success (ItemCode:slotlocation, count)
 
     }
     else { // AddItem Fail
@@ -164,7 +219,11 @@ void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 }
 
 void RedisManager::DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    std::string inventory_key = "inventory:uuid123:equipment";
+    auto uuidCheck = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    TempConnUser->SetUuid(uuidCheck->uuId);
+
+    std::string inventory_key = "inventory:uuid123:" + itemType[uuidCheck->itemType];
 
     if (redis.hdel(inventory_key, "101:0")) { // DeleteItem Success
     
@@ -175,7 +234,11 @@ void RedisManager::DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_
 }
 
 void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    std::string inventory_key = "inventory:uuid123:equipment";
+    auto uuidCheck = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    TempConnUser->SetUuid(uuidCheck->uuId);
+
+    std::string inventory_key = "inventory:uuid123:" + itemType[uuidCheck->itemType];
 
     if (redis.hset(inventory_key, "101:0", "20")) { // MoveItem Success
     
@@ -186,7 +249,11 @@ void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) 
 }
 
 void RedisManager::ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    std::string inventory_key = "inventory:uuid123:equipment";
+    auto uuidCheck = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    TempConnUser->SetUuid(uuidCheck->uuId);
+
+    std::string inventory_key = "inventory:uuid123:" + itemType[uuidCheck->itemType];
 
     if (redis.hset(inventory_key, "101:0", "20")) { // ModifyItem Success
 

@@ -3,8 +3,9 @@
 #include "ConnUsersManager.h"
 #include "Packet.h"
 
-#include <mysql.h>
 #include <sw/redis++/redis++.h>
+#include <nlohmann/json.hpp>
+#include <mysql.h>
 #include <iostream>
 #include <windef.h>
 #include <unordered_map>
@@ -20,10 +21,11 @@ public:
     void Disconnect(SOCKET userSkt);
 
 private:
+    bool CreateRedisThread(const UINT16 RedisThreadCnt_);
+
     void RedisRun(const UINT16 RedisThreadCnt_);
     void MysqlRun();
     void SendMsg(SOCKET TempSkt_);
-    bool CreateRedisThread(const UINT16 RedisThreadCnt_);
     void RedisThread();
     void CloseMySQL(); // Close mysql
 
@@ -47,9 +49,13 @@ private:
     // 1 bytes
     bool redisRun = 0;
 
+    // 4 bytes
+    int MysqlResult;
+
     // 8 bytes
     sw::redis::RedisCluster redis;
     ConnUsersManager* connUsersManager;
+    MYSQL_ROW Row;
 
     // 16 bytes
     std::thread redisThread;
@@ -58,7 +64,8 @@ private:
     typedef void(RedisManager::*RECV_PACKET_FUNCTION)(SOCKET, UINT16, char*); 
     std::vector<RECV_PACKET_FUNCTION> packetIDTable;
     std::vector<std::thread> redisPool;
-    
+    std::vector<std::string> itemType;
+
     // 72 bytes
     std::condition_variable cv;
 
