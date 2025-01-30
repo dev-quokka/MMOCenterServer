@@ -65,7 +65,7 @@ bool QuokkaServer::StartWork() {
 
     p_ConnUsersManagerManager = std::make_unique<ConnUsersManager>();
 
-    for (int i = 1; i <= maxClientCount; i++) { // Make ConnUsers Queue
+    for (int i = 0; i < maxClientCount; i++) { // Make ConnUsers Queue
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
         
         // For Reuse Socket Set
@@ -83,13 +83,13 @@ bool QuokkaServer::StartWork() {
             return false;
         }
 
-        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA);
+        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA,i);
 
         AcceptQueue.push(connUser); // Push ConnUser
         p_ConnUsersManagerManager->InsertUser(TempSkt); // Init ConnUsers
     }
 
-    for (int i = 1; i <= maxClientCount; i++) { // Make Waittint Users Queue
+    for (int i = 0; i < maxClientCount; i++) { // Make Waittint Users Queue
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
         // For Reuse Socket
@@ -107,10 +107,11 @@ bool QuokkaServer::StartWork() {
             return false;
         }
 
-        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA);
+        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA, maxClientCount);
 
         WaittingQueue.push(connUser); // Push ConnUser
     }
+
     p_RedisManager->init(MaxThreadCnt);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
     p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager.get()); // 
 

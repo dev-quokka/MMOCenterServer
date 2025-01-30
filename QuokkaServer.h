@@ -20,7 +20,7 @@
 
 class QuokkaServer {
 public:
-    QuokkaServer(UINT32 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {}
+    QuokkaServer(UINT16 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {}
     ~QuokkaServer() {}
 
     bool init(const UINT16 MaxThreadCnt_, int port_);
@@ -48,9 +48,9 @@ private:
 
     // 2 bytes
     UINT16 MaxThreadCnt = 0;
+    UINT16 maxClientCount = 0;
 
     // 4 bytes
-    UINT32 maxClientCount = 0;
     std::atomic<int> UserCnt = 0; //Check Current UserCnt
 
     // 8 bytes

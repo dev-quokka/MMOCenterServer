@@ -29,7 +29,7 @@ struct PACKET_HEADER
 };
 
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
-
+	UINT16 userPk;
 };
 
 struct USER_CONNECT_RESPONSE_PACKET : PACKET_HEADER {
@@ -38,13 +38,49 @@ struct USER_CONNECT_RESPONSE_PACKET : PACKET_HEADER {
 };
 
 struct ADD_ITEM_REQUEST : PACKET_HEADER {
-	uint8_t itemType; // Max 3
-	uint8_t slotPos; // Max 50
-	short itemCount; // Max 999
-	short itemCode; // Max 5000
+	uint8_t itemType; // (Max 3)
+	uint8_t slotPos; // (Max 50)
+	short itemCount; // (Max 999)
+	short itemCode; // (Max 5000)
 };
 
 struct ADD_ITEM_RESPONSE : PACKET_HEADER {
+
+};
+
+struct DEL_ITEM_REQUEST : PACKET_HEADER {
+	uint8_t itemType; // (Max 3)
+	uint8_t slotPos; // (Max 50)
+	short itemCode; // (Max 5000)
+};
+
+struct DEL_ITEM_RESPONSE : PACKET_HEADER {
+
+};
+
+struct MOV_ITEM_REQUEST : PACKET_HEADER {
+	uint8_t dragitemType; // (Max 3)
+	uint8_t dragslotPos; // (Max 50)
+	int8_t targetitemType; // (Max 3)
+	uint8_t targetslotPos; // (Max 50)
+	short dragitemCount; // (Max 999)
+	short dragitemCode; // (Max 5000)
+	short targetitemCount; // (Max 999)
+	short targetitemCode; // (Max 5000)
+};
+
+struct MOV_ITEM_RESPONSE : PACKET_HEADER {
+
+};
+
+struct MOD_ITEM_REQUEST : PACKET_HEADER {
+	uint8_t itemType; // (Max 3)
+	uint8_t slotPos; // (Max 50)
+	short itemCount; // (Max 999)
+	short itemCode; // (Max 5000)
+};
+
+struct MOD_ITEM_RESPONSE : PACKET_HEADER {
 
 };
 
@@ -62,12 +98,12 @@ enum class PACKET_ID : UINT16{
 	USER_DISCONNECT_RESPONSE = 14,
 
 	// INVENTORY (25~)
-	ADDITEM_REQUEST = 25,
-	ADDITEM_RESPONSE = 26,
-	DELITEM_REQUEST = 27,
-	DELITEM_RESPONSE = 28,
-	MOVEITEM_REQUEST = 29,
-	MOVEITEM_RESPONSE = 30,
-	MODIFYITEM_REQUEST = 31,
-	MODIFYITEM_RESPONSE = 32
+	ADD_ITEM_REQUEST = 25,
+	ADD_ITEM_RESPONSE = 26,
+	DEL_ITEM_REQUEST = 27,
+	DEL_ITEM_RESPONSE = 28,
+	MOV_ITEM_REQUEST = 29,
+	MOV_ITEM_RESPONSE = 30,
+	MOD_ITEM_REQUEST = 31,
+	MOD_ITEM_RESPONSE = 32
 };

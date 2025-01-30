@@ -9,7 +9,7 @@
 
 class ConnUser {
 public:
-	ConnUser(SOCKET UserSkt_, UINT32 bufferSize_) : userSkt(UserSkt_), circularBuffer(bufferSize_) {}
+	ConnUser(SOCKET UserSkt_, UINT32 bufferSize_, UINT16 connObjNum_) : userSkt(UserSkt_), circularBuffer(bufferSize_), connObjNum(connObjNum_) {}
 
 public :
 	bool IsConn() { // check connection status
@@ -18,6 +18,14 @@ public :
 
 	void SetUuid(std::string userUuid_) {
 		userUuid = userUuid_;
+	}
+
+	char* GetRecvBuffer() {
+		return recvBuf;
+	}
+
+	std::string GetObjNumString() {
+		return std::to_string(connObjNum/100);
 	}
 
 	std::string GetUuid() {
@@ -40,10 +48,6 @@ public :
 
 			return packetInfo;
 		}
-	}
-
-	char* GetRecvBuffer() {
-		return recvBuf;
 	}
 
 	void Reset() {
@@ -179,6 +183,9 @@ private:
 	char acceptBuf[64];
 	char recvBuf[MAX_SOCK];
 	char* recvCircleBuf;
+
+	// 2 bytes
+	UINT16 connObjNum;
 
 	// 4 bytes
 	UINT32 userPk = 0;

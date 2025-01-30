@@ -1,6 +1,6 @@
 #include "QuokkaServer.h"
 const UINT16 PORT = 8080;
-const UINT32 maxClientCount = 100;
+const UINT16 maxClientCount = 100;
 
 #include <iostream>
 

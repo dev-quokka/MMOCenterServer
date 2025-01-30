@@ -117,27 +117,33 @@ void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { 
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
 
     // Get Update Data From Redis 
-    std::unordered_map<std::string, std::string> userInfoMap;
-    std::unordered_map<std::string, std::string> invenMap;
-    redis.hgetall("user:" + TempConnUser->GetUuid(), std::inserter(userInfoMap, userInfoMap.begin()));
-    redis.hgetall("inventory:" + TempConnUser->GetUuid(), std::inserter(invenMap, invenMap.begin()));
+    //"{user_info_" + TempConnUser->GetObjNumString() + "}"
+    
 
-    // Update UserInfo In Mysql
+    // Update Inven Data From Redis
+    std::vector<std::string> keys = { TempConnUser->GetUuid() + ":equipment", TempConnUser->GetUuid() + ":consumable", TempConnUser->GetUuid() + ":material" };
+    redis.hmget("{inventory_info}_" + TempConnUser->GetObjNumString(), keys.begin(), keys.end(), keys);
+
+    nlohmann::json invenJson;
+    invenJson["equipment"] = nlohmann::json::parse(keys[0]);
+    invenJson["consumable"] = nlohmann::json::parse(keys[1]);
+    invenJson["material"] = nlohmann::json::parse(keys[2]);
+
+    std::string inventory_json_string = invenJson.dump();
+
     std::string userInfoQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
+    std::string invenQuery = "update inventory set "+ inventory_json_string;
 
     const char* Query = &*userInfoQuery.begin();
     MysqlResult = mysql_query(ConnPtr, Query);
 
-    if (MysqlResult != 0) { 
+    if (MysqlResult != 0) {
         std::cerr << "MySQL UPDATE UserInfo Query Error: " << mysql_error(ConnPtr) << std::endl;
         mysql_query(ConnPtr, "ROLLBACK;"); // 무결성 오류 방지 ROLLBACK
         return;
     }
-    
-    // Update Inven Data From Redis
-    std::string invenQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
 
-    const char* Query = &*invenQuery.begin();
+    Query = &*invenQuery.begin();
     MysqlResult = mysql_query(ConnPtr, Query);
 
     if (MysqlResult != 0) {
@@ -203,62 +209,98 @@ void RedisManager::ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_)
 
 // INVENTORY
 void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    auto uuidCheck = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    auto addItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
-    TempConnUser->SetUuid(uuidCheck->uuId);
+    
+    ADD_ITEM_RESPONSE addItemResPacket;
+    addItemResPacket.PacketId = (UINT16)PACKET_ID::ADD_ITEM_RESPONSE;
+    addItemResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
+    addItemResPacket.uuId = TempConnUser->GetUuid();
 
-    std::string inventory_key = "inventory:uuid123:"+ itemType[uuidCheck->itemType];
+    if (addItemReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
+        std::string inventory_key = "inventory:" + TempConnUser->GetUuid() + ":" +itemType[addItemReqPacket->itemType];
 
-    if (redis.hset(inventory_key, "101:0", "10")) { // AddItem Success (ItemCode:slotlocation, count)
+        if (redis.hset(inventory_key, "itemCode:slotPosition", "10")) { // AddItem Success (ItemCode:slotposition, count)
+
+        }
+        else { // AddItem Fail
+
+        }
+    }
+
+    else { // UUID NOT CORRECT
 
     }
-    else { // AddItem Fail
-
-    }
-
 }
 
 void RedisManager::DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    auto uuidCheck = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    auto delItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
-    TempConnUser->SetUuid(uuidCheck->uuId);
 
-    std::string inventory_key = "inventory:uuid123:" + itemType[uuidCheck->itemType];
+    DEL_ITEM_RESPONSE delItemResPacket;
+    delItemResPacket.PacketId = (UINT16)PACKET_ID::DEL_ITEM_RESPONSE;
+    delItemResPacket.PacketLength = sizeof(DEL_ITEM_RESPONSE);
+    delItemResPacket.uuId = TempConnUser->GetUuid();
 
-    if (redis.hdel(inventory_key, "101:0")) { // DeleteItem Success
-    
+    if (delItemReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
+        std::string inventory_key = "inventory:" + TempConnUser->GetUuid() + ":" + itemType[delItemReqPacket->itemType];
+
+        if (redis.hdel(inventory_key, "itemCode:itemPosition")) { // DeleteItem Success
+
+        }
+        else { // DeleteItem Fail
+
+        }
     }
-    else { // DeleteItem Fail
+    else { // UUID NOT CORRECT
 
     }
 }
 
 void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    auto uuidCheck = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    auto movItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
-    TempConnUser->SetUuid(uuidCheck->uuId);
 
-    std::string inventory_key = "inventory:uuid123:" + itemType[uuidCheck->itemType];
+    MOV_ITEM_RESPONSE movItemResPacket;
+    movItemResPacket.PacketId = (UINT16)PACKET_ID::MOV_ITEM_RESPONSE;
+    movItemResPacket.PacketLength = sizeof(MOV_ITEM_RESPONSE);
+    movItemResPacket.uuId = TempConnUser->GetUuid();
 
-    if (redis.hset(inventory_key, "101:0", "20")) { // MoveItem Success
-    
+    if (movItemReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
+        std::string inventory_key = "inventory:" + TempConnUser->GetUuid() + ":" + itemType[movItemReqPacket->itemType];
+
+        if (redis.hset(inventory_key, "101:0", "20")) { // MoveItem Success
+
+        }
+        else { // MoveItem Fail
+
+        }
     }
-    else { // MoveItem Fail
+    else { // UUID NOT CORRECT
 
     }
 }
 
 void RedisManager::ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    auto uuidCheck = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    auto modItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
-    TempConnUser->SetUuid(uuidCheck->uuId);
 
-    std::string inventory_key = "inventory:uuid123:" + itemType[uuidCheck->itemType];
+    MOD_ITEM_RESPONSE modItemResPacket;
+    modItemResPacket.PacketId = (UINT16)PACKET_ID::MOD_ITEM_RESPONSE;
+    modItemResPacket.PacketLength = sizeof(MOD_ITEM_RESPONSE);
+    modItemResPacket.uuId = TempConnUser->GetUuid();
 
-    if (redis.hset(inventory_key, "101:0", "20")) { // ModifyItem Success
+    if (modItemReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
+        std::string inventory_key = "inventory:" + TempConnUser->GetUuid() + ":" + itemType[modItemReqPacket->itemType];
 
+        if (redis.hset(inventory_key, "101:0", "20")) { // ModifyItem Success
+
+        }
+        else { // ModifyItem Fail
+
+        }
     }
-    else {// ModifyItem Fail
+    else { // UUID NOT CORRECT
 
     }
 }
