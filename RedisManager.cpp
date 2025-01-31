@@ -1,4 +1,5 @@
 #include "RedisManager.h"
+thread_local std::mt19937 RedisManager::gen(std::random_device{}());
 
 void RedisManager::init(const UINT16 RedisThreadCnt_) {
 
@@ -16,7 +17,6 @@ void RedisManager::init(const UINT16 RedisThreadCnt_) {
     packetIDTable[25] = &RedisManager::AddItem;
     packetIDTable[26] = &RedisManager::DeleteItem;
     packetIDTable[27] = &RedisManager::MoveItem;
-
 
     // ---------- SET ITEM TYPE ---------- 
     itemType[1] = "equipment";
@@ -47,7 +47,7 @@ void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Ser
 
 void RedisManager::MysqlRun() {
     mysql_init(&Conn);
-    ConnPtr = mysql_real_connect(&Conn, "127.0.0.1", "quokka", "1234", "Quokka", 3306, (char*)NULL, 0);
+    ConnPtr = mysql_real_connect(&Conn, MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD , MYSQL_DB , 3306, (char*)NULL, 0);
 
     if (ConnPtr == NULL) std::cout << "MySQL Connect Fail" << std::endl; // mysql 연결 실패
     else std::cout << "MySQL Connect Success" << std::endl; // mysql 연결 성공
@@ -67,6 +67,15 @@ bool RedisManager::CreateRedisThread(const UINT16 RedisThreadCnt_) {
         redisPool.emplace_back(std::thread([this]() {RedisThread(); }));
     }
     return true;
+}
+
+bool RedisManager::EquipmentEnhance(short currentEnhanceCount_) {
+    if (currentEnhanceCount_ < 0 || currentEnhanceCount_ >= enhanceProbabilities.size()) { // Strange Enhance
+        return false;
+    }
+
+    std::uniform_int_distribution<int> range(1, 100);
+    return dist(gen) <= enhanceProbabilities[currentEnhanceCount_];
 }
 
 void RedisManager::SendMsg(SOCKET tempSkt_) { // Send Proccess Message To User
@@ -102,9 +111,11 @@ void RedisManager::CloseMySQL() {
     mysql_close(ConnPtr);
 }
 
-// ---------------------------- PACKET -----------------------------------
 
-// SYSTEM
+// ---------------------------- PACKET ----------------------------
+
+//  ---------------------------- SYSTEM  ----------------------------
+
 void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     auto uuidCheck = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
@@ -124,15 +135,8 @@ void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { 
     std::vector<std::string> keys = { TempConnUser->GetUuid() + ":equipment", TempConnUser->GetUuid() + ":consumable", TempConnUser->GetUuid() + ":material" };
     redis.hmget("{inventory_info}_" + TempConnUser->GetObjNumString(), keys.begin(), keys.end(), keys);
 
-    nlohmann::json invenJson;
-    invenJson["equipment"] = nlohmann::json::parse(keys[0]);
-    invenJson["consumable"] = nlohmann::json::parse(keys[1]);
-    invenJson["material"] = nlohmann::json::parse(keys[2]);
-
-    std::string inventory_json_string = invenJson.dump();
-
     std::string userInfoQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
-    std::string invenQuery = "update inventory set "+ inventory_json_string;
+    std::string invenQuery = "update inventory set ";
 
     const char* Query = &*userInfoQuery.begin();
     MysqlResult = mysql_query(ConnPtr, Query);
@@ -156,7 +160,7 @@ void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { 
 
     TempConnUser->Reset(); // Initializes the ConnUser object
 
-    redis.expire("user:"+ TempConnUser->GetUuid(), 180); // Set TTL (Short Time)
+    redis.expire("user:"+ TempConnUser->GetUuid(), 180); // Set Short Time TTL (3 minutes)
     return;
 }
 
@@ -197,17 +201,38 @@ void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
 
     TempConnUser->Reset(); // Initializes the ConnUser object
 
-    redis.expire("user:" + TempConnUser->GetUuid(), 600); // Set TTL (Long Time)
+    redis.expire("user:" + TempConnUser->GetUuid(), 600); // Set Long Time TTL (10 minutes)
 }
 
 void RedisManager::ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 
-// USER_STATUS
+
+//  ---------------------------- USER_STATUS  ----------------------------4
+
+void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto addItemReqPacket = reinterpret_cast<EXP_UP_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+
+    EXP_UP_RESPONSE expUpResPacket;
+    expUpResPacket.PacketId = (UINT16)PACKET_ID::ADD_ITEM_RESPONSE;
+    expUpResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
+    expUpResPacket.uuId = TempConnUser->GetUuid();
+
+    redis.hget
+
+}
+
+void RedisManager::LevelUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto addItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
 
 
-// INVENTORY
+}
+
+//  ---------------------------- INVENTORY  ----------------------------
+
 void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     auto addItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
@@ -218,19 +243,20 @@ void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     addItemResPacket.uuId = TempConnUser->GetUuid();
 
     if (addItemReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
-        std::string inventory_key = "inventory:" + TempConnUser->GetUuid() + ":" +itemType[addItemReqPacket->itemType];
+        std::string inventory_slot = "inventory:" + TempConnUser->GetUuid();
 
-        if (redis.hset(inventory_key, "itemCode:slotPosition", "10")) { // AddItem Success (ItemCode:slotposition, count)
-
+        if (redis.hset(inventory_slot, itemType[addItemReqPacket->itemType] + std::to_string(addItemReqPacket->itemCode) + std::to_string(addItemReqPacket->itemSlotPos), std::to_string(addItemReqPacket->itemCount))) { // AddItem Success (ItemCode:slotposition, count)
+            addItemResPacket.isSuccess = true;
         }
         else { // AddItem Fail
-
+            addItemResPacket.isSuccess = false;
         }
     }
-
     else { // UUID NOT CORRECT
-
+        addItemResPacket.isSuccess = false;
     }
+
+    TempConnUser->PushSendMsg(sizeof(ADD_ITEM_RESPONSE),(char*)&addItemResPacket);
 }
 
 void RedisManager::DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
@@ -243,42 +269,20 @@ void RedisManager::DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_
     delItemResPacket.uuId = TempConnUser->GetUuid();
 
     if (delItemReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
-        std::string inventory_key = "inventory:" + TempConnUser->GetUuid() + ":" + itemType[delItemReqPacket->itemType];
+        std::string inventory_slot = "inventory:" + TempConnUser->GetUuid();
 
-        if (redis.hdel(inventory_key, "itemCode:itemPosition")) { // DeleteItem Success
-
+        if (redis.hdel(inventory_slot, itemType[delItemReqPacket->itemType] + std::to_string(delItemReqPacket->itemCode) + std::to_string(delItemReqPacket->itemSlotPos))) { // DeleteItem Success
+            delItemResPacket.isSuccess = true;
         }
         else { // DeleteItem Fail
-
+            delItemResPacket.isSuccess = false;
         }
     }
     else { // UUID NOT CORRECT
-
+        delItemResPacket.isSuccess = false;
     }
-}
 
-void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    auto movItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
-    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
-
-    MOV_ITEM_RESPONSE movItemResPacket;
-    movItemResPacket.PacketId = (UINT16)PACKET_ID::MOV_ITEM_RESPONSE;
-    movItemResPacket.PacketLength = sizeof(MOV_ITEM_RESPONSE);
-    movItemResPacket.uuId = TempConnUser->GetUuid();
-
-    if (movItemReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
-        std::string inventory_key = "inventory:" + TempConnUser->GetUuid() + ":" + itemType[movItemReqPacket->itemType];
-
-        if (redis.hset(inventory_key, "101:0", "20")) { // MoveItem Success
-
-        }
-        else { // MoveItem Fail
-
-        }
-    }
-    else { // UUID NOT CORRECT
-
-    }
+    TempConnUser->PushSendMsg(sizeof(DEL_ITEM_RESPONSE),(char*)&delItemResPacket);
 }
 
 void RedisManager::ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
@@ -291,16 +295,135 @@ void RedisManager::ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_
     modItemResPacket.uuId = TempConnUser->GetUuid();
 
     if (modItemReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
-        std::string inventory_key = "inventory:" + TempConnUser->GetUuid() + ":" + itemType[modItemReqPacket->itemType];
+        std::string inventory_slot = "inventory:" + TempConnUser->GetUuid();
 
-        if (redis.hset(inventory_key, "101:0", "20")) { // ModifyItem Success
-
+        if (redis.hset(inventory_slot, itemType[modItemReqPacket->itemType] + std::to_string(modItemReqPacket->itemCode) + std::to_string(modItemReqPacket->itemSlotPos), std::to_string(modItemReqPacket->itemCount))) { // ModifyItem Success
+            modItemResPacket.isSuccess = true;
         }
         else { // ModifyItem Fail
-
+            modItemResPacket.isSuccess = false;
         }
     }
     else { // UUID NOT CORRECT
+        modItemResPacket.isSuccess = false;
+    }
+
+    TempConnUser->PushSendMsg(sizeof(MOD_ITEM_RESPONSE), (char*)&modItemResPacket);
+}
+
+void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto movItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+
+    MOV_ITEM_RESPONSE movItemResPacket;
+    movItemResPacket.PacketId = (UINT16)PACKET_ID::MOV_ITEM_RESPONSE;
+    movItemResPacket.PacketLength = sizeof(MOV_ITEM_RESPONSE);
+    movItemResPacket.uuId = TempConnUser->GetUuid();
+
+    if (movItemReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
+        std::string inventory_slot = "inventory:" + TempConnUser->GetUuid();
+
+        if (redis.hset(inventory_slot, itemType[movItemReqPacket->itemType] + std::to_string(movItemReqPacket->itemCode) + std::to_string(movItemReqPacket->itemSlotPos), std::to_string(movItemReqPacket->itemCount))) { // MoveItem Success
+            movItemResPacket.isSuccess = true;
+        }
+        else { // MoveItem Fail
+            movItemResPacket.isSuccess = false;
+        }
+    }
+    else { // UUID NOT CORRECT
+        movItemResPacket.isSuccess = false;
+    }
+
+    TempConnUser->PushSendMsg(sizeof(MOV_ITEM_RESPONSE), (char*)&movItemResPacket);
+}
+
+
+//  ---------------------------- INVENTORY:EQUIPMENT  ----------------------------
+
+void RedisManager::AddEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto addEquipReqPacket = reinterpret_cast<ADD_EQUIPMENT_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+
+    ADD_EQUIPMENT_RESPONSE addEquipResPacket;
+    addEquipResPacket.PacketId = (UINT16)PACKET_ID::ADD_ITEM_RESPONSE;
+    addEquipResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
+    addEquipResPacket.uuId = TempConnUser->GetUuid();
+
+    if (addEquipReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
+        std::string inventory_slot = "inventory:" + TempConnUser->GetUuid();
+
+        if (redis.hset(inventory_slot, itemType[addEquipReqPacket->itemType] + std::to_string(addEquipReqPacket->itemCode) + std::to_string(addEquipReqPacket->itemSlotPos), std::to_string(addEquipReqPacket->currentEnhanceCount))) { // AddItem Success (ItemCode:slotposition, count)
+            addEquipResPacket.isSuccess = true;
+        }
+        else { // AddItem Fail
+            addEquipResPacket.isSuccess = false;
+        }
+    }
+
+    else { // UUID NOT CORRECT
+        addEquipResPacket.isSuccess = false;
+    }
+
+    TempConnUser->PushSendMsg(sizeof(ADD_EQUIPMENT_RESPONSE), (char*)&addEquipResPacket);
+}
+
+void RedisManager::DeleteEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto delEquipReqPacket = reinterpret_cast<DEL_EQUIPMENT_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+
+    DEL_EQUIPMENT_RESPONSE delEquipResPacket;
+    delEquipResPacket.PacketId = (UINT16)PACKET_ID::DEL_ITEM_RESPONSE;
+    delEquipResPacket.PacketLength = sizeof(DEL_ITEM_RESPONSE);
+    delEquipResPacket.uuId = TempConnUser->GetUuid();
+
+    if (delEquipReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
+        std::string inventory_slot = "inventory:" + TempConnUser->GetUuid();
+
+        if (redis.hdel(inventory_slot, itemType[delEquipReqPacket->itemType] + std::to_string(delEquipReqPacket->itemCode) + std::to_string(delEquipReqPacket->itemSlotPos))) { // DeleteItem Success
+            delEquipResPacket.isSuccess = true;
+        }
+        else { // DeleteItem Fail
+            delEquipResPacket.isSuccess = false;
+        }
+    }
+    else { // UUID NOT CORRECT
+        delEquipResPacket.isSuccess = false;
+    }
+
+    TempConnUser->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
+}
+
+void RedisManager::EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto delEquipReqPacket = reinterpret_cast<ENH_EQUIPMENT_REQUEST*>(pPacket_);
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+
+    ENH_EQUIPMENT_RESPONSE delEquipResPacket;
+    delEquipResPacket.PacketId = (UINT16)PACKET_ID::DEL_ITEM_RESPONSE;
+    delEquipResPacket.PacketLength = sizeof(DEL_ITEM_RESPONSE);
+    delEquipResPacket.uuId = TempConnUser->GetUuid();
+
+    if (delEquipReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
+        std::string inventory_slot = "inventory:" + TempConnUser->GetUuid();
+
+        if (redis.hdel(inventory_slot, 
+            itemType[delEquipReqPacket->itemType] + std::to_string(delEquipReqPacket->itemCode) + std::to_string(delEquipReqPacket->itemSlotPos), std::to_string(delEquipReqPacket->currentEnhanceCount))) {
+            
+            if (EquipmentEnhance(delEquipReqPacket->currentEnhanceCount)) { // Enhance Success
+                delEquipResPacket.isSuccess = true;
+            }
+            else { // Enhance Success
+                delEquipResPacket.isSuccess = false;
+            }
+
+        }
+        else { // DeleteItem Fail
+            delEquipResPacket.isSuccess = false;
+        }
 
     }
+    else { // UUID NOT CORRECT
+        delEquipResPacket.isSuccess = false;
+    }
+
+    TempConnUser->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
 }
