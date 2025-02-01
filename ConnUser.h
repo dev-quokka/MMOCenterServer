@@ -24,8 +24,8 @@ public :
 		return recvBuf;
 	}
 
-	std::string GetObjNumString() {
-		return std::to_string(connObjNum/100);
+	UINT16 GetObjNum() {
+		return connObjNum;
 	}
 
 	std::string GetUuid() {
@@ -186,9 +186,6 @@ private:
 
 	// 2 bytes
 	UINT16 connObjNum;
-
-	// 4 bytes
-	UINT32 userPk = 0;
 
 	// 8 bytes
 	SOCKET userSkt;

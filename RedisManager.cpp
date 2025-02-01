@@ -1,7 +1,8 @@
 #include "RedisManager.h"
+
 thread_local std::mt19937 RedisManager::gen(std::random_device{}());
 
-void RedisManager::init(const UINT16 RedisThreadCnt_) {
+void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_) {
 
     // ---------- SET PACKET PROCESS ---------- 
     packetIDTable = std::vector<RECV_PACKET_FUNCTION>(PACKET_ID_SIZE, nullptr);
@@ -22,6 +23,8 @@ void RedisManager::init(const UINT16 RedisThreadCnt_) {
     itemType[1] = "equipment";
     itemType[2] = "consumables ";
     itemType[3] = "materials";
+
+    inGameUserManager->Init(maxClientCount_);
 
     RedisManager::RedisRun(RedisThreadCnt_);
     RedisManager::MysqlRun();
@@ -117,11 +120,12 @@ void RedisManager::CloseMySQL() {
 //  ---------------------------- SYSTEM  ----------------------------
 
 void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    auto uuidCheck = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
+    auto userConn = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
-    TempConnUser->SetUuid(uuidCheck->uuId);
+    TempConnUser->SetUuid(userConn->uuId);
+    inGameUserManager->Set(TempConnUser->GetObjNum(), userConn->userPk, userConn->level, userConn->currentExp);
 
-    redis.persist("user:" + uuidCheck->uuId); // Remove TTL Time
+    redis.persist("user:" + userConn->uuId); // Remove TTL Time
 }
 
 void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Normal Disconnect
@@ -205,14 +209,15 @@ void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
 }
 
 void RedisManager::ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    // Process Remain Packet
 
 }
 
 
-//  ---------------------------- USER_STATUS  ----------------------------4
+//  ---------------------------- USER_STATUS  ----------------------------
 
 void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    auto addItemReqPacket = reinterpret_cast<EXP_UP_REQUEST*>(pPacket_);
+    auto expUpReqPacket = reinterpret_cast<EXP_UP_REQUEST*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
 
     EXP_UP_RESPONSE expUpResPacket;
@@ -220,15 +225,30 @@ void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     expUpResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
     expUpResPacket.uuId = TempConnUser->GetUuid();
 
-    redis.hget
+    std::string user_slot = "userinfo:" + TempConnUser->GetUuid();
 
-}
+    std::pair<uint8_t, unsigned int> tempExp = inGameUserManager->ExpUp(TempConnUser->GetObjNum(), expUpReqPacket->increaseExp);
 
-void RedisManager::LevelUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
-    auto addItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
-    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    if (tempExp.first == 0) {
+        redis.hincrby(user_slot,"exp", tempExp.second);
 
+        expUpResPacket.currentExp = tempExp.second;
+        TempConnUser->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
+    }
+    else { // Level Up
+        redis.hincrby(user_slot, "level", tempExp.first);
+        redis.set(user_slot, "exp", tempExp.second);
 
+        LEVEL_UP_RESPONSE levelUpResPacket;
+        levelUpResPacket.PacketId = (UINT16)PACKET_ID::ADD_ITEM_RESPONSE;
+        levelUpResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
+        levelUpResPacket.uuId = TempConnUser->GetUuid();
+
+        expUpResPacket.currentExp = tempExp.second;
+        levelUpResPacket.currentLevel = tempExp.first;
+        TempConnUser->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
+        TempConnUser->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
+    }
 }
 
 //  ---------------------------- INVENTORY  ----------------------------

@@ -137,6 +137,7 @@
   <ItemGroup>
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="ConnUsersManager.cpp" />
+    <ClCompile Include="InGameUserManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="QuokkaServer.cpp" />
     <ClCompile Include="RedisManager.cpp" />
@@ -145,6 +146,7 @@
     <ClInclude Include="ConnUser.h" />
     <ClInclude Include="ConnUsersManager.h" />
     <ClInclude Include="Define.h" />
+    <ClInclude Include="InGameUserManager.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="QuokkaServer.h" />
     <ClInclude Include="RedisManager.h" />

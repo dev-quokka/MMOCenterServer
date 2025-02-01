@@ -7,6 +7,7 @@
 
 #include "ConnUsersManager.h"
 #include "Packet.h"
+#include "InGameUserManager.h"
 
 #include <sw/redis++/redis++.h>
 #include <json/json.h>
@@ -20,7 +21,7 @@
 
 class RedisManager {
 public:
-    void init(const UINT16 RedisThreadCnt_);
+    void init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_);
     void EndRedisThreads(); // End Redis Threads
     void SetConnUserManager(ConnUsersManager* connUsersManager_);
     void PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_); // Push Redis Packet
@@ -44,7 +45,6 @@ private:
 
     // USER STATUS
     void ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void LevelUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // INVENTORY
     void AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
@@ -68,7 +68,6 @@ private:
 
     // 8 bytes
     sw::redis::RedisCluster redis;
-    ConnUsersManager* connUsersManager;
     MYSQL_ROW Row;
     std::uniform_int_distribution<int> dist;
 
@@ -81,7 +80,9 @@ private:
     std::vector<std::thread> redisPool;
     std::vector<std::string> itemType;
     std::vector<short> enhanceProbabilities = {100,90,80,70,60,50,40,30,20,10};
-    std::vector<short> enhanceProbabilities = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+
+    // 64b bytes
+    InGameUserManager* inGameUserManager;
 
     // 72 bytes
     std::condition_variable cv;
@@ -97,6 +98,9 @@ private:
 
     // 242 bytes
     sw::redis::ConnectionOptions connection_options;
+
+    // 606 bytes
+    ConnUsersManager* connUsersManager;
 
     // 1096 bytes
     MYSQL Conn;

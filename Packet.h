@@ -31,7 +31,9 @@ struct PACKET_HEADER
 //  ---------------------------- SYSTEM  ----------------------------
 
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
+	uint8_t level;
 	UINT16 userPk;
+	unsigned int currentExp;
 };
 
 struct USER_CONNECT_RESPONSE_PACKET : PACKET_HEADER {
@@ -42,7 +44,7 @@ struct USER_CONNECT_RESPONSE_PACKET : PACKET_HEADER {
 //  ---------------------------- USER STATUS  ----------------------------
 
 struct EXP_UP_REQUEST : PACKET_HEADER {
-	unsigned int exp;
+	unsigned int increaseExp;
 };
 
 struct EXP_UP_RESPONSE : PACKET_HEADER {
@@ -50,7 +52,7 @@ struct EXP_UP_RESPONSE : PACKET_HEADER {
 };
 
 struct LEVEL_UP_RESPONSE : PACKET_HEADER {
-	uint8_t level;
+	uint8_t currentLevel;
 };
 
 //  ---------------------------- INVENTORY  ----------------------------
