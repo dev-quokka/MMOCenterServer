@@ -1,23 +1,14 @@
 #pragma once
 
-#define MYSQL_USER "quokka"
-#define MYSQL_PASSWORD "1234"
-#define MYSQL_HOST "127.0.0.1"
-#define MYSQL_DB "Quokka"
-
 #include "ConnUsersManager.h"
 #include "Packet.h"
 #include "InGameUserManager.h"
 
 #include <sw/redis++/redis++.h>
-#include <json/json.h>
-#include <mysql.h>
 #include <windef.h>
 #include <iostream>
 #include <random>
 #include <unordered_map>
-
-#pragma comment (lib, "libmysql.lib") // mysql 연동
 
 class RedisManager {
 public:
@@ -32,10 +23,7 @@ private:
     bool EquipmentEnhance(short currentEnhanceCount_);
 
     void RedisRun(const UINT16 RedisThreadCnt_);
-    void MysqlRun();
-    void SendMsg(SOCKET TempSkt_);
     void RedisThread();
-    void CloseMySQL(); // Close mysql
 
     //SYSTEM
     void UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // User Connect
@@ -60,18 +48,16 @@ private:
     void EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // RAID
+    void Matching(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
 
     // 1 bytes
     bool redisRun = 0;
 
-    // 4 bytes
-    int MysqlResult;
-
     // 8 bytes
     SOCKET webServerSocket = 0;
     sw::redis::RedisCluster redis;
-    MYSQL_ROW Row;
     std::uniform_int_distribution<int> dist;
 
     // 16 bytes
@@ -95,9 +81,6 @@ private:
     // 80 bytes
     std::mutex redisMu;
 
-    // 104 bytes
-    MYSQL_RES* Result;
-
     // 136 bytes 
     boost::lockfree::queue<DataPacket> procSktQueue;// 나중에 병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환
 
@@ -106,10 +89,6 @@ private:
 
     // 606 bytes
     ConnUsersManager* connUsersManager;
-
-    // 1096 bytes
-    MYSQL Conn;
-    MYSQL* ConnPtr = NULL;
 
     // 5000 bytes
     thread_local static std::mt19937 gen;

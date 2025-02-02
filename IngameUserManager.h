@@ -5,7 +5,6 @@
 
 struct EXP_MANAGER {
 	uint8_t currentLevel;
-	UINT32 userPk;
 	unsigned int currentExp;
 };
 
@@ -13,9 +12,8 @@ class InGameUserManager {
 public:
 	void Init(UINT16 maxClientCount_);
 	uint8_t GetLevel(UINT16 connObjNum_);
-	UINT32 GetPk(UINT16 connObjNum_);
 	std::pair<uint8_t, unsigned int> ExpUp(UINT16 connObjNum_, short mobExp_);
-	void Set(UINT16 connObjNum_, UINT32 userPk_, uint8_t currentLevel_, unsigned int currentExp_);
+	void Set(UINT16 connObjNum_, uint8_t currentLevel_, unsigned int currentExp_);
 	void Reset(UINT16 connObjNum_);
 
 private:

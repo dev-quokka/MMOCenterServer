@@ -22,7 +22,6 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
     inGameUserManager->Init(maxClientCount_);
 
     RedisManager::RedisRun(RedisThreadCnt_);
-    RedisManager::MysqlRun();
 }
 
 void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Server
@@ -43,14 +42,6 @@ void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Ser
     }
 }
 
-void RedisManager::MysqlRun() {
-    mysql_init(&Conn);
-    ConnPtr = mysql_real_connect(&Conn, MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD , MYSQL_DB , 3306, (char*)NULL, 0);
-
-    if (ConnPtr == NULL) std::cout << "MySQL Connect Fail" << std::endl; // mysql 연결 실패
-    else std::cout << "MySQL Connect Success" << std::endl; // mysql 연결 성공
-}
-
 void RedisManager::Disconnect(SOCKET userSkt) {
     this->UserDisConnect(userSkt);
 }
@@ -67,18 +58,13 @@ bool RedisManager::CreateRedisThread(const UINT16 RedisThreadCnt_) {
     return true;
 }
 
-bool RedisManager::EquipmentEnhance(short currentEnhanceCount_) {
+bool RedisManager::EquipmentEnhance(short currentEnhanceCount_) { // 
     if (currentEnhanceCount_ < 0 || currentEnhanceCount_ >= enhanceProbabilities.size()) { // Strange Enhance
         return false;
     }
 
     std::uniform_int_distribution<int> range(1, 100);
     return dist(gen) <= enhanceProbabilities[currentEnhanceCount_];
-}
-
-void RedisManager::SendMsg(SOCKET tempSkt_) { // Send Proccess Message To User
-    ConnUser* TempConnUser = connUsersManager->FindUser(tempSkt_);        
-    //TempConnUser->PushSendMsg();
 }
 
 void RedisManager::RedisThread() {
@@ -104,13 +90,8 @@ void RedisManager::PushRedisPacket(const SOCKET userSkt_, const UINT32 size_, ch
     procSktQueue.push(tempD);
 }
 
-void RedisManager::CloseMySQL() {
-    
-    mysql_close(ConnPtr);
-}
 
-
-// ---------------------------- PACKET ----------------------------
+// ============================== PACKET ==============================
 
 //  ---------------------------- SYSTEM  ----------------------------
 
