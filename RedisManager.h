@@ -42,9 +42,11 @@ private:
     void Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // Normal Disconnect (Set Short Time TTL)
     void UserDisConnect(SOCKET userSkt); // Abnormal Disconnect (Set Long Time TTL)
     void ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void ImWebRequest(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // Web Server Socket Check
 
     // USER STATUS
     void ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void LevleUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // INVENTORY
     void AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
@@ -67,6 +69,7 @@ private:
     int MysqlResult;
 
     // 8 bytes
+    SOCKET webServerSocket = 0;
     sw::redis::RedisCluster redis;
     MYSQL_ROW Row;
     std::uniform_int_distribution<int> dist;
@@ -78,10 +81,12 @@ private:
     typedef void(RedisManager::*RECV_PACKET_FUNCTION)(SOCKET, UINT16, char*); 
     std::vector<RECV_PACKET_FUNCTION> packetIDTable;
     std::vector<std::thread> redisPool;
-    std::vector<std::string> itemType;
-    std::vector<short> enhanceProbabilities = {100,90,80,70,60,50,40,30,20,10};
 
-    // 64b bytes
+    std::vector<short> enhanceProbabilities = {100,90,80,70,60,50,40,30,20,10};
+    std::vector<unsigned int> mobExp = { 0,1,2,3,4,5,6,7,8,9,10 };
+    std::vector<std::string> itemType = {"equipment", "consumables", "materials" };
+
+    // 64 bytes
     InGameUserManager* inGameUserManager;
 
     // 72 bytes

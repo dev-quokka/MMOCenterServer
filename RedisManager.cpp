@@ -19,11 +19,6 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
     packetIDTable[26] = &RedisManager::DeleteItem;
     packetIDTable[27] = &RedisManager::MoveItem;
 
-    // ---------- SET ITEM TYPE ---------- 
-    itemType[1] = "equipment";
-    itemType[2] = "consumables ";
-    itemType[3] = "materials";
-
     inGameUserManager->Init(maxClientCount_);
 
     RedisManager::RedisRun(RedisThreadCnt_);
@@ -131,79 +126,11 @@ void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket
 void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Normal Disconnect
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
 
-    // Get Update Data From Redis 
-    //"{user_info_" + TempConnUser->GetObjNumString() + "}"
-    
-
-    // Update Inven Data From Redis
-    std::vector<std::string> keys = { TempConnUser->GetUuid() + ":equipment", TempConnUser->GetUuid() + ":consumable", TempConnUser->GetUuid() + ":material" };
-    redis.hmget("{inventory_info}_" + TempConnUser->GetObjNumString(), keys.begin(), keys.end(), keys);
-
-    std::string userInfoQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
-    std::string invenQuery = "update inventory set ";
-
-    const char* Query = &*userInfoQuery.begin();
-    MysqlResult = mysql_query(ConnPtr, Query);
-
-    if (MysqlResult != 0) {
-        std::cerr << "MySQL UPDATE UserInfo Query Error: " << mysql_error(ConnPtr) << std::endl;
-        mysql_query(ConnPtr, "ROLLBACK;"); // 무결성 오류 방지 ROLLBACK
-        return;
-    }
-
-    Query = &*invenQuery.begin();
-    MysqlResult = mysql_query(ConnPtr, Query);
-
-    if (MysqlResult != 0) {
-        std::cerr << "MySQL UPDATE UserInfo Query Error: " << mysql_error(ConnPtr) << std::endl;
-        mysql_query(ConnPtr, "ROLLBACK;"); // 무결성 오류 방지 ROLLBACK
-        return;
-    }
-
-    mysql_query(ConnPtr, "COMMIT;");
-
-    TempConnUser->Reset(); // Initializes the ConnUser object
-
-    redis.expire("user:"+ TempConnUser->GetUuid(), 180); // Set Short Time TTL (3 minutes)
-    return;
+    redis.expire("user:" + TempConnUser->GetUuid(), 180); // Set Short Time TTL (3 minutes)
 }
 
 void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
-
-    // Get Update Data From Redis 
-    std::unordered_map<std::string, std::string> userInfoMap;
-    std::unordered_map<std::string, std::string> invenMap;
-    redis.hgetall("user:" + TempConnUser->GetUuid(), std::inserter(userInfoMap, userInfoMap.begin()));
-    redis.hgetall("inventory:" + TempConnUser->GetUuid(), std::inserter(invenMap, invenMap.begin()));
-
-    // Update UserInfo In Mysql
-    std::string userInfoQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
-
-    const char* Query = &*userInfoQuery.begin();
-    MysqlResult = mysql_query(ConnPtr, Query);
-
-    if (MysqlResult != 0) {
-        std::cerr << "MySQL UPDATE UserInfo Query Error: " << mysql_error(ConnPtr) << std::endl;
-        mysql_query(ConnPtr, "ROLLBACK;"); // 무결성 오류 방지 ROLLBACK
-        return;
-    }
-
-    // Update Inven Data From Redis
-    std::string invenQuery = "update Users set last_login = current_timestamp, level = " + userInfoMap["level"] + "exp = " + userInfoMap["exp"] + "where id = " + userInfoMap["pk"];
-
-    const char* Query = &*invenQuery.begin();
-    MysqlResult = mysql_query(ConnPtr, Query);
-
-    if (MysqlResult != 0) {
-        std::cerr << "MySQL UPDATE UserInfo Query Error: " << mysql_error(ConnPtr) << std::endl;
-        mysql_query(ConnPtr, "ROLLBACK;"); // 무결성 오류 방지 ROLLBACK
-        return;
-    }
-
-    mysql_query(ConnPtr, "COMMIT;");
-
-    TempConnUser->Reset(); // Initializes the ConnUser object
 
     redis.expire("user:" + TempConnUser->GetUuid(), 600); // Set Long Time TTL (10 minutes)
 }
@@ -211,6 +138,26 @@ void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
 void RedisManager::ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     // Process Remain Packet
 
+}
+
+void RedisManager::ImWebRequest(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+
+    IM_WEB_RESPONSE imWebResPacket;
+    imWebResPacket.PacketId = (UINT16)PACKET_ID::IM_WEB_RESPONSE;
+    imWebResPacket.PacketLength = sizeof(IM_WEB_RESPONSE);
+    imWebResPacket.uuId = TempConnUser->GetUuid();
+
+    if (webServerSocket != 0) { // Web Server Already Exist
+        imWebResPacket.isSuccess = false;
+        TempConnUser->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
+        return;
+    }
+
+    webServerSocket = userSkt;
+    imWebResPacket.isSuccess = true;
+
+    TempConnUser->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
 }
 
 
@@ -221,35 +168,58 @@ void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
 
     EXP_UP_RESPONSE expUpResPacket;
-    expUpResPacket.PacketId = (UINT16)PACKET_ID::ADD_ITEM_RESPONSE;
-    expUpResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
+    expUpResPacket.PacketId = (UINT16)PACKET_ID::EXP_UP_RESPONSE;
+    expUpResPacket.PacketLength = sizeof(EXP_UP_RESPONSE);
     expUpResPacket.uuId = TempConnUser->GetUuid();
 
     std::string user_slot = "userinfo:" + TempConnUser->GetUuid();
 
-    std::pair<uint8_t, unsigned int> tempExp = inGameUserManager->ExpUp(TempConnUser->GetObjNum(), expUpReqPacket->increaseExp);
+    if (redis.hincrby(user_slot, "exp", mobExp[expUpReqPacket->mobNum])) { // Exp Up Success
+        auto userExp = inGameUserManager->ExpUp(TempConnUser->GetObjNum(), mobExp[expUpReqPacket->mobNum]); // Increase Level Cnt , Current Exp
 
-    if (tempExp.first == 0) {
-        redis.hincrby(user_slot,"exp", tempExp.second);
+        if (userExp.first!=0) { // Level Up
+            LEVEL_UP_RESPONSE levelUpResPacket;
+            levelUpResPacket.PacketId = (UINT16)PACKET_ID::LEVEL_UP_RESPONSE;
+            levelUpResPacket.PacketLength = sizeof(LEVEL_UP_RESPONSE);
+            levelUpResPacket.uuId = TempConnUser->GetUuid();
 
-        expUpResPacket.currentExp = tempExp.second;
-        TempConnUser->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
+            if (redis.hincrby(user_slot, "level", userExp.first)) { // Level Up Success
+                levelUpResPacket.increaseLevel = userExp.first;
+                levelUpResPacket.currentExp = userExp.second;
+
+                TempConnUser->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
+
+                { // Send User PK, Level, Exp data to the Web Server for Synchronization with MySQL
+                    ConnUser* TempWebServer = connUsersManager->FindUser(webServerSocket);
+
+                    SYNCRONIZE_LEVEL_REQUEST syncLevelReqPacket;
+                    syncLevelReqPacket.PacketId = (UINT16)PACKET_ID::SYNCRONIZE_LEVEL_REQUEST;
+                    syncLevelReqPacket.PacketLength = sizeof(SYNCRONIZE_LEVEL_REQUEST);
+                    syncLevelReqPacket.uuId = TempWebServer->GetUuid();
+                    syncLevelReqPacket.level = userExp.first;
+                    syncLevelReqPacket.currentExp = userExp.second;
+                    syncLevelReqPacket.userPk = inGameUserManager->GetPk(TempConnUser->GetObjNum());
+
+                    TempWebServer->PushSendMsg(sizeof(SYNCRONIZE_LEVEL_REQUEST), (char*)&syncLevelReqPacket);
+                }
+            }
+            else { // Level Up Fail
+                levelUpResPacket.increaseLevel = 0;
+                levelUpResPacket.currentExp = 0;
+                TempConnUser->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
+            }
+        }
+        else { // Just Exp Up
+            expUpResPacket.expUp = userExp.second;
+            TempConnUser->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
+        }
     }
-    else { // Level Up
-        redis.hincrby(user_slot, "level", tempExp.first);
-        redis.set(user_slot, "exp", tempExp.second);
-
-        LEVEL_UP_RESPONSE levelUpResPacket;
-        levelUpResPacket.PacketId = (UINT16)PACKET_ID::ADD_ITEM_RESPONSE;
-        levelUpResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
-        levelUpResPacket.uuId = TempConnUser->GetUuid();
-
-        expUpResPacket.currentExp = tempExp.second;
-        levelUpResPacket.currentLevel = tempExp.first;
+    else{ // Exp Up Fail
+        expUpResPacket.expUp = 0;
         TempConnUser->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
-        TempConnUser->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
     }
 }
+
 
 //  ---------------------------- INVENTORY  ----------------------------
 
@@ -365,8 +335,8 @@ void RedisManager::AddEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacke
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
 
     ADD_EQUIPMENT_RESPONSE addEquipResPacket;
-    addEquipResPacket.PacketId = (UINT16)PACKET_ID::ADD_ITEM_RESPONSE;
-    addEquipResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
+    addEquipResPacket.PacketId = (UINT16)PACKET_ID::ADD_EQUIPMENT_RESPONSE;
+    addEquipResPacket.PacketLength = sizeof(ADD_EQUIPMENT_RESPONSE);
     addEquipResPacket.uuId = TempConnUser->GetUuid();
 
     if (addEquipReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
@@ -392,8 +362,8 @@ void RedisManager::DeleteEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPa
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
 
     DEL_EQUIPMENT_RESPONSE delEquipResPacket;
-    delEquipResPacket.PacketId = (UINT16)PACKET_ID::DEL_ITEM_RESPONSE;
-    delEquipResPacket.PacketLength = sizeof(DEL_ITEM_RESPONSE);
+    delEquipResPacket.PacketId = (UINT16)PACKET_ID::DEL_EQUIPMENT_RESPONSE;
+    delEquipResPacket.PacketLength = sizeof(DEL_EQUIPMENT_RESPONSE);
     delEquipResPacket.uuId = TempConnUser->GetUuid();
 
     if (delEquipReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
@@ -418,8 +388,8 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pP
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
 
     ENH_EQUIPMENT_RESPONSE delEquipResPacket;
-    delEquipResPacket.PacketId = (UINT16)PACKET_ID::DEL_ITEM_RESPONSE;
-    delEquipResPacket.PacketLength = sizeof(DEL_ITEM_RESPONSE);
+    delEquipResPacket.PacketId = (UINT16)PACKET_ID::ENH_EQUIPMENT_RESPONSE;
+    delEquipResPacket.PacketLength = sizeof(ENH_EQUIPMENT_RESPONSE);
     delEquipResPacket.uuId = TempConnUser->GetUuid();
 
     if (delEquipReqPacket->uuId == TempConnUser->GetUuid()) { // UUID CORRECT
