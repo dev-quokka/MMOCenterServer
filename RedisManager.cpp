@@ -118,21 +118,39 @@ void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket
     auto userConn = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
     TempConnUser->SetUuid(userConn->uuId);
-    inGameUserManager->Set(TempConnUser->GetObjNum(), userConn->userPk, userConn->level, userConn->currentExp);
+    TempConnUser->SetPk(userConn->userPk);
+    inGameUserManager->Set(TempConnUser->GetObjNum(), userConn->level, userConn->currentExp);
 
     redis.persist("user:" + userConn->uuId); // Remove TTL Time
 }
 
 void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Normal Disconnect
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    ConnUser* TempWebServer = connUsersManager->FindUser(webServerSocket);
 
-    redis.expire("user:" + TempConnUser->GetUuid(), 180); // Set Short Time TTL (3 minutes)
+    {  // Send User PK to the Web Server for Synchronization with MySQL
+        SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
+        syncLogoutReqPacket.PacketId = (UINT16)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
+        syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
+        syncLogoutReqPacket.uuId = TempConnUser->GetUuid();
+        syncLogoutReqPacket.userPk = TempConnUser->GetPk();
+
+        TempWebServer->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+    }
 }
 
 void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
+    ConnUser* TempWebServer = connUsersManager->FindUser(webServerSocket);
 
-    redis.expire("user:" + TempConnUser->GetUuid(), 600); // Set Long Time TTL (10 minutes)
+    {  // Send User PK to the Web Server for Synchronization with MySQL
+        SYNCRONIZE_DISCONNECT_REQUEST syncDisconnReqPacket;
+        syncDisconnReqPacket.PacketId = (UINT16)PACKET_ID::SYNCRONIZE_DISCONNECT_REQUEST;
+        syncDisconnReqPacket.PacketLength = sizeof(SYNCRONIZE_DISCONNECT_REQUEST);
+        syncDisconnReqPacket.uuId = TempConnUser->GetPk();
+
+        TempWebServer->PushSendMsg(sizeof(SYNCRONIZE_DISCONNECT_REQUEST), (char*)&syncDisconnReqPacket);
+    }
 }
 
 void RedisManager::ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
@@ -198,7 +216,7 @@ void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
                     syncLevelReqPacket.uuId = TempWebServer->GetUuid();
                     syncLevelReqPacket.level = userExp.first;
                     syncLevelReqPacket.currentExp = userExp.second;
-                    syncLevelReqPacket.userPk = inGameUserManager->GetPk(TempConnUser->GetObjNum());
+                    syncLevelReqPacket.userPk = TempConnUser->GetPk();
 
                     TempWebServer->PushSendMsg(sizeof(SYNCRONIZE_LEVEL_REQUEST), (char*)&syncLevelReqPacket);
                 }

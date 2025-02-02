@@ -54,10 +54,12 @@ struct SYNCRONIZE_LEVEL_REQUEST : PACKET_HEADER {
 	unsigned int currentExp;
 };
 
-struct SYNCRONIZE_USERINFO_REQUEST : PACKET_HEADER {
+struct SYNCRONIZE_LOGOUT_REQUEST : PACKET_HEADER {
 	UINT16 userPk;
-	// UserInfo
-	// Inventory
+};
+
+struct SYNCRONIZE_DISCONNECT_REQUEST : PACKET_HEADER {
+	UINT16 userPk;
 };
 
 //  ---------------------------- USER STATUS  ----------------------------
@@ -166,6 +168,8 @@ enum class PACKET_ID : UINT16 {
 	IM_WEB_REQUEST = 4,
 	IM_WEB_RESPONSE = 5,
 	SYNCRONIZE_LEVEL_REQUEST = 6,
+	SYNCRONIZE_LOGOUT_REQUEST = 7,
+	SYNCRONIZE_DISCONNECT_REQUEST = 8,
 
 	// USER STATUS (11~)
 	EXP_UP_REQUEST = 11,

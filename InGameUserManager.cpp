@@ -10,13 +10,9 @@ uint8_t InGameUserManager::GetLevel(UINT16 connObjNum_) {
 	return inGmaeUser[connObjNum_]->currentLevel;
 }
 
-UINT32 InGameUserManager::GetPk(UINT16 connObjNum_){
-	return inGmaeUser[connObjNum_]->userPk;
-}
 
-void InGameUserManager::Set(UINT16 connObjNum_, UINT32 userPk_, uint8_t currentLevel_, unsigned int currentExp_) {
+void InGameUserManager::Set(UINT16 connObjNum_, uint8_t currentLevel_, unsigned int currentExp_) {
 	inGmaeUser[connObjNum_]->currentLevel = currentLevel_;
-	inGmaeUser[connObjNum_]->userPk = userPk_;
 	inGmaeUser[connObjNum_]->currentExp = currentExp_;
 }
 
@@ -39,6 +35,5 @@ std::pair<uint8_t, unsigned int> InGameUserManager::ExpUp(UINT16 connObjNum_, sh
 
 void InGameUserManager::Reset(UINT16 connObjNum_) {
 	inGmaeUser[connObjNum_]->currentLevel = 0;
-	inGmaeUser[connObjNum_]->userPk = 0;
 	inGmaeUser[connObjNum_]->currentExp = 0;
 }

@@ -20,12 +20,20 @@ public :
 		userUuid = userUuid_;
 	}
 
+	void SetPk(UINT32 userPk_) {
+		userPk = userPk_;
+	}
+
 	char* GetRecvBuffer() {
 		return recvBuf;
 	}
 
 	UINT16 GetObjNum() {
 		return connObjNum;
+	}
+
+	UINT32 GetPk() {
+		return userPk;
 	}
 
 	std::string GetUuid() {
@@ -186,6 +194,9 @@ private:
 
 	// 2 bytes
 	UINT16 connObjNum;
+
+	// 4 bytes
+	UINT32 userPk;
 
 	// 8 bytes
 	SOCKET userSkt;
