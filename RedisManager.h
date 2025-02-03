@@ -2,7 +2,7 @@
 
 #include "ConnUsersManager.h"
 #include "Packet.h"
-#include "InGameUserManager.h"
+#include "UsersExpManager.h"
 
 #include <sw/redis++/redis++.h>
 #include <windef.h>
@@ -48,7 +48,8 @@ private:
     void EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // RAID
-    void Matching(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void RaidMatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
 
@@ -73,7 +74,7 @@ private:
     std::vector<std::string> itemType = {"equipment", "consumables", "materials" };
 
     // 64 bytes
-    InGameUserManager* inGameUserManager;
+    UsersExpManager* userExpManager;
 
     // 72 bytes
     std::condition_variable cv;

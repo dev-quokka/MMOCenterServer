@@ -8,7 +8,7 @@ struct EXP_MANAGER {
 	unsigned int currentExp;
 };
 
-class InGameUserManager {
+class UsersExpManager {
 public:
 	void Init(UINT16 maxClientCount_);
 	uint8_t GetLevel(UINT16 connObjNum_);
