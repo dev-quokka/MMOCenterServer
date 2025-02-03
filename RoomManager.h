@@ -1,5 +1,9 @@
 #pragma once
 
+#include "Room.h"
+#include "Packet.h"
+#include "ConnUsersManager.h"
+
 #include <iostream>
 #include <queue>
 #include <set>
@@ -32,7 +36,7 @@ public:
 	bool Insert(uint8_t userLevel_, UINT16 userSkt_);
 	bool CreateMatchThread();
 	bool CreatTimeCheckThread();
-	void MatchThread();
+	void MatchingThread();
 	void TimeCheckThread();
 
 private:
@@ -41,7 +45,7 @@ private:
 	bool timeChekcRun;
 
 	// 16 bytes
-	std::thread matchThread;
+	std::thread matchingThread;
 	std::thread timeCheckThread;
 
 	// 24 bytes
@@ -54,5 +58,6 @@ private:
 	boost::lockfree::queue<uint8_t> roomNumQueue; // Set Room Num
 
 	// 576 bytes
-	tbb::concurrent_hash_map<uint8_t, std::priority_queue<MatchingRoom*>> matchMap; // {Level/3 + 1 (0~2 = 1, 3~5 = 2 ...), UserSkt}
+	tbb::concurrent_hash_map<short, Room*> roomMap; // {roomNum, Room}
+	tbb::concurrent_hash_map<uint8_t, std::priority_queue<MatchingRoom*>> matchingMap; // {Level/3 + 1 (0~2 = 1, 3~5 = 2 ...), UserSkt}
 };

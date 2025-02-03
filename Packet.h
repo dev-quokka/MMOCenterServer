@@ -167,10 +167,13 @@ struct RAID_MATCHING_REQUEST : PACKET_HEADER {
 
 };
 
-struct RAID_MATCHING_RESPONSE : PACKET_HEADER {
-	uint8_t timerMin;
+struct RAID_MATCHING_RESPONSE : PACKET_HEADER { // Matching Success
+	uint8_t timer;
+	uint8_t teamLevel; 
+	UINT16 teamUserSkt;
 	short roomNum; // If Max RoomNum Up to Short Range, Back to Number One
 	short mobHp;
+	std::string teamId;
 };
 
 struct RAID_HEAT_REQUEST : PACKET_HEADER {
