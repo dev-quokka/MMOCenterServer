@@ -67,7 +67,7 @@ private:
     // 32 bytes
     typedef void(RedisManager::*RECV_PACKET_FUNCTION)(SOCKET, UINT16, char*); 
     std::vector<RECV_PACKET_FUNCTION> packetIDTable;
-    std::vector<std::thread> redisPool;
+    std::vector<std::thread> redisThreads;
 
     std::vector<short> enhanceProbabilities = {100,90,80,70,60,50,40,30,20,10};
     std::vector<unsigned int> mobExp = { 0,1,2,3,4,5,6,7,8,9,10 };

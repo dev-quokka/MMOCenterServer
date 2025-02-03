@@ -11,6 +11,5 @@ public:
 
 private:
     // 576 bytes
-    tbb::concurrent_hash_map<SOCKET, ConnUser*>::accessor accessor;
     tbb::concurrent_hash_map<SOCKET, ConnUser*> ConnUsers; // ConnUsers Info
 };

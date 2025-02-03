@@ -61,7 +61,7 @@ private:
 
     // 32 bytes
     std::vector<std::thread> workThreads;
-    std::vector<std::thread> acceptThreads;
+    std::thread acceptThread;
 
     // 136 bytes 
     boost::lockfree::queue<ConnUser*> AcceptQueue; // For Aceept User Queue

@@ -53,7 +53,7 @@ void RedisManager::SetConnUserManager(ConnUsersManager* connUsersManager_) {
 bool RedisManager::CreateRedisThread(const UINT16 RedisThreadCnt_) {
     redisRun = true;
     for (int i = 0; i < RedisThreadCnt_; i++) {
-        redisPool.emplace_back(std::thread([this]() {RedisThread(); }));
+        redisThreads.emplace_back(std::thread([this]() {RedisThread(); }));
     }
     return true;
 }

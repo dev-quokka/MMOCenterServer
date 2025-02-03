@@ -18,6 +18,6 @@ public:
 
 private:
 	std::vector<EXP_MANAGER*> inGmaeUser;
-	std::vector<short> enhanceProbabilities = { 0,1,2,3,5,8,13,21,34,56,90,146,236,382,618 };
+	std::vector<short> enhanceProbabilities = { 0,1,2,3,5,8,13,21,34,56,90,146,236,382,618,1000 };
 };
 

@@ -129,9 +129,7 @@ bool QuokkaServer::CreateWorkThread() {
 
 bool QuokkaServer::CreateAccepterThread() {
     auto threadCnt = MaxThreadCnt/4; // (core/4)
-    for (int i = 0; i < threadCnt; i++) {
-        acceptThreads.emplace_back([this]() {AccepterThread();});
-    }
+    acceptThread = std::thread([this]() { AccepterThread(); });
     std::cout << "AcceptThread ½ÃÀÛ" << std::endl;
     return true;
 }
