@@ -25,6 +25,15 @@
     <Filter Include="헤더 파일\ConnUsers">
       <UniqueIdentifier>{a4fea4b7-ee8a-4142-92a1-93257acbf2ad}</UniqueIdentifier>
     </Filter>
+    <Filter Include="헤더 파일\ConnUsers\RoomManager">
+      <UniqueIdentifier>{c9d2ae5a-5a12-490a-816d-4f86b29da142}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\ConnUsers\UserExpManager">
+      <UniqueIdentifier>{33559a6b-5416-4fad-bdb6-09921d4b0c19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\ConnUsers\ConnUsersManager">
+      <UniqueIdentifier>{a3e442f8-1f37-41ed-ba2a-da80f513604d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -36,14 +45,17 @@
     <ClCompile Include="RedisManager.cpp">
       <Filter>헤더 파일\Redis</Filter>
     </ClCompile>
-    <ClCompile Include="ConnUsersManager.cpp">
-      <Filter>헤더 파일\ConnUsers</Filter>
-    </ClCompile>
     <ClCompile Include="CircularBuffer.cpp">
       <Filter>헤더 파일\Network\CircularRecvBuf</Filter>
     </ClCompile>
-    <ClCompile Include="InGameUserManager.cpp">
-      <Filter>헤더 파일\ConnUsers</Filter>
+    <ClCompile Include="RoomManager.cpp">
+      <Filter>헤더 파일\ConnUsers\RoomManager</Filter>
+    </ClCompile>
+    <ClCompile Include="UsersExpManager.cpp">
+      <Filter>헤더 파일\ConnUsers\UserExpManager</Filter>
+    </ClCompile>
+    <ClCompile Include="ConnUsersManager.cpp">
+      <Filter>헤더 파일\ConnUsers\ConnUsersManager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -59,17 +71,20 @@
     <ClInclude Include="RedisManager.h">
       <Filter>헤더 파일\Redis</Filter>
     </ClInclude>
-    <ClInclude Include="Packet.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="ConnUsersManager.h">
-      <Filter>헤더 파일\ConnUsers</Filter>
-    </ClInclude>
     <ClInclude Include="CircularBuffer.h">
       <Filter>헤더 파일\Network\CircularRecvBuf</Filter>
     </ClInclude>
-    <ClInclude Include="InGameUserManager.h">
-      <Filter>헤더 파일\ConnUsers</Filter>
+    <ClInclude Include="Packet.h">
+      <Filter>헤더 파일\Redis</Filter>
+    </ClInclude>
+    <ClInclude Include="RoomManager.h">
+      <Filter>헤더 파일\ConnUsers\RoomManager</Filter>
+    </ClInclude>
+    <ClInclude Include="UsersExpManager.h">
+      <Filter>헤더 파일\ConnUsers\UserExpManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ConnUsersManager.h">
+      <Filter>헤더 파일\ConnUsers\ConnUsersManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -19,7 +19,7 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
     packetIDTable[26] = &RedisManager::DeleteItem;
     packetIDTable[27] = &RedisManager::MoveItem;
 
-    inGameUserManager->Init(maxClientCount_);
+    userExpManager->Init(maxClientCount_);
 
     RedisManager::RedisRun(RedisThreadCnt_);
 }
@@ -100,7 +100,7 @@ void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt);
     TempConnUser->SetUuid(userConn->uuId);
     TempConnUser->SetPk(userConn->userPk);
-    inGameUserManager->Set(TempConnUser->GetObjNum(), userConn->level, userConn->currentExp);
+    userExpManager->Set(TempConnUser->GetObjNum(), userConn->level, userConn->currentExp);
 
     redis.persist("user:" + userConn->uuId); // Remove TTL Time
 }
@@ -174,7 +174,7 @@ void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     std::string user_slot = "userinfo:" + TempConnUser->GetUuid();
 
     if (redis.hincrby(user_slot, "exp", mobExp[expUpReqPacket->mobNum])) { // Exp Up Success
-        auto userExp = inGameUserManager->ExpUp(TempConnUser->GetObjNum(), mobExp[expUpReqPacket->mobNum]); // Increase Level Cnt , Current Exp
+        auto userExp = userExpManager->ExpUp(TempConnUser->GetObjNum(), mobExp[expUpReqPacket->mobNum]); // Increase Level Cnt , Current Exp
 
         if (userExp.first!=0) { // Level Up
             LEVEL_UP_RESPONSE levelUpResPacket;
@@ -415,4 +415,19 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pP
     }
 
     TempConnUser->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
+}
+
+
+//  ---------------------------- RAID  ----------------------------
+
+void RaidMatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
 }

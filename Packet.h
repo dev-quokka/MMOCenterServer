@@ -160,6 +160,35 @@ struct ENH_EQUIPMENT_RESPONSE : PACKET_HEADER {
 	bool isSuccess;
 };
 
+
+//  ---------------------------- RAID  ----------------------------
+
+struct RAID_MATCHING_REQUEST : PACKET_HEADER {
+
+};
+
+struct RAID_MATCHING_RESPONSE : PACKET_HEADER {
+	uint8_t timerMin;
+	short roomNum; // If Max RoomNum Up to Short Range, Back to Number One
+	short mobHp;
+};
+
+struct RAID_HEAT_REQUEST : PACKET_HEADER {
+
+};
+
+struct RAID_HEAT_RESPONSE : PACKET_HEADER {
+
+};
+
+struct RAID_END_REQUEST : PACKET_HEADER {
+	short roomNum; // If Max RoomNum Up to Short Range, Back to Number One
+};
+
+struct RAID_END_RESPONSE : PACKET_HEADER {
+	bool isEnd;
+};
+
 enum class PACKET_ID : UINT16 {
 	//SYSTEM
 	USER_CONNECT_REQUEST = 1,
