@@ -18,4 +18,5 @@ InGameUser* InGameUserManager::GetInGameUserByObjNum(UINT16 connObjNum_) {
 }
 
 void InGameUserManager::Reset(UINT16 connObjNum_) {
+
 }

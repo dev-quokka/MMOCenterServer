@@ -69,6 +69,9 @@ void MatchingManager::MatchingThread() {
                                 InGameUser* user1 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching1->userSkt)->GetObjNum());
                                 InGameUser* user2 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching2->userSkt)->GetObjNum());
 
+                                std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
+                                std::chrono::time_point<std::chrono::steady_clock> endTime = now + std::chrono::minutes(2);
+
                                 // Send to User1 with User2 Info
                                 rMatchResPacket1.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
                                 rMatchResPacket1.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
@@ -91,17 +94,17 @@ void MatchingManager::MatchingThread() {
                                 rMatchResPacket2.teamUserSkt = tempMatching1->userSkt;
                                 rMatchResPacket2.teamId = tempMatching1->userId;
 
-                                connUsersManager->FindUser(tempMatching1->userSkt)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&rMatchResPacket1); // Send User1 with Game Info && User2 Info
-                                connUsersManager->FindUser(tempMatching2->userSkt)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&rMatchResPacket1); // Send User2 with Game Info && User1 Info
+                                redisManager->PushRedisPacket(tempMatching1->userSkt,sizeof(PacketInfo), (char*)&rMatchResPacket1); // Send User1 with Game Info && User2 Info
+                                redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rMatchResPacket2); // Send User2 with Game Info && User1 Info
                                 
-                                roomManager->MakeRoom(tempRoomNum, 2, 30, user1, user2);
+                                roomManager->MakeRoom(tempRoomNum, 30, user1, user2, endTime);
+                                // tempRoom = 0;
                             }
-
-                            tempRoom = 0;
 
                             while (!roomNumQueue.pop(tempRoomNum)) { // 룸 넘버 없으면 현재 레벨 위치에서 반환될때까지 대기
                                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
                             }
+
                             continue; // 룸넘버 있으면 다음으로 넘어가서 실행
 
                         }
@@ -119,13 +122,21 @@ void MatchingManager::MatchingThread() {
 }
 
 void MatchingManager::TimeCheckThread() {
+    std::chrono::steady_clock::time_point now;
     while (timeChekcRun) {
-        if (!rtCheckQueue.empty()) {
-            if (rtCheckQueue.top().endTime <= std::chrono::steady_clock::now()) {
+        if (!rtCheckSet.empty()) {
+            now = std::chrono::steady_clock::now();
+            if (rtCheckSet.begin()->endTime <= now) {
+                auto rtTemp = rtCheckSet.begin();
 
-            }
-            else {
+                RAID_END_RESPONSE raidEndResPacket;
+                raidEndResPacket.userScore1 = ;
+                raidEndResPacket.userScore2 = ;
+                raidEndResPacket.elapsedTime = ;
 
+                roomManager->DeleteRoom(rtTemp->roomNum);
+                rtCheckSet.erase(rtTemp); // Raid TimeOut
+                roomNumQueue.push(rtTemp->roomNum); // Return Room Number
             }
         } 
         else {

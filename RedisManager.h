@@ -48,8 +48,9 @@ private:
     void EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // RAID
-    void RaidMatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void RaidStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
 

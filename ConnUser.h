@@ -24,14 +24,14 @@ public :
 		return connObjNum;
 	}
 
-	bool WriteRecvData(const char* data_, size_t size_) {
+	bool WriteRecvData(const char* data_, UINT32 size_) {
 		return circularBuffer.Write(data_,size_);
 	}
 
-	PacketInfo ReadRecvData(char* readData_, size_t size_) {
-		auto pHeader = (PACKET_HEADER*)readData_;
-
+	PacketInfo ReadRecvData(char* readData_, UINT32 size_) {
 		if (circularBuffer.Read(readData_, size_)) {
+			auto pHeader = (PACKET_HEADER*)readData_;
+
 			PacketInfo packetInfo;
 			packetInfo.packetId = pHeader->PacketId;
 			packetInfo.dataSize = pHeader->PacketLength;

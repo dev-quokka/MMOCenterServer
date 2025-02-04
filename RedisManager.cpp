@@ -419,11 +419,15 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pP
 
 //  ---------------------------- RAID  ----------------------------
 
-void RaidMatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RaidStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 
 void RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 

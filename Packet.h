@@ -189,7 +189,9 @@ struct RAID_END_REQUEST : PACKET_HEADER {
 };
 
 struct RAID_END_RESPONSE : PACKET_HEADER {
-	bool isEnd;
+	unsigned int userScore1;
+	unsigned int userScore2;
+	std::chrono::time_point<std::chrono::steady_clock> elapsedTime;
 };
 
 enum class PACKET_ID : UINT16 {

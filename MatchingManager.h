@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Packet.h"
-#include "ConnUsersManager.h"
 #include "RoomManager.h"
 #include "InGameUserManager.h"
+#include "RedisManager.h"
 
 #include <iostream>
 #include <queue>
@@ -17,15 +16,14 @@
 
 struct EndTimeCheck {
 	uint8_t roomNum;
+	UINT16 userSkt1;
+	UINT16 userSkt2;
 	std::chrono::time_point<std::chrono::steady_clock> endTime;
-};
 
-struct CompareEndTime {
 	bool operator()(const EndTimeCheck& a, const EndTimeCheck& b) {
 		return a.endTime < b.endTime;
 	}
 };
-
 struct MatchingRoom {
 	uint8_t LoofCnt = 0;
 	uint8_t userLevel;
@@ -52,13 +50,7 @@ private:
 	std::thread timeCheckThread;
 
 	// 24 bytes
-	std::multiset<EndTimeCheck, CompareEndTime> roomExpiration;
-
-	// 40 bytes
-	std::priority_queue<EndTimeCheck, std::vector<EndTimeCheck>, std::greater<>> rtCheckQueue;
-
-
-	RoomManager* roomManager;
+	std::multiset<EndTimeCheck> rtCheckSet;
 
 	// 64 bytes
 	InGameUserManager* inGameUserManager;
@@ -67,8 +59,12 @@ private:
 	boost::lockfree::queue<uint8_t> roomNumQueue; // Set Room Num
 
 	// 576 bytes
+	RoomManager* roomManager;
 	tbb::concurrent_hash_map<uint8_t, std::priority_queue<MatchingRoom*>> matchingMap; // {Level/3 + 1 (0~2 = 1, 3~5 = 2 ...), UserSkt}
 
 	// 606 bytes
 	ConnUsersManager* connUsersManager;
+
+	// 760 bytes
+	RedisManager* redisManager;
 };
