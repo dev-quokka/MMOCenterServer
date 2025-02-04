@@ -2,7 +2,7 @@
 
 #include "ConnUsersManager.h"
 #include "Packet.h"
-#include "UsersExpManager.h"
+#include "InGameUserManager.h"
 
 #include <sw/redis++/redis++.h>
 #include <windef.h>
@@ -74,7 +74,7 @@ private:
     std::vector<std::string> itemType = {"equipment", "consumables", "materials" };
 
     // 64 bytes
-    UsersExpManager* userExpManager;
+    InGameUserManager* inGameUserManager;
 
     // 72 bytes
     std::condition_variable cv;

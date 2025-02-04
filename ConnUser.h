@@ -195,15 +195,9 @@ private:
 	// 2 bytes
 	UINT16 connObjNum;
 
-	// 4 bytes
-	UINT32 userPk;
-
 	// 8 bytes
 	SOCKET userSkt;
 	HANDLE userIocpHandle = INVALID_HANDLE_VALUE;
-
-	// 40 bytes
-	std::string userUuid;
 
 	// 56 bytes
 	OverlappedEx userOvlap = {};

@@ -5,7 +5,7 @@
 #include <string>
 #include <ws2tcpip.h>
 
-const UINT16 PACKET_ID_SIZE = 39; // Last Packet_ID Num + 1
+const UINT16 PACKET_ID_SIZE = 51; // Last Packet_ID Num + 1
 
 struct DataPacket {
 	UINT32 dataSize;
@@ -168,7 +168,7 @@ struct RAID_MATCHING_REQUEST : PACKET_HEADER {
 };
 
 struct RAID_MATCHING_RESPONSE : PACKET_HEADER { // Matching Success
-	uint8_t timer;
+	uint8_t timer; // Minutes
 	uint8_t teamLevel; 
 	UINT16 teamUserSkt;
 	short roomNum; // If Max RoomNum Up to Short Range, Back to Number One
@@ -216,16 +216,22 @@ enum class PACKET_ID : UINT16 {
 	DEL_ITEM_RESPONSE = 28,
 	MOD_ITEM_REQUEST = 29,
 	MOD_ITEM_RESPONSE = 30,
-
-	// COMMON
 	MOV_ITEM_REQUEST = 31,
 	MOV_ITEM_RESPONSE = 32,
 
-	// EQUIPMENT 
+	// INVENTORY::EQUIPMENT 
 	ADD_EQUIPMENT_REQUEST = 33,
 	ADD_EQUIPMENT_RESPONSE = 34,
 	DEL_EQUIPMENT_REQUEST = 35,
 	DEL_EQUIPMENT_RESPONSE = 36,
 	ENH_EQUIPMENT_REQUEST = 37,
-	ENH_EQUIPMENT_RESPONSE = 38
+	ENH_EQUIPMENT_RESPONSE = 38,
+
+	// RAID (45~)
+	RAID_MATCHING_REQUEST = 45,
+	RAID_MATCHING_RESPONSE = 46,
+	RAID_HEAT_REQUEST = 47,
+	RAID_HEAT_RESPONSE = 48,
+	RAID_END_REQUEST = 49,
+	RAID_END_RESPONSE = 50
 };
