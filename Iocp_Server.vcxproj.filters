@@ -19,20 +19,20 @@
     <Filter Include="헤더 파일\Redis">
       <UniqueIdentifier>{4f70c36f-c0c1-4b0d-9a89-57339c5fe71c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일\Network\CircularRecvBuf">
-      <UniqueIdentifier>{2ab19ce5-49a1-4e8f-947c-94cbab24f74a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="헤더 파일\InGameConnUsers">
       <UniqueIdentifier>{a4fea4b7-ee8a-4142-92a1-93257acbf2ad}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일\InGameConnUsers\RoomManager">
+    <Filter Include="헤더 파일\InGameConnUsers\RaidManager">
       <UniqueIdentifier>{c9d2ae5a-5a12-490a-816d-4f86b29da142}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일\InGameConnUsers\UserExpManager">
-      <UniqueIdentifier>{33559a6b-5416-4fad-bdb6-09921d4b0c19}</UniqueIdentifier>
+    <Filter Include="헤더 파일\InGameConnUsers\InGameUserManager">
+      <UniqueIdentifier>{52b7f251-cd0d-4927-9c6a-562cad4688df}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일\InGameConnUsers\ConnUsersManager">
+    <Filter Include="헤더 파일\Network\UserNetworkManager">
       <UniqueIdentifier>{a3e442f8-1f37-41ed-ba2a-da80f513604d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\Network\UserNetworkManager\CircularRecvBuf">
+      <UniqueIdentifier>{2ab19ce5-49a1-4e8f-947c-94cbab24f74a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -46,23 +46,23 @@
       <Filter>헤더 파일\Redis</Filter>
     </ClCompile>
     <ClCompile Include="CircularBuffer.cpp">
-      <Filter>헤더 파일\Network\CircularRecvBuf</Filter>
+      <Filter>헤더 파일\Network\UserNetworkManager\CircularRecvBuf</Filter>
     </ClCompile>
-    <ClCompile Include="RoomManager.cpp">
-      <Filter>헤더 파일\InGameConnUsers\RoomManager</Filter>
-    </ClCompile>
-    <ClCompile Include="UsersExpManager.cpp">
-      <Filter>헤더 파일\InGameConnUsers\UserExpManager</Filter>
+    <ClCompile Include="MatchingManager.cpp">
+      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
     </ClCompile>
     <ClCompile Include="ConnUsersManager.cpp">
-      <Filter>헤더 파일\InGameConnUsers\ConnUsersManager</Filter>
+      <Filter>헤더 파일\Network\UserNetworkManager</Filter>
+    </ClCompile>
+    <ClCompile Include="RoomManager.cpp">
+      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
+    </ClCompile>
+    <ClCompile Include="IngameUserManager.cpp">
+      <Filter>헤더 파일\InGameConnUsers\InGameUserManager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="QuokkaServer.h">
-      <Filter>헤더 파일\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="ConnUser.h">
       <Filter>헤더 파일\Network</Filter>
     </ClInclude>
     <ClInclude Include="Define.h">
@@ -72,22 +72,31 @@
       <Filter>헤더 파일\Redis</Filter>
     </ClInclude>
     <ClInclude Include="CircularBuffer.h">
-      <Filter>헤더 파일\Network\CircularRecvBuf</Filter>
+      <Filter>헤더 파일\Network\UserNetworkManager\CircularRecvBuf</Filter>
     </ClInclude>
     <ClInclude Include="Packet.h">
       <Filter>헤더 파일\Redis</Filter>
     </ClInclude>
-    <ClInclude Include="RoomManager.h">
-      <Filter>헤더 파일\InGameConnUsers\RoomManager</Filter>
-    </ClInclude>
-    <ClInclude Include="UsersExpManager.h">
-      <Filter>헤더 파일\InGameConnUsers\UserExpManager</Filter>
+    <ClInclude Include="MatchingManager.h">
+      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
     </ClInclude>
     <ClInclude Include="ConnUsersManager.h">
-      <Filter>헤더 파일\InGameConnUsers\ConnUsersManager</Filter>
+      <Filter>헤더 파일\Network\UserNetworkManager</Filter>
     </ClInclude>
     <ClInclude Include="Room.h">
-      <Filter>헤더 파일\InGameConnUsers\RoomManager</Filter>
+      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
+    </ClInclude>
+    <ClInclude Include="RoomManager.h">
+      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
+    </ClInclude>
+    <ClInclude Include="InGameUserManager.h">
+      <Filter>헤더 파일\InGameConnUsers\InGameUserManager</Filter>
+    </ClInclude>
+    <ClInclude Include="InGameUser.h">
+      <Filter>헤더 파일\InGameConnUsers\InGameUserManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ConnUser.h">
+      <Filter>헤더 파일\Network\UserNetworkManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
