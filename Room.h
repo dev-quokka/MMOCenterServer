@@ -4,24 +4,32 @@
 
 class Room {
 public:
-	Room(uint8_t roomNum_, UINT16 userSkt1_, UINT16 userSkt2_, int mobHp_) : roomNum(roomNum_), userSkt1(userSkt1_), userSkt2(userSkt2_), mobHp(mobHp_) {}
-	void Hit();
+	bool set(uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, InGameUser* user1_, InGameUser* user2_) {
+	
+	}
+
+	uint8_t Hit(unsigned int damage_) { // Success(1), Fail(2), Zero(3)
+		if (mobHp.load() <= 0) {
+			return 3;
+		}
+		else {
+			mobHp.fetch_sub(damage_);
+			return 1;
+		}
+	}
+
+	void SetScore() {
+
+	}
 
 private:
 	// 1 bytes
 	uint8_t roomNum;
 	uint8_t timer; // minutes
-	uint8_t userLevel1;
-	uint8_t userLevel2; // minutes
-
-	// 2 bytes
-	UINT16 userSkt1;
-	UINT16 userSkt2;
 
 	// 4 bytes
-	int mobHp;
+	std::atomic<unsigned int> mobHp;
 
-	// 40 bytes
-	std::string userId1;
-	std::string userId2;
+	InGameUser* user1; 
+	InGameUser* user2;
 };

@@ -66,8 +66,9 @@ void MatchingManager::MatchingThread() {
                             { // 두명 유저 방 만들어서 넣어주기
                                 RAID_MATCHING_RESPONSE rMatchResPacket1;
                                 RAID_MATCHING_RESPONSE rMatchResPacket2;
-                                ConnUser* user1;
-                                ConnUser* user2;
+                                InGameUser* user1 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching1->userSkt)->GetObjNum());
+                                InGameUser* user2 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching2->userSkt)->GetObjNum());
+
                                 // Send to User1 with User2 Info
                                 rMatchResPacket1.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
                                 rMatchResPacket1.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
@@ -90,10 +91,10 @@ void MatchingManager::MatchingThread() {
                                 rMatchResPacket2.teamUserSkt = tempMatching1->userSkt;
                                 rMatchResPacket2.teamId = tempMatching1->userId;
 
-                                user1->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&rMatchResPacket1); // Send User1 with Game Info && User2 Info
-                                user2->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&rMatchResPacket1); // Send User2 with Game Info && User1 Info
+                                connUsersManager->FindUser(tempMatching1->userSkt)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&rMatchResPacket1); // Send User1 with Game Info && User2 Info
+                                connUsersManager->FindUser(tempMatching2->userSkt)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&rMatchResPacket1); // Send User2 with Game Info && User1 Info
                                 
-                                Room* room();
+                                roomManager->MakeRoom(tempRoomNum, 2, 30, user1, user2);
                             }
 
                             tempRoom = 0;

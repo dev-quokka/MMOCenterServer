@@ -16,28 +16,12 @@ public :
 		return isConn;
 	}
 
-	void SetUuid(std::string userUuid_) {
-		userUuid = userUuid_;
-	}
-
-	void SetPk(UINT32 userPk_) {
-		userPk = userPk_;
-	}
-
 	char* GetRecvBuffer() {
 		return recvBuf;
 	}
 
 	UINT16 GetObjNum() {
 		return connObjNum;
-	}
-
-	UINT32 GetPk() {
-		return userPk;
-	}
-
-	std::string GetUuid() {
-		return userUuid;
 	}
 
 	bool WriteRecvData(const char* data_, size_t size_) {

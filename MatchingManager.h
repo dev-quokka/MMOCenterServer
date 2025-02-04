@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Room.h"
 #include "Packet.h"
 #include "ConnUsersManager.h"
 #include "RoomManager.h"
+#include "InGameUserManager.h"
 
 #include <iostream>
 #include <queue>
@@ -56,6 +56,12 @@ private:
 
 	// 40 bytes
 	std::priority_queue<EndTimeCheck, std::vector<EndTimeCheck>, std::greater<>> rtCheckQueue;
+
+
+	RoomManager* roomManager;
+
+	// 64 bytes
+	InGameUserManager* inGameUserManager;
 
 	// 136 bytes
 	boost::lockfree::queue<uint8_t> roomNumQueue; // Set Room Num
