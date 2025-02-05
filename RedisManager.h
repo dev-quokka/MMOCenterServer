@@ -18,6 +18,9 @@ public:
     void PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_); // Push Redis Packet
     void Disconnect(SOCKET userSkt);
 
+    // // Send Data to Web Server for Synchronization With Redis
+    void SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1, RAID_END_REQUEST raidEndReqPacket2);
+
 private:
     bool CreateRedisThread(const UINT16 RedisThreadCnt_);
     bool EquipmentEnhance(short currentEnhanceCount_);
@@ -48,7 +51,9 @@ private:
     void EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // RAID
+    void MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void RaidStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void RaidTeamCheck(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);

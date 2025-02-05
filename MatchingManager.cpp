@@ -68,20 +68,14 @@ void MatchingManager::MatchingThread() {
                                 RAID_MATCHING_RESPONSE rMatchResPacket2;
                                 InGameUser* user1 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching1->userSkt)->GetObjNum());
                                 InGameUser* user2 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching2->userSkt)->GetObjNum());
-
-                                std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
-                                std::chrono::time_point<std::chrono::steady_clock> endTime = now + std::chrono::minutes(2);
-
-                                // Send to User1 with User2 Info
+                                
+                                // Send to User1 With User2 Info
                                 rMatchResPacket1.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
                                 rMatchResPacket1.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
                                 rMatchResPacket1.uuId = user1->GetUuid();
                                 rMatchResPacket1.timer = 2;
                                 rMatchResPacket1.roomNum = tempRoomNum;
                                 rMatchResPacket1.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
-                                rMatchResPacket1.teamLevel = tempMatching2->userLevel;
-                                rMatchResPacket1.teamUserSkt = tempMatching2->userSkt;
-                                rMatchResPacket1.teamId = tempMatching2->userId;
 
                                 // Send to User2 with User1 Info
                                 rMatchResPacket2.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
@@ -90,15 +84,15 @@ void MatchingManager::MatchingThread() {
                                 rMatchResPacket2.timer = 2;
                                 rMatchResPacket2.roomNum = tempRoomNum;
                                 rMatchResPacket2.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
-                                rMatchResPacket2.teamLevel = tempMatching1->userLevel;
-                                rMatchResPacket2.teamUserSkt = tempMatching1->userSkt;
-                                rMatchResPacket2.teamId = tempMatching1->userId;
 
+                                // 마지막 요청 처리 뒤에 방 생성 요청 보내기 (전에 요청건 다 처리하고 방 생성)
                                 redisManager->PushRedisPacket(tempMatching1->userSkt,sizeof(PacketInfo), (char*)&rMatchResPacket1); // Send User1 with Game Info && User2 Info
                                 redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rMatchResPacket2); // Send User2 with Game Info && User1 Info
                                 
-                                roomManager->MakeRoom(tempRoomNum, 30, user1, user2, endTime);
-                                // tempRoom = 0;
+                                std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
+                                std::chrono::time_point<std::chrono::steady_clock> endTime = now + std::chrono::minutes(2) + std::chrono::seconds(10); // Add 2m + 10 sec
+
+                                endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 30, tempMatching1->userSkt, tempMatching2->userSkt, user1, user2, endTime));
                             }
 
                             while (!roomNumQueue.pop(tempRoomNum)) { // 룸 넘버 없으면 현재 레벨 위치에서 반환될때까지 대기
@@ -121,26 +115,95 @@ void MatchingManager::MatchingThread() {
     }
 }
 
+void MatchingManager::DeleteMob(Room* room_) {
+    {
+        mDeleteRoom.lock();
+        for (auto iter = endRoomCheckSet.begin(); iter != endRoomCheckSet.end(); iter++) {
+            if (*iter == room_) {
+                delete *iter;
+                endRoomCheckSet.erase(iter);
+                break;
+            }
+        }
+        mDeleteRoom.unlock();
+    }
+
+    // 다른 Raid 관련 요청 보다 타임 종료는 먼저 처리되야 함으로 바로 유저 Send
+    RAID_END_REQUEST raidEndReqPacket1;
+    RAID_END_REQUEST raidEndReqPacket2;
+    InGameUser* user1 = room_->GetUser(0);
+    InGameUser* user2 = room_->GetUser(1);
+
+    // Send to User1 With User2 Info
+    raidEndReqPacket1.PacketId = (UINT16)PACKET_ID::RAID_END_REQUEST;
+    raidEndReqPacket1.PacketLength = sizeof(RAID_END_REQUEST);
+    raidEndReqPacket1.uuId = user1->GetUuid();
+    raidEndReqPacket1.userScore = room_->GetScore(0);
+    raidEndReqPacket1.teamScore = room_->GetScore(1);
+
+    connUsersManager->FindUser(room_->GetUserSkt(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
+
+    // Send to User2 with User1 Info
+    raidEndReqPacket2.PacketId = (UINT16)PACKET_ID::RAID_END_REQUEST;
+    raidEndReqPacket2.PacketLength = sizeof(RAID_END_REQUEST);
+    raidEndReqPacket2.uuId = user2->GetUuid();
+    raidEndReqPacket2.teamScore = room_->GetScore(0);
+    raidEndReqPacket2.userScore = room_->GetScore(1);
+
+    connUsersManager->FindUser(room_->GetUserSkt(1))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket2);
+
+    // Send Message To Redis Cluster For Syncronize
+    redisManager->SyncRaidScoreToRedis(raidEndReqPacket1, raidEndReqPacket2);
+
+    roomManager->DeleteRoom(room_->GetRoomNum());
+    roomNumQueue.push(room_->GetRoomNum());
+}
+
 void MatchingManager::TimeCheckThread() {
     std::chrono::steady_clock::time_point now;
+    Room* room_;
     while (timeChekcRun) {
-        if (!rtCheckSet.empty()) {
+        if (!endRoomCheckSet.empty()) { // Room Exist
+            room_ = (*endRoomCheckSet.begin());
             now = std::chrono::steady_clock::now();
-            if (rtCheckSet.begin()->endTime <= now) {
-                auto rtTemp = rtCheckSet.begin();
+            if (room_->GetEndTime() <= now) {
 
-                RAID_END_RESPONSE raidEndResPacket;
-                raidEndResPacket.userScore1 = ;
-                raidEndResPacket.userScore2 = ;
-                raidEndResPacket.elapsedTime = ;
+                // 다른 Raid 관련 요청 보다 타임 종료는 먼저 처리되야 함으로 바로 유저 Send
+                RAID_END_REQUEST raidEndReqPacket1;
+                RAID_END_REQUEST raidEndReqPacket2;
+                InGameUser* user1 = room_->GetUser(0);
+                InGameUser* user2 = room_->GetUser(1);
 
-                roomManager->DeleteRoom(rtTemp->roomNum);
-                rtCheckSet.erase(rtTemp); // Raid TimeOut
-                roomNumQueue.push(rtTemp->roomNum); // Return Room Number
+                // Send to User1 With User2 Info
+                raidEndReqPacket1.PacketId = (UINT16)PACKET_ID::RAID_END_REQUEST;
+                raidEndReqPacket1.PacketLength = sizeof(RAID_END_REQUEST);
+                raidEndReqPacket1.uuId = user1->GetUuid();
+                raidEndReqPacket1.userScore = room_->GetScore(0);
+                raidEndReqPacket1.teamScore = room_->GetScore(1);
+
+                connUsersManager->FindUser(room_->GetUserSkt(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
+
+                // Send to User2 with User1 Info
+                raidEndReqPacket2.PacketId = (UINT16)PACKET_ID::RAID_END_REQUEST;
+                raidEndReqPacket2.PacketLength = sizeof(RAID_END_REQUEST);
+                raidEndReqPacket2.uuId = user2->GetUuid();
+                raidEndReqPacket2.teamScore = room_->GetScore(0);
+                raidEndReqPacket2.userScore = room_->GetScore(1);
+
+                connUsersManager->FindUser(room_->GetUserSkt(1))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket2);
+
+                // Send Message To Redis Cluster For Syncronize
+                redisManager->SyncRaidScoreToRedis(raidEndReqPacket1, raidEndReqPacket2);
+
+                roomManager->DeleteRoom(room_->GetRoomNum());
+                roomNumQueue.push(room_->GetRoomNum());
+            }
+            else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         } 
-        else {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        else { // Room Not Exist
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
     }
 }

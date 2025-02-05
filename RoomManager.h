@@ -8,8 +8,8 @@
 
 class RoomManager {
 public:
-	void MakeRoom(uint8_t roomNum_, unsigned int mobHp_, InGameUser* user1_, InGameUser* user2_, std::chrono::time_point<std::chrono::steady_clock> endTime_);
-	void DeleteRoom(uint8_t roomNum);
+	Room* MakeRoom(uint8_t roomNum_, unsigned int mobHp_, UINT16 userSkt1_, UINT16 userSkt2_, InGameUser* user1_, InGameUser* user2_, std::chrono::time_point<std::chrono::steady_clock> endTime_);
+	bool DeleteRoom(uint8_t roomNum);
 
 private:
 	std::unordered_map<uint8_t, Room*> roomMap; // { roomNum, Room }

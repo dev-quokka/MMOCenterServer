@@ -14,16 +14,12 @@
 #include <boost/lockfree/queue.hpp>
 #include <tbb/concurrent_hash_map.h>
 
-struct EndTimeCheck {
-	uint8_t roomNum;
-	UINT16 userSkt1;
-	UINT16 userSkt2;
-	std::chrono::time_point<std::chrono::steady_clock> endTime;
-
-	bool operator()(const EndTimeCheck& a, const EndTimeCheck& b) {
-		return a.endTime < b.endTime;
+struct EndTimeComp {
+	bool operator()(Room* r1, Room* r2) const {
+		return r1->GetEndTime() < r2->GetEndTime();
 	}
 };
+
 struct MatchingRoom {
 	uint8_t LoofCnt = 0;
 	uint8_t userLevel;
@@ -39,6 +35,7 @@ public:
 	bool CreatTimeCheckThread();
 	void MatchingThread();
 	void TimeCheckThread();
+	void DeleteMob(Room* room_);
 
 private:
 	// 1 bytes
@@ -50,10 +47,13 @@ private:
 	std::thread timeCheckThread;
 
 	// 24 bytes
-	std::multiset<EndTimeCheck> rtCheckSet;
+	std::set<Room*, EndTimeComp> endRoomCheckSet;
 
 	// 64 bytes
 	InGameUserManager* inGameUserManager;
+
+	// 80 bytes
+	std::mutex mDeleteRoom;
 
 	// 136 bytes
 	boost::lockfree::queue<uint8_t> roomNumQueue; // Set Room Num

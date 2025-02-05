@@ -90,6 +90,11 @@ void RedisManager::PushRedisPacket(const SOCKET userSkt_, const UINT32 size_, ch
     procSktQueue.push(tempD);
 }
 
+void RedisManager::SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1_, RAID_END_REQUEST raidEndReqPacket2_) {
+    connUsersManager->FindUser(webServerSocket)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&raidEndReqPacket1_);
+    connUsersManager->FindUser(webServerSocket)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&raidEndReqPacket2_);
+}
+
 
 // ============================== PACKET ==============================
 
@@ -419,18 +424,28 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pP
 
 //  ---------------------------- RAID  ----------------------------
 
-void RaidStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 
-void RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::RaidStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 
-void RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::RaidTeamCheck(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 
-void GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+
+}
+
+void RedisManager::RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Send User Raid End Packet
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+
+
+}
+
+void RedisManager::GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }

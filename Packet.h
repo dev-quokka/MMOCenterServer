@@ -163,16 +163,24 @@ struct ENH_EQUIPMENT_RESPONSE : PACKET_HEADER {
 
 //  ---------------------------- RAID  ----------------------------
 
-struct RAID_MATCHING_REQUEST : PACKET_HEADER {
+struct RAID_MATCHING_REQUEST : PACKET_HEADER { // À¯ÀúÀÇ ¸ÅÄª Èñ¸Á ¿äÃ»
 
 };
 
-struct RAID_MATCHING_RESPONSE : PACKET_HEADER { // Matching Success
+struct RAID_MATCHING_RESPONSE : PACKET_HEADER { // Matching Success Respose && Waitting Team Info
 	uint8_t timer; // Minutes
-	uint8_t teamLevel; 
 	uint8_t roomNum; // If Max RoomNum Up to Short Range, Back to Number One
-	UINT16 teamUserSkt;
 	unsigned int mobHp;
+};
+
+struct RAID_TEAMINFO_REQUEST : PACKET_HEADER { // User To Server
+	uint8_t roomNum; // If Max RoomNum Up to Short Range, Back to Number One
+};
+
+struct RAID_TEAMINFO_RESPONSE : PACKET_HEADER {
+	bool teamReady;
+	uint8_t teamLevel;
+	UINT16 teamUserSkt;
 	std::string teamId;
 };
 
@@ -184,14 +192,22 @@ struct RAID_HEAT_RESPONSE : PACKET_HEADER {
 
 };
 
-struct RAID_END_REQUEST : PACKET_HEADER {
-	short roomNum; // If Max RoomNum Up to Short Range, Back to Number One
+struct RAID_END_REQUEST : PACKET_HEADER { // Server to USER
+	unsigned int userScore;
+	unsigned int teamScore;
+	std::chrono::time_point<std::chrono::steady_clock> elapsedTime; // Time to Finish Mob
 };
 
-struct RAID_END_RESPONSE : PACKET_HEADER {
-	unsigned int userScore1;
-	unsigned int userScore2;
-	std::chrono::time_point<std::chrono::steady_clock> elapsedTime;
+struct RAID_END_RESPONSE : PACKET_HEADER { // User to Server (If Server Get This Packet, Return Room Number)
+
+};
+
+struct RAID_RANKING_REQUEST : PACKET_HEADER {
+	short 
+};
+
+struct RAID_RANKING_RESPONSE : PACKET_HEADER {
+
 };
 
 enum class PACKET_ID : UINT16 {
