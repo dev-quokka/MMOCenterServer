@@ -21,7 +21,8 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
 
     inGameUserManager->Init(maxClientCount_);
 
-    RedisManager::RedisRun(RedisThreadCnt_);
+    RedisRun(RedisThreadCnt_);
+    matchingManager->Init(maxClientCount_);
 }
 
 void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Server
@@ -104,7 +105,7 @@ void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket
     auto userConn = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
 
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
-    tempUser->Set(userConn->uuId, userConn->userPk, userConn->currentExp,userConn->level);
+    tempUser->Set(userConn->uuId, userConn->userId, userConn->userPk, userConn->currentExp,userConn->level);
 
     redis.persist("user:" + userConn->uuId); // Remove TTL Time
 }
@@ -424,28 +425,83 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pP
 
 //  ---------------------------- RAID  ----------------------------
 
-void RedisManager::MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { 
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
+    RAID_MATCHING_RESPONSE raidMatchResPacket;
+    raidMatchResPacket.PacketId = (UINT16)PACKET_ID::RAID_RANKING_RESPONSE;
+    raidMatchResPacket.PacketLength = sizeof(RAID_RANKING_RESPONSE);
+    raidMatchResPacket.uuId = tempUser->GetUuid();
+
+    if (matchingManager->Insert(tempUser->GetLevel(), userSkt, tempUser->GetId())) { // Insert Into Mathcing Queue Success
+        raidMatchResPacket.insertSuccess = true;
+    }
+    else raidMatchResPacket.insertSuccess = false; // Mathing Queue Full
+
+    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&raidMatchResPacket);
 }
 
-void RedisManager::RaidStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::RaidReqTeamInfo(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto raidTeamInfoReqPacket = reinterpret_cast<RAID_TEAMINFO_REQUEST*>(pPacket_);
 
-}
+    Room* tempRoom = roomManager->GetRoom(raidTeamInfoReqPacket->roomNum);
+    InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* teamUser = tempRoom->GetTeamUser(raidTeamInfoReqPacket->myNum);
 
-void RedisManager::RaidTeamCheck(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    RAID_TEAMINFO_RESPONSE raidTeamInfoResPacket;
+    raidTeamInfoResPacket.PacketId = (UINT16)PACKET_ID::RAID_TEAMINFO_RESPONSE;
+    raidTeamInfoResPacket.PacketLength = sizeof(RAID_TEAMINFO_RESPONSE);
+    raidTeamInfoResPacket.uuId = user->GetUuid();
+    raidTeamInfoResPacket.teamLevel = teamUser->GetLevel();
+    raidTeamInfoResPacket.teamId = teamUser->GetId();
 
+    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_TEAMINFO_RESPONSE), (char*)&raidTeamInfoResPacket);
+
+    if (tempRoom->StartCheck()) { // 두 명의 유저에게 팀의 정보를 전달하고 둘 다 받음 확인하면 게임 시작 정보 보내주기
+
+        RAID_START_REQUEST raidStartReqPacket1;
+        raidStartReqPacket1.PacketId = (UINT16)PACKET_ID::RAID_START_REQUEST;
+        raidStartReqPacket1.PacketLength = sizeof(RAID_START_REQUEST);
+        raidStartReqPacket1.uuId = user->GetUuid();
+        raidStartReqPacket1.endTime = tempRoom->GetEndTime();
+
+        RAID_START_REQUEST raidStartReqPacket2;
+        raidStartReqPacket2.PacketId = (UINT16)PACKET_ID::RAID_START_REQUEST;
+        raidStartReqPacket2.PacketLength = sizeof(RAID_START_REQUEST);
+        raidStartReqPacket2.uuId = teamUser->GetUuid();
+        raidStartReqPacket2.endTime = tempRoom->GetEndTime();
+
+        connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_START_REQUEST), (char*)&raidStartReqPacket1);
+        connUsersManager->FindUser(tempRoom->GetTeamSkt(raidTeamInfoReqPacket->myNum))->PushSendMsg(sizeof(RAID_START_REQUEST), (char*)&raidStartReqPacket2);
+    }
 }
 
 void RedisManager::RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto raidTeamInfoReqPacket = reinterpret_cast<RAID_HIT_REQUEST*>(pPacket_);
+    InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+
 
 }
 
 void RedisManager::RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Send User Raid End Packet
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
-
+    
+    //redis.zadd("user_scores", score, to_string(user_id));
 
 }
 
 void RedisManager::GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+    auto delEquipReqPacket = reinterpret_cast<RAID_RANKING_REQUEST*>(pPacket_);
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
+    std::vector<std::pair<std::string, unsigned int>> scores;
+    redis.zrevrange("raidscore", delEquipReqPacket->startRank, delEquipReqPacket->startRank+99, inserter(scores, scores.begin()));
+
+    RAID_RANKING_RESPONSE raidRankResPacket;
+    raidRankResPacket.PacketId = (UINT16)PACKET_ID::RAID_RANKING_RESPONSE;
+    raidRankResPacket.PacketLength = sizeof(RAID_RANKING_RESPONSE);
+    raidRankResPacket.uuId = tempUser->GetUuid();
+    raidRankResPacket.reqScore = scores;
+
+    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_RANKING_RESPONSE), (char*)&raidRankResPacket);
 }

@@ -5,7 +5,7 @@
 #include <string>
 #include <ws2tcpip.h>
 
-const UINT16 PACKET_ID_SIZE = 51; // Last Packet_ID Num + 1
+const UINT16 PACKET_ID_SIZE = 53; // Last Packet_ID Num + 1
 
 struct DataPacket {
 	UINT32 dataSize;
@@ -28,12 +28,18 @@ struct PACKET_HEADER
 	std::string uuId; // UUID For User Check
 };
 
+struct UserScore {
+	unsigned int score;
+	std::string userId;
+};
+
 //  ---------------------------- SYSTEM  ----------------------------
 
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
 	uint8_t level;
 	UINT16 userPk;
 	unsigned int currentExp;
+	std::string userId;
 };
 
 struct USER_CONNECT_RESPONSE_PACKET : PACKET_HEADER {
@@ -163,33 +169,42 @@ struct ENH_EQUIPMENT_RESPONSE : PACKET_HEADER {
 
 //  ---------------------------- RAID  ----------------------------
 
-struct RAID_MATCHING_REQUEST : PACKET_HEADER { // À¯ÀúÀÇ ¸ÅÄª Èñ¸Á ¿äÃ»
+struct RAID_MATCHING_REQUEST : PACKET_HEADER { // Users Matching Request
 
 };
 
-struct RAID_MATCHING_RESPONSE : PACKET_HEADER { // Matching Success Respose && Waitting Team Info
+struct RAID_MATCHING_RESPONSE : PACKET_HEADER {
+	bool insertSuccess; // Insert Into Matching Queue Check
+};
+
+struct RAID_READY_REQUEST : PACKET_HEADER {
 	uint8_t timer; // Minutes
 	uint8_t roomNum; // If Max RoomNum Up to Short Range, Back to Number One
+	uint8_t yourNum;
 	unsigned int mobHp;
 };
 
 struct RAID_TEAMINFO_REQUEST : PACKET_HEADER { // User To Server
-	uint8_t roomNum; // If Max RoomNum Up to Short Range, Back to Number One
+	bool imReady;
+	uint8_t roomNum;
+	uint8_t myNum;
 };
 
 struct RAID_TEAMINFO_RESPONSE : PACKET_HEADER {
-	bool teamReady;
 	uint8_t teamLevel;
-	UINT16 teamUserSkt;
 	std::string teamId;
 };
 
-struct RAID_HEAT_REQUEST : PACKET_HEADER {
-
+struct RAID_START_REQUEST : PACKET_HEADER {
+	std::chrono::time_point<std::chrono::steady_clock> endTime;
 };
 
-struct RAID_HEAT_RESPONSE : PACKET_HEADER {
+struct RAID_HIT_REQUEST : PACKET_HEADER {
+	unsigned int damage;
+};
 
+struct RAID_HIT_RESPONSE : PACKET_HEADER {
+	unsigned int currentHp;
 };
 
 struct RAID_END_REQUEST : PACKET_HEADER { // Server to USER
@@ -203,11 +218,11 @@ struct RAID_END_RESPONSE : PACKET_HEADER { // User to Server (If Server Get This
 };
 
 struct RAID_RANKING_REQUEST : PACKET_HEADER {
-	short 
+	unsigned int startRank; 
 };
 
 struct RAID_RANKING_RESPONSE : PACKET_HEADER {
-
+	std::vector<std::pair<std::string, unsigned int>> reqScore;
 };
 
 enum class PACKET_ID : UINT16 {
@@ -248,8 +263,14 @@ enum class PACKET_ID : UINT16 {
 	// RAID (45~)
 	RAID_MATCHING_REQUEST = 45,
 	RAID_MATCHING_RESPONSE = 46,
-	RAID_HEAT_REQUEST = 47,
-	RAID_HEAT_RESPONSE = 48,
-	RAID_END_REQUEST = 49,
-	RAID_END_RESPONSE = 50
+	RAID_READY_REQUEST = 47,
+	RAID_TEAMINFO_REQUEST = 48,
+	RAID_TEAMINFO_RESPONSE = 49,
+	RAID_START_REQUEST = 50,
+	RAID_HEAT_REQUEST = 51,
+	RAID_HEAT_RESPONSE = 52,
+	RAID_END_REQUEST = 53,
+	RAID_END_RESPONSE = 54,
+	RAID_RANKING_REQUEST = 55,
+	RAID_RANKING_RESPONSE = 56,
 };

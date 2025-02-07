@@ -4,15 +4,16 @@ class InGameUser {
 public:
 	InGameUser(std::vector<short>* expLimit_) : expLimit(expLimit_) {}
 
-	uint8_t GetLevel(UINT16 connObjNum_) {
+	uint8_t GetLevel() {
 		return userLevel;
 	}
 
-	void Set(std::string userUuid_, UINT32 userPk_, unsigned int userExp_, uint8_t userLevel_) {
+	void Set(std::string userUuid_, std::string userId_, UINT32 userPk_, unsigned int userExp_, uint8_t userLevel_) {
 		userLevel = userLevel_;
 		userExp = userExp_;
 		userPk = userPk_;
 		userUuid = userUuid_;
+		userId = userId_;
 	}
 
 	void Reset() {
@@ -22,12 +23,16 @@ public:
 		userUuid = "";
 	}
 
-	UINT32 GetUserPk() {
+	UINT32 GetPk() {
 		return userPk;
 	}
 
 	std::string GetUuid() {
 		return userUuid;
+	}
+
+	std::string GetId() {
+		return userId;
 	}
 
 	std::pair<uint8_t, unsigned int> ExpUp(short mobExp_) {
@@ -57,4 +62,5 @@ private:
 
 	// 40 bytes
 	std::string userUuid;
+	std::string userId;
 };

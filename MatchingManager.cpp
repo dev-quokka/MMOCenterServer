@@ -1,12 +1,12 @@
 #include "MatchingManager.h"
 
-void MatchingManager::Init() {
+void MatchingManager::Init(const UINT16 maxClientCount_) {
     for (int i = 1; i <= 6; i++ ) { // Max i = MaxLevel/3 + 1 (Level Check Set)
         std::priority_queue<MatchingRoom*> k;
         matchingMap.emplace(i, std::priority_queue<MatchingRoom*>());
     }
 
-    for (int i = 1; i <= 100; i++) { // (Max Room Set)
+    for (int i = 1; i <= 64; i++) { // (Max Room Set)
         roomNumQueue.push(i);
     }
 
@@ -64,35 +64,34 @@ void MatchingManager::MatchingThread() {
                             accessor2->second.pop();
 
                             { // 두명 유저 방 만들어서 넣어주기
-                                RAID_MATCHING_RESPONSE rMatchResPacket1;
-                                RAID_MATCHING_RESPONSE rMatchResPacket2;
+                                RAID_READY_REQUEST rReadyResPacket1;
+                                RAID_READY_REQUEST rReadyResPacket2;
                                 InGameUser* user1 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching1->userSkt)->GetObjNum());
                                 InGameUser* user2 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching2->userSkt)->GetObjNum());
                                 
                                 // Send to User1 With User2 Info
-                                rMatchResPacket1.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
-                                rMatchResPacket1.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
-                                rMatchResPacket1.uuId = user1->GetUuid();
-                                rMatchResPacket1.timer = 2;
-                                rMatchResPacket1.roomNum = tempRoomNum;
-                                rMatchResPacket1.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
+                                rReadyResPacket1.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
+                                rReadyResPacket1.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
+                                rReadyResPacket1.uuId = user1->GetUuid();
+                                rReadyResPacket1.timer = 2;
+                                rReadyResPacket1.roomNum = tempRoomNum;
+                                rReadyResPacket1.yourNum = 0;
+                                rReadyResPacket1.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
 
                                 // Send to User2 with User1 Info
-                                rMatchResPacket2.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
-                                rMatchResPacket2.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
-                                rMatchResPacket2.uuId = user2->GetUuid();
-                                rMatchResPacket2.timer = 2;
-                                rMatchResPacket2.roomNum = tempRoomNum;
-                                rMatchResPacket2.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
+                                rReadyResPacket2.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
+                                rReadyResPacket2.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
+                                rReadyResPacket2.uuId = user2->GetUuid();
+                                rReadyResPacket2.timer = 2;
+                                rReadyResPacket2.roomNum = tempRoomNum;
+                                rReadyResPacket2.yourNum = 1;
+                                rReadyResPacket2.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
 
-                                // 마지막 요청 처리 뒤에 방 생성 요청 보내기 (전에 요청건 다 처리하고 방 생성)
-                                redisManager->PushRedisPacket(tempMatching1->userSkt,sizeof(PacketInfo), (char*)&rMatchResPacket1); // Send User1 with Game Info && User2 Info
-                                redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rMatchResPacket2); // Send User2 with Game Info && User1 Info
-                                
-                                std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
-                                std::chrono::time_point<std::chrono::steady_clock> endTime = now + std::chrono::minutes(2) + std::chrono::seconds(10); // Add 2m + 10 sec
+                                // 마지막 요청 처리 뒤에 방 생성 요청 보내기 (전에 요청 건 다 처리하고 방 생성)
+                                redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket1); // Send User1 with Game Info && User2 Info
+                                redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket2); // Send User2 with Game Info && User1 Info
 
-                                endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 30, tempMatching1->userSkt, tempMatching2->userSkt, user1, user2, endTime));
+                                endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userSkt, tempMatching2->userSkt, user1, user2));
                             }
 
                             while (!roomNumQueue.pop(tempRoomNum)) { // 룸 넘버 없으면 현재 레벨 위치에서 반환될때까지 대기

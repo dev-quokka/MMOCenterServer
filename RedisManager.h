@@ -3,6 +3,7 @@
 #include "ConnUsersManager.h"
 #include "Packet.h"
 #include "InGameUserManager.h"
+#include "MatchingManager.h"
 
 #include <sw/redis++/redis++.h>
 #include <windef.h>
@@ -51,9 +52,8 @@ private:
     void EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // RAID
-    void MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void RaidStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void RaidTeamCheck(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 매치 대기열 삽입
+    void RaidReqTeamInfo(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 서로 팀 정보 요청 (상대 대기 확인)
     void RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
@@ -81,7 +81,8 @@ private:
 
     // 64 bytes
     InGameUserManager* inGameUserManager;
-
+    MatchingManager* matchingManager;
+    RoomManager* roomManager;
     // 72 bytes
     std::condition_variable cv;
 

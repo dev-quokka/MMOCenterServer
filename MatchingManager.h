@@ -29,7 +29,7 @@ struct MatchingRoom {
 
 class MatchingManager {
 public:
-	void Init();
+	void Init(const UINT16 maxClientCount_);
 	bool Insert(uint8_t userLevel_, UINT16 userSkt_, std::string userId);
 	bool CreateMatchThread();
 	bool CreatTimeCheckThread();
@@ -56,7 +56,7 @@ private:
 	std::mutex mDeleteRoom;
 
 	// 136 bytes
-	boost::lockfree::queue<uint8_t> roomNumQueue; // Set Room Num
+	boost::lockfree::queue<uint8_t> roomNumQueue; // Set RoomNum
 
 	// 576 bytes
 	RoomManager* roomManager;
