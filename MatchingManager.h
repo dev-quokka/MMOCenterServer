@@ -14,6 +14,8 @@
 #include <boost/lockfree/queue.hpp>
 #include <tbb/concurrent_hash_map.h>
 
+constexpr int UDP_PORT = 50000;
+
 struct EndTimeComp {
 	bool operator()(Room* r1, Room* r2) const {
 		return r1->GetEndTime() < r2->GetEndTime();
@@ -45,6 +47,8 @@ private:
 	// 16 bytes
 	std::thread matchingThread;
 	std::thread timeCheckThread;
+
+	std::vector<SOCKET> udpSockets;
 
 	// 24 bytes
 	std::set<Room*, EndTimeComp> endRoomCheckSet;

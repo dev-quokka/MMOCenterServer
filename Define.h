@@ -18,17 +18,28 @@ enum class TaskType {
 };
 
 struct OverlappedEx {
-	// 2 bytes
-	short retryCnt = 0; // Retry Count For Send Proc
-
 	// 4 bytes
 	TaskType taskType; // ACCPET, RECV, SEND INFO
+
+	WSAOVERLAPPED wsaOverlapped;
+};
+
+struct OverlappedTCP {
+	// 2 bytes
+	short retryCnt = 0; // Retry Count For Send Proc
 
 	// 8 bytes
 	SOCKET userSkt;
 
 	// 16 bytes
-	WSABUF wsaBuf; // WSASend, WSARecv에 필요한 버퍼
+	WSABUF wsaBuf; // TCP Buffer
+};
 
-	WSAOVERLAPPED wsaOverlapped;
+struct OverlappedUDP {
+	// 4 bytes
+	int addrSize = sizeof(sockaddr_in);
+
+	// 16 bytes
+	WSABUF wsaBuf; // UDP Buffer
+	sockaddr_in clientAddr;  // Client Ip && Port Info
 };

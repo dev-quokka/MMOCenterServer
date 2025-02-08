@@ -25,7 +25,16 @@ public:
 	bool StartCheck() {
 		if (startCheck.fetch_add(1) + 1 == 2) {
 			endTime = std::chrono::steady_clock::now() + std::chrono::minutes(2)+ std::chrono::seconds(8);
+			return true;
 		}
+		return false;
+	}
+
+	bool EndCheck() {
+		if (startCheck.fetch_sub(1) + 1 == 0) {
+			return true;
+		}
+		return false;
 	}
 
 	uint8_t GetRoomNum() {
@@ -61,56 +70,20 @@ public:
 		else if (userNum == 1) return ruInfos[1].userScore;
 	}
 
-	unsigned int Hit(uint8_t userNum, unsigned int damage_){ // userNum으로 하면 해킹 위험 있을 수도 있으니 받은 소켓으로 확인
-		unsigned int hitMob = mobHp.fetch_sub(damage_);
-
+	unsigned int Hit(uint8_t userNum_, unsigned int damage_){
 		if (mobHp <= 0 || finishCheck.load()) {
 			return 0;
 		}
 
-		unsigned int myDamage = min(damage_,hitMob);
-
-		if (myDamage <= 0) {
+		if (mobHp.fetch_sub(damage_)-damage_<=0) {
 			finishCheck.store(true);
-			myDamage = mobHp + damage_;
+			return ruInfos[userNum_].userScore.fetch_add(mobHp + damage_) + (mobHp + damage_);
+
+			MatchingManager* matchingManager;
+			matchingManager->DeleteMob(this); // delete room 요청
 		}
 
-			if (ruInfos[0].userSkt == userSkt_) {
-
-				int k;
-				if ((k = mobHp.load() - damage_) <= 0) {
-					mobHp.store(0);
-					ruInfos[0].userScore = k + damage_;
-
-					MatchingManager* matchingManager;
-					matchingManager->DeleteMob(this); // delete room 요청
-
-					return 3;
-				}
-				else {
-					mobHp.fetch_sub(damage_);
-					ruInfos[0].userScore = damage_;
-					return 1;
-				}
-			}
-
-			else {
-				int k;
-				if ((k = mobHp.load() - damage_) <= 0) {
-					mobHp.store(0);
-					ruInfos[1].userScore = k + damage_;
-
-					MatchingManager* matchingManager;
-					matchingManager->DeleteMob(this); // delete room 요청
-
-					return 3;
-				}
-				else {
-					mobHp.fetch_sub(damage_);
-					ruInfos[1].userScore = damage_;
-					return 1;
-				}
-			}
+		return ruInfos[userNum_].userScore.fetch_add(damage_) + damage_;
 	}
 
 private:

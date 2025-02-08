@@ -200,11 +200,14 @@ struct RAID_START_REQUEST : PACKET_HEADER {
 };
 
 struct RAID_HIT_REQUEST : PACKET_HEADER {
+	uint8_t roomNum;
+	uint8_t myNum;
 	unsigned int damage;
 };
 
 struct RAID_HIT_RESPONSE : PACKET_HEADER {
-	unsigned int currentHp;
+	unsigned int yourScore;
+	unsigned int currentMobHp;
 };
 
 struct RAID_END_REQUEST : PACKET_HEADER { // Server to USER

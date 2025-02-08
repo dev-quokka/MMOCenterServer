@@ -112,14 +112,14 @@ bool QuokkaServer::StartWork() {
         WaittingQueue.push(connUser); // Push ConnUser
     }
 
-    p_RedisManager->init(MaxThreadCnt, maxClientCount);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
-    p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager.get()); // 
+    p_RedisManager->init(MaxThreadCnt, maxClientCount);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes)
+    p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager.get());
 
     return true;
 }
 
 bool QuokkaServer::CreateWorkThread() {
-    auto threadCnt = MaxThreadCnt; // core
+    auto threadCnt = MaxThreadCnt-1; // core-1
     for (int i = 0; i < threadCnt; i++) {
         workThreads.emplace_back([this]() { WorkThread(); });
     }
@@ -132,6 +132,15 @@ bool QuokkaServer::CreateAccepterThread() {
     acceptThread = std::thread([this]() { AccepterThread(); });
     std::cout << "AcceptThread ½ÃÀÛ" << std::endl;
     return true;
+}
+
+bool checkSocketType(SOCKET socket) {
+    int sockType;
+    int sockTypeSize = sizeof(sockType);
+
+    if (getsockopt(socket, SOL_SOCKET, SO_TYPE, (char*)&sockType, &sockTypeSize) == 0) {
+        return sockType == SOCK_STREAM;  // True is TCP, False is UDP
+    }
 }
 
 void QuokkaServer::WorkThread() {
@@ -153,6 +162,9 @@ void QuokkaServer::WorkThread() {
             WorkRun = false;
             continue;
         }
+
+
+
 
         auto pOverlappedEx = (OverlappedEx*)lpOverlapped;
         connUser = p_ConnUsersManagerManager->FindUser(pOverlappedEx->userSkt);

@@ -6,8 +6,25 @@ void MatchingManager::Init(const UINT16 maxClientCount_) {
         matchingMap.emplace(i, std::priority_queue<MatchingRoom*>());
     }
 
-    for (int i = 1; i <= 64; i++) { // (Max Room Set)
+    for (int i = 1; i <= maxClientCount_; i++) { // Room Number Set
         roomNumQueue.push(i);
+    }
+
+    for (int i = 0; i <= maxClientCount_ / 300; i++) { // 유저 300명당 하나의 UDP SOCKET 생성
+        SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
+
+        sockaddr_in udpAddr;
+        udpAddr.sin_family = AF_INET;
+        udpAddr.sin_port = htons(UDP_PORT+i);
+        udpAddr.sin_addr.s_addr = INADDR_ANY;
+
+        if (bind(udpSocket, (SOCKADDR*)&udpAddr, sizeof(udpAddr)) == SOCKET_ERROR) {
+            std::cout << "UDP SOCKET BIND FAIL" << std::endl;
+            closesocket(udpSocket);
+            break;
+        }
+
+        udpSockets.emplace_back(udpSocket);
     }
 
     CreateMatchThread();

@@ -54,7 +54,9 @@ private:
     // RAID
     void MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 매치 대기열 삽입
     void RaidReqTeamInfo(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 서로 팀 정보 요청 (상대 대기 확인)
+
     void RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+
     void RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
     void GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
@@ -66,6 +68,10 @@ private:
     SOCKET webServerSocket = 0;
     sw::redis::RedisCluster redis;
     std::uniform_int_distribution<int> dist;
+
+    std::unique_ptr<InGameUserManager> inGameUserManager;
+    std::unique_ptr<MatchingManager> matchingManager;
+    std::unique_ptr<RoomManager> roomManager;
 
     // 16 bytes
     std::thread redisThread;
@@ -79,10 +85,6 @@ private:
     std::vector<unsigned int> mobExp = { 0,1,2,3,4,5,6,7,8,9,10 };
     std::vector<std::string> itemType = {"equipment", "consumables", "materials" };
 
-    // 64 bytes
-    InGameUserManager* inGameUserManager;
-    MatchingManager* matchingManager;
-    RoomManager* roomManager;
     // 72 bytes
     std::condition_variable cv;
 
@@ -90,7 +92,7 @@ private:
     std::mutex redisMu;
 
     // 136 bytes 
-    boost::lockfree::queue<DataPacket> procSktQueue;// 나중에 병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환
+    boost::lockfree::queue<DataPacket> procSktQueue{1024}; // 나중에 병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환
 
     // 242 bytes
     sw::redis::ConnectionOptions connection_options;

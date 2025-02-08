@@ -19,6 +19,10 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
     packetIDTable[26] = &RedisManager::DeleteItem;
     packetIDTable[27] = &RedisManager::MoveItem;
 
+    matchingManager = std::make_unique<MatchingManager>(maxClientCount_);
+    inGameUserManager = std::make_unique<InGameUserManager>();
+    roomManager = std::make_unique<RoomManager>();
+
     inGameUserManager->Init(maxClientCount_);
 
     RedisRun(RedisThreadCnt_);
@@ -480,6 +484,8 @@ void RedisManager::RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     auto raidTeamInfoReqPacket = reinterpret_cast<RAID_HIT_REQUEST*>(pPacket_);
     InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
+    roomManager->GetRoom(raidTeamInfoReqPacket->roomNum)->Hit(raidTeamInfoReqPacket->myNum, raidTeamInfoReqPacket->damage);
+
 
 }
 
@@ -487,6 +493,7 @@ void RedisManager::RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
     
     //redis.zadd("user_scores", score, to_string(user_id));
+
 
 }
 

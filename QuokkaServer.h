@@ -20,7 +20,9 @@
 
 class QuokkaServer {
 public:
-    QuokkaServer(UINT16 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {}
+    QuokkaServer(UINT16 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {
+        p_RedisManager = std::make_unique<RedisManager>(maxClientCount_);
+    }
     ~QuokkaServer() {}
 
     bool init(const UINT16 MaxThreadCnt_, int port_);
@@ -30,6 +32,7 @@ private:
     bool CreateWorkThread();
     bool CreateRedisThread();
     bool CreateAccepterThread();
+    bool checkSocketType(SOCKET socket);
 
     void WorkThread(); // IOCP Complete Event Thread
     void RedisThread(); // Redis req Thread
