@@ -32,7 +32,6 @@ private:
     bool CreateWorkThread();
     bool CreateRedisThread();
     bool CreateAccepterThread();
-    bool checkSocketType(SOCKET socket);
 
     void WorkThread(); // IOCP Complete Event Thread
     void RedisThread(); // Redis req Thread

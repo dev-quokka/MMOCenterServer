@@ -24,7 +24,7 @@ struct OverlappedEx {
 	WSAOVERLAPPED wsaOverlapped;
 };
 
-struct OverlappedTCP {
+struct OverlappedTCP : OverlappedEx {
 	// 2 bytes
 	short retryCnt = 0; // Retry Count For Send Proc
 
@@ -35,7 +35,7 @@ struct OverlappedTCP {
 	WSABUF wsaBuf; // TCP Buffer
 };
 
-struct OverlappedUDP {
+struct OverlappedUDP : OverlappedEx {
 	// 4 bytes
 	int addrSize = sizeof(sockaddr_in);
 
