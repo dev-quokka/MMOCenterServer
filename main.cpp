@@ -10,7 +10,7 @@ int main() {
 
     UINT16 core= std::thread::hardware_concurrency();
 
-    server.init(core/2,PORT);
+    server.init(1,PORT);
 
     server.StartWork();
 

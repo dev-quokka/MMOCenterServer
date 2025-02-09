@@ -34,7 +34,7 @@ bool QuokkaServer::init(const UINT16 MaxThreadCnt_, int port_) {
         return false;
     }
 
-    sIOCPHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, MaxThreadCnt-1);
+    sIOCPHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, MaxThreadCnt);
     if (sIOCPHandle == NULL) {
         std::cout << "iocp 핸들 생성 실패" << std::endl;
         return false;
@@ -128,7 +128,7 @@ bool QuokkaServer::CreateWorkThread() {
 }
 
 bool QuokkaServer::CreateAccepterThread() {
-    auto threadCnt = MaxThreadCnt/4; // (core/4)
+    auto threadCnt = MaxThreadCnt/4+1; // (core/4)
     acceptThread = std::thread([this]() { AccepterThread(); });
     std::cout << "AcceptThread 시작" << std::endl;
     return true;
