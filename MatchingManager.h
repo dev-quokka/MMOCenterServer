@@ -31,24 +31,31 @@ struct MatchingRoom {
 
 class MatchingManager {
 public:
-	void Init(const UINT16 maxClientCount_);
+	void Init(const UINT16 maxClientCount_, const HANDLE sIOCPHandle_, RedisManager* redisManager);
 	bool Insert(uint8_t userLevel_, UINT16 userSkt_, std::string userId);
 	bool CreateMatchThread();
-	bool CreatTimeCheckThread();
+	bool CreateUDPWorkThread(HANDLE sIOCPHandle_);
+	bool CreateTimeCheckThread();
+	void UDPWorkThread(HANDLE sIOCPHandle_);
 	void MatchingThread();
 	void TimeCheckThread();
 	void DeleteMob(Room* room_);
+	SOCKET GetUDPSocket(uint8_t roomNum_);
+
+	void SyncMobHp(OverlappedUDP* overlappedUDP_, uint8_t roomNum_);
 
 private:
 	// 1 bytes
 	bool matchRun;
 	bool timeChekcRun;
+	bool workRun;
 
 	// 16 bytes
+	std::thread udpWorkThread;
 	std::thread matchingThread;
 	std::thread timeCheckThread;
-
 	std::vector<SOCKET> udpSockets;
+	char serverIP[16];
 
 	// 24 bytes
 	std::set<Room*, EndTimeComp> endRoomCheckSet;

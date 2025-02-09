@@ -83,7 +83,7 @@ bool QuokkaServer::StartWork() {
             return false;
         }
 
-        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA,i);
+        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA,i, sIOCPHandle);
 
         AcceptQueue.push(connUser); // Push ConnUser
         p_ConnUsersManagerManager->InsertUser(TempSkt); // Init ConnUsers
@@ -107,12 +107,12 @@ bool QuokkaServer::StartWork() {
             return false;
         }
 
-        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA, maxClientCount);
+        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA, maxClientCount, sIOCPHandle);
 
         WaittingQueue.push(connUser); // Push ConnUser
     }
 
-    p_RedisManager->init(MaxThreadCnt, maxClientCount);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
+    p_RedisManager->init(MaxThreadCnt, maxClientCount, sIOCPHandle);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
     p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager.get()); // 
 
     return true;
@@ -144,7 +144,7 @@ void QuokkaServer::WorkThread() {
         gqSucces = GetQueuedCompletionStatus(
             sIOCPHandle,
             &dwIoSize,
-            (PULONG_PTR)&connUser,
+            nullptr,
             &lpOverlapped,
             INFINITE
         );
@@ -154,22 +154,22 @@ void QuokkaServer::WorkThread() {
             continue;
         }
 
-        auto pOverlappedEx = (OverlappedTCP*)lpOverlapped;
-        connUser = p_ConnUsersManagerManager->FindUser(pOverlappedEx->userSkt);
+        auto overlappedTCP = (OverlappedTCP*)lpOverlapped;
+        connUser = p_ConnUsersManagerManager->FindUser(overlappedTCP->userSkt);
 
-        if (!gqSucces || (dwIoSize == 0 && pOverlappedEx->taskType != TaskType::ACCEPT)) { // User Disconnect
-            p_RedisManager->Disconnect(pOverlappedEx->userSkt);
-            std::cout << "socket " << pOverlappedEx->userSkt << " Disconnect && Data Update Fail" << std::endl;
+        if (!gqSucces || (dwIoSize == 0 && overlappedTCP->taskType != TaskType::ACCEPT)) { // User Disconnect
+            p_RedisManager->Disconnect(overlappedTCP->userSkt);
+            std::cout << "socket " << overlappedTCP->userSkt << " Disconnect && Data Update Fail" << std::endl;
             UserCnt.fetch_sub(1); // UserCnt -1
             CloseSocket(connUser);
             continue;
         }
 
-        if (pOverlappedEx->taskType == TaskType::ACCEPT) { // User Connect
+        if (overlappedTCP->taskType == TaskType::ACCEPT) { // User Connect
             if (connUser) {
                 if (connUser->BindUser()) {
                     UserCnt.fetch_add(1); // UserCnt +1
-                    std::cout << "socket " << pOverlappedEx->userSkt << " Connect" << std::endl;
+                    std::cout << "socket " << overlappedTCP->userSkt << " Connect" << std::endl;
                 }
                 else { // Bind Fail
                     CloseSocket(connUser, true);
@@ -178,12 +178,12 @@ void QuokkaServer::WorkThread() {
                 }
             }
         }
-        else if (pOverlappedEx->taskType == TaskType::RECV) {
-            p_RedisManager->PushRedisPacket(pOverlappedEx->userSkt, dwIoSize, connUser->GetRecvBuffer()); // Proccess In Redismanager
+        else if (overlappedTCP->taskType == TaskType::RECV) {
+            p_RedisManager->PushRedisPacket(overlappedTCP->userSkt, dwIoSize, connUser->GetRecvBuffer()); // Proccess In Redismanager
             connUser->ConnUserRecv(); // Wsarecv Again
         }
-        else if (pOverlappedEx->taskType == TaskType::SEND) {
 
+        else if (overlappedTCP->taskType == TaskType::SEND) {
             connUser->SendComplete();
         }
     }

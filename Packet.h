@@ -181,13 +181,16 @@ struct RAID_READY_REQUEST : PACKET_HEADER {
 	uint8_t timer; // Minutes
 	uint8_t roomNum; // If Max RoomNum Up to Short Range, Back to Number One
 	uint8_t yourNum;
+	UINT16 udpPort;   // Server UDP Port Num
 	unsigned int mobHp;
+	char serverIP[16]; // Server IP Address
 };
 
 struct RAID_TEAMINFO_REQUEST : PACKET_HEADER { // User To Server
 	bool imReady;
 	uint8_t roomNum;
 	uint8_t myNum;
+	sockaddr_in userAddr;// 유저가 만든 udp 소켓의 sockaddr_in 전달
 };
 
 struct RAID_TEAMINFO_RESPONSE : PACKET_HEADER {

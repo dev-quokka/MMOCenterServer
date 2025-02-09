@@ -13,7 +13,7 @@
 
 class RedisManager {
 public:
-    void init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_);
+    void init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_, const HANDLE sIOCPHandle_);
     void EndRedisThreads(); // End Redis Threads
     void SetConnUserManager(ConnUsersManager* connUsersManager_);
     void PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_); // Push Redis Packet

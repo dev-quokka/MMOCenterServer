@@ -9,7 +9,7 @@
 
 class ConnUser {
 public:
-	ConnUser(SOCKET UserSkt_, UINT32 bufferSize_, UINT16 connObjNum_) : userSkt(UserSkt_), circularBuffer(bufferSize_), connObjNum(connObjNum_) {}
+	ConnUser(SOCKET UserSkt_, UINT32 bufferSize_, UINT16 connObjNum_, HANDLE sIOCPHandle) : userSkt(UserSkt_), circularBuffer(bufferSize_), connObjNum(connObjNum_), userIocpHandle(sIOCPHandle) {}
 
 public :
 	bool IsConn() { // check connection status
@@ -106,8 +106,8 @@ public :
 	}
 
 	void PushSendMsg(const UINT32 dataSize_, char* sendMsg) {
-		auto sendOverlapped = new OverlappedEx;
-		ZeroMemory(sendOverlapped, sizeof(OverlappedEx));
+		auto sendOverlapped = new OverlappedTCP;
+		ZeroMemory(sendOverlapped, sizeof(OverlappedTCP));
 		sendOverlapped->wsaBuf.len = dataSize_;
 		sendOverlapped->wsaBuf.buf = new char[dataSize_];
 		CopyMemory(sendOverlapped->wsaBuf.buf, sendMsg, dataSize_);
@@ -121,7 +121,7 @@ public :
 	}
 
 	void SendComplete() {
-		OverlappedEx* deleteOverlapped = nullptr;
+		OverlappedTCP* deleteOverlapped = nullptr;
 
 		while (deleteSendQueue.pop(deleteOverlapped)) {
 			delete[] deleteOverlapped->wsaBuf.buf;
@@ -133,14 +133,14 @@ public :
 
 private:
 	void ProcSend() {
-		auto sendOverlapped = new OverlappedEx;
+		auto sendOverlapped = new OverlappedTCP;
 
 		if (sendQueue.pop(sendOverlapped)) {
-			DWORD dwRecvNumBytes = 0;
+			DWORD dwSendBytes = 0;
 			int sCheck = WSASend(userSkt,
 				&(sendOverlapped->wsaBuf),
 				1,
-				&dwRecvNumBytes,
+				&dwSendBytes,
 				0,
 				(LPWSAOVERLAPPED)sendOverlapped,
 				NULL);
@@ -184,12 +184,12 @@ private:
 	HANDLE userIocpHandle = INVALID_HANDLE_VALUE;
 
 	// 56 bytes
-	OverlappedEx userOvlap = {};
+	OverlappedTCP userOvlap = {};
 
 	// 120 bytes
 	CircularBuffer circularBuffer; // Make Circular Recv Buffer
 
 	// 136 bytes 
-	boost::lockfree::queue<OverlappedEx*> sendQueue;
-	boost::lockfree::queue<OverlappedEx*> deleteSendQueue;
+	boost::lockfree::queue<OverlappedTCP*> sendQueue;
+	boost::lockfree::queue<OverlappedTCP*> deleteSendQueue;
 };

@@ -1,6 +1,6 @@
 #include "MatchingManager.h"
 
-void MatchingManager::Init(const UINT16 maxClientCount_) {
+void MatchingManager::Init(const UINT16 maxClientCount_, const HANDLE sIOCPHandle_, RedisManager* redisManager_) {
     for (int i = 1; i <= 6; i++ ) { // Max i = MaxLevel/3 + 1 (Level Check Set)
         std::priority_queue<MatchingRoom*> k;
         matchingMap.emplace(i, std::priority_queue<MatchingRoom*>());
@@ -24,11 +24,34 @@ void MatchingManager::Init(const UINT16 maxClientCount_) {
             break;
         }
 
+        HANDLE result = CreateIoCompletionPort((HANDLE)udpSocket, sIOCPHandle_, (ULONG_PTR)0, 0);
+
+        if (result == NULL) {
+            std::cerr << "UDP SOCKET IOCP BIND FAIL : " << GetLastError() << std::endl;
+        }
+
+        if (serverIP == '\0') { // 처음에만 serverIP에 IP값 할당해두기
+            sockaddr_in addr;
+            int addrSize = sizeof(addr);
+
+            if (getsockname(udpSocket, (SOCKADDR*)&addr, &addrSize) == 0) {
+                inet_ntop(AF_INET, &addr.sin_addr, serverIP, sizeof(serverIP));
+            }
+            else {
+                std::cerr << "GET UDP SOCKET IP FAIL : " << WSAGetLastError() << std::endl;
+            }
+        }
+
         udpSockets.emplace_back(udpSocket);
     }
 
+    redisManager = redisManager_;
     CreateMatchThread();
     TimeCheckThread();
+}
+
+SOCKET MatchingManager::GetUDPSocket(uint8_t roomNum_) {
+    return udpSockets[roomNum_/300]; // 300명 단위로 나누어진 udp 소켓
 }
 
 bool MatchingManager::Insert(uint8_t userLevel_, UINT16 userSkt_, std::string userId_) {
@@ -55,10 +78,17 @@ bool MatchingManager::CreateMatchThread() {
     return true;
 }
 
-bool MatchingManager::CreatTimeCheckThread() {
+bool MatchingManager::CreateTimeCheckThread() {
     timeChekcRun = true;
     timeCheckThread = std::thread([this]() {TimeCheckThread(); });
     std::cout << "TimeCheckThread 시작" << std::endl;
+    return true;
+}
+
+bool MatchingManager::CreateUDPWorkThread(HANDLE sIOCPHandle_) {
+    workRun = true;
+    udpWorkThread = std::thread([this, sIOCPHandle_]() {UDPWorkThread(sIOCPHandle_); });
+    std::cout << "UDPWorkThread 시작" << std::endl;
     return true;
 }
 
@@ -94,6 +124,8 @@ void MatchingManager::MatchingThread() {
                                 rReadyResPacket1.roomNum = tempRoomNum;
                                 rReadyResPacket1.yourNum = 0;
                                 rReadyResPacket1.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
+                                rReadyResPacket1.udpPort = UDP_PORT;
+                                strcpy(rReadyResPacket1.serverIP, serverIP);
 
                                 // Send to User2 with User1 Info
                                 rReadyResPacket2.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
@@ -103,6 +135,8 @@ void MatchingManager::MatchingThread() {
                                 rReadyResPacket2.roomNum = tempRoomNum;
                                 rReadyResPacket2.yourNum = 1;
                                 rReadyResPacket2.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
+                                rReadyResPacket2.udpPort = UDP_PORT;
+                                strcpy(rReadyResPacket2.serverIP, serverIP);
 
                                 // 마지막 요청 처리 뒤에 방 생성 요청 보내기 (전에 요청 건 다 처리하고 방 생성)
                                 redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket1); // Send User1 with Game Info && User2 Info
@@ -222,4 +256,47 @@ void MatchingManager::TimeCheckThread() {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
     }
+}
+
+
+void MatchingManager::SyncMobHp(OverlappedUDP* overlappedUDP_, uint8_t roomNum_){
+    DWORD dwSendBytes = 0;
+
+   int result =  WSASendTo(udpSockets[roomNum_/300], &overlappedUDP_->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&overlappedUDP_->userAddr, sizeof(overlappedUDP_->userAddr), (LPWSAOVERLAPPED)overlappedUDP_, NULL);
+
+   if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+       std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
+       delete[] overlappedUDP_->wsaBuf.buf;
+       delete overlappedUDP_;
+   }
+
+}
+
+void MatchingManager::UDPWorkThread(HANDLE sIOCPHandle_) {
+    LPOVERLAPPED lpOverlapped = NULL;
+    DWORD dwIoSize = 0;
+    bool gqSucces = TRUE;
+
+    while (workRun) {
+        gqSucces = GetQueuedCompletionStatus(
+            sIOCPHandle_,
+            &dwIoSize,
+            nullptr,
+            &lpOverlapped,
+            INFINITE
+        );
+
+        auto overlappedUDP = (OverlappedUDP*)lpOverlapped;
+
+        if (overlappedUDP->taskType == TaskType::SEND) {
+            delete[] overlappedUDP->wsaBuf.buf;
+            delete overlappedUDP;
+        }
+
+        else if (overlappedUDP->taskType == TaskType::RECV) {
+
+        }
+
+    }
+
 }

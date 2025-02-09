@@ -2,7 +2,7 @@
 
 thread_local std::mt19937 RedisManager::gen(std::random_device{}());
 
-void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_) {
+void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_, HANDLE sIOCPHandle_) {
 
     // ---------- SET PACKET PROCESS ---------- 
     packetIDTable = std::vector<RECV_PACKET_FUNCTION>(PACKET_ID_SIZE, nullptr);
@@ -26,7 +26,7 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
     inGameUserManager->Init(maxClientCount_);
 
     RedisRun(RedisThreadCnt_);
-    matchingManager->Init(maxClientCount_);
+    matchingManager->Init(maxClientCount_, sIOCPHandle_, this);
 }
 
 void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Server
@@ -449,6 +449,8 @@ void RedisManager::RaidReqTeamInfo(SOCKET userSkt, UINT16 packetSize_, char* pPa
     auto raidTeamInfoReqPacket = reinterpret_cast<RAID_TEAMINFO_REQUEST*>(pPacket_);
 
     Room* tempRoom = roomManager->GetRoom(raidTeamInfoReqPacket->roomNum);
+    tempRoom->setSockAddr(raidTeamInfoReqPacket->myNum, raidTeamInfoReqPacket->userAddr); // Set User UDP Socket Info
+
     InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
     InGameUser* teamUser = tempRoom->GetTeamUser(raidTeamInfoReqPacket->myNum);
 

@@ -30,18 +30,12 @@ public:
 
 private:
     bool CreateWorkThread();
-    bool CreateRedisThread();
     bool CreateAccepterThread();
 
     void WorkThread(); // IOCP Complete Event Thread
-    void RedisThread(); // Redis req Thread
     void AccepterThread(); // Accept req Thread
 
-    void OnConnect(const UINT32 clientIndex_);
-    void OnReceive(const UINT32 clientIndex_, const DWORD size_, char* pData_);
     void CloseSocket(ConnUser* connUser, bool isForce_ = false);
-
-    ConnUser* GetClientInfo(TaskType taskType);
 
     // 1 bytes
     bool WorkRun = true;

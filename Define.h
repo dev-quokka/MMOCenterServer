@@ -41,5 +41,5 @@ struct OverlappedUDP : OverlappedEx {
 
 	// 16 bytes
 	WSABUF wsaBuf; // UDP Buffer
-	sockaddr_in clientAddr;  // Client Ip && Port Info
+	sockaddr_in userAddr;  // Client Ip && Port Info
 };
