@@ -144,7 +144,7 @@ void QuokkaServer::WorkThread() {
         gqSucces = GetQueuedCompletionStatus(
             sIOCPHandle,
             &dwIoSize,
-            nullptr,
+            (PULONG_PTR)&connUser,
             &lpOverlapped,
             INFINITE
         );

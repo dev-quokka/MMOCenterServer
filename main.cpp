@@ -14,13 +14,15 @@ int main() {
 
     server.StartWork();
 
-    std::cout << "if you exit, write quokka" << std::endl;
+    std::cout << "If You Want Exit, Write quokka" << std::endl;
     std::string k = "";
 
     while (1) {
         std::cin >> k;
         if (k == "quokka") break;
     }
+
+    server.ServerEnd();
 
     return 0;
 }

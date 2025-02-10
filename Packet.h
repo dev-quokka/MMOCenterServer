@@ -119,10 +119,10 @@ struct MOD_ITEM_RESPONSE : PACKET_HEADER {
 
 struct MOV_ITEM_REQUEST : PACKET_HEADER {
 	uint8_t dragItemType; // (Max 3)
-	uint8_t targetItemType; // (Max 3)
 	uint8_t dragItemSlotPos; // (Max 50)
-	uint8_t targetItemSlotPos; // (Max 50)
 	uint8_t dragItemCount; // (Max 99)
+	uint8_t targetItemType; // (Max 3)
+	uint8_t targetItemSlotPos; // (Max 50)
 	uint8_t targetItemCount; // (Max 99)
 	short dragItemCode; // (Max 5000)
 	short targetItemCode; // (Max 5000)

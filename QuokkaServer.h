@@ -16,7 +16,7 @@
 #include <tbb/concurrent_hash_map.h>
 
 #pragma comment(lib, "ws2_32.lib") // 소켓 프로그래밍용
-#pragma comment(lib, "mswsock.lib") // AcceptEx 사용용
+#pragma comment(lib, "mswsock.lib") // AcceptEx 사용
 
 class QuokkaServer {
 public:
@@ -27,6 +27,7 @@ public:
 
     bool init(const UINT16 MaxThreadCnt_, int port_);
     bool StartWork();
+    void ServerEnd();
 
 private:
     bool CreateWorkThread();
