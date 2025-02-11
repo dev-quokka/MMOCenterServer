@@ -26,7 +26,7 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
     inGameUserManager->Init(maxClientCount_);
 
     RedisRun(RedisThreadCnt_);
-    matchingManager->Init(maxClientCount_, sIOCPHandle_, this);
+    matchingManager->Init(maxClientCount_, this);
 }
 
 void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Server

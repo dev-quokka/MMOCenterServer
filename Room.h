@@ -103,7 +103,7 @@ public:
 			overlappedUDP->userAddr = userAddr;
 			overlappedUDP->taskType = TaskType::SEND;
 
-			matchingManager->SyncMobHp(overlappedUDP,roomNum); // Syncronize Mob Hp
+			matchingManager->SyncMobHp(overlappedUDP); // Syncronize Mob Hp
 		}
 
 		score_ = ruInfos[userNum_].userScore.fetch_add(damage_) + damage_;

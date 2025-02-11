@@ -82,7 +82,7 @@ public :
 
 		return ConnUserRecv();
 	}
-
+	
 	bool ConnUserRecv() {
 		DWORD dwFlag = 0;
 		DWORD dwRecvBytes = 0;

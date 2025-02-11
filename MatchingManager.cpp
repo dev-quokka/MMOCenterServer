@@ -1,6 +1,6 @@
 #include "MatchingManager.h"
 
-void MatchingManager::Init(const UINT16 maxClientCount_, const HANDLE sIOCPHandle_, RedisManager* redisManager_) {
+void MatchingManager::Init(const UINT16 maxClientCount_, RedisManager* redisManager_) {
     for (int i = 1; i <= 6; i++ ) { // Max i = MaxLevel/3 + 1 (Level Check Set)
         std::priority_queue<MatchingRoom*> k;
         matchingMap.emplace(i, std::priority_queue<MatchingRoom*>());
@@ -10,21 +10,22 @@ void MatchingManager::Init(const UINT16 maxClientCount_, const HANDLE sIOCPHandl
         roomNumQueue.push(i);
     }
 
-    for (int i = 0; i <= maxClientCount_ / 300; i++) { // 유저 300명당 하나의 UDP SOCKET 생성
+    udpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1); // 마지막 매개변수 = udp 소켓 GetQueuedCompletionStatus 쓰레드 개수
+
+
         SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
 
         sockaddr_in udpAddr;
         udpAddr.sin_family = AF_INET;
-        udpAddr.sin_port = htons(UDP_PORT+i);
+        udpAddr.sin_port = htons(UDP_PORT);
         udpAddr.sin_addr.s_addr = INADDR_ANY;
 
         if (bind(udpSocket, (SOCKADDR*)&udpAddr, sizeof(udpAddr)) == SOCKET_ERROR) {
             std::cout << "UDP SOCKET BIND FAIL" << std::endl;
             closesocket(udpSocket);
-            break;
         }
 
-        HANDLE result = CreateIoCompletionPort((HANDLE)udpSocket, sIOCPHandle_, (ULONG_PTR)0, 0);
+        HANDLE result = CreateIoCompletionPort((HANDLE)udpSocket, udpHandle, (ULONG_PTR)0, 0);
 
         if (result == NULL) {
             std::cerr << "UDP SOCKET IOCP BIND FAIL : " << GetLastError() << std::endl;
@@ -40,18 +41,15 @@ void MatchingManager::Init(const UINT16 maxClientCount_, const HANDLE sIOCPHandl
             else {
                 std::cerr << "GET UDP SOCKET IP FAIL : " << WSAGetLastError() << std::endl;
             }
-        }
-
-        udpSockets.emplace_back(udpSocket);
-    }
+        }  
 
     redisManager = redisManager_;
     CreateMatchThread();
     TimeCheckThread();
 }
 
-SOCKET MatchingManager::GetUDPSocket(uint8_t roomNum_) {
-    return udpSockets[roomNum_/300]; // 300명 단위로 나누어진 udp 소켓
+SOCKET MatchingManager::GetUDPSocket() {
+    return udpSocket;
 }
 
 bool MatchingManager::Insert(uint8_t userLevel_, UINT16 userSkt_, std::string userId_) {
@@ -85,9 +83,9 @@ bool MatchingManager::CreateTimeCheckThread() {
     return true;
 }
 
-bool MatchingManager::CreateUDPWorkThread(HANDLE sIOCPHandle_) {
+bool MatchingManager::CreateUDPWorkThread() {
     workRun = true;
-    udpWorkThread = std::thread([this, sIOCPHandle_]() {UDPWorkThread(sIOCPHandle_); });
+    udpWorkThread = std::thread([this]() {UDPWorkThread(); });
     std::cout << "UDPWorkThread 시작" << std::endl;
     return true;
 }
@@ -259,29 +257,28 @@ void MatchingManager::TimeCheckThread() {
 }
 
 
-void MatchingManager::SyncMobHp(OverlappedUDP* overlappedUDP_, uint8_t roomNum_){
+void MatchingManager::SyncMobHp(OverlappedUDP* overlappedUDP_){
     DWORD dwSendBytes = 0;
 
-   int result =  WSASendTo(udpSockets[roomNum_/300], &overlappedUDP_->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&overlappedUDP_->userAddr, sizeof(overlappedUDP_->userAddr), (LPWSAOVERLAPPED)overlappedUDP_, NULL);
+        int result = WSASendTo(udpSocket, &overlappedUDP_->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&overlappedUDP_->userAddr, sizeof(overlappedUDP_->userAddr), (LPWSAOVERLAPPED)overlappedUDP_, NULL);
 
-   if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-       std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
-       delete[] overlappedUDP_->wsaBuf.buf;
-       delete overlappedUDP_;
-   }
-
+        if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+            std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
+            delete[] overlappedUDP_->wsaBuf.buf;
+            delete overlappedUDP_;
+        }
 }
 
-void MatchingManager::UDPWorkThread(HANDLE sIOCPHandle_) {
+void MatchingManager::UDPWorkThread() {
     LPOVERLAPPED lpOverlapped = NULL;
     DWORD dwIoSize = 0;
     bool gqSucces = TRUE;
 
     while (workRun) {
         gqSucces = GetQueuedCompletionStatus(
-            sIOCPHandle_,
+            udpHandle,
             &dwIoSize,
-            nullptr,
+            (PULONG_PTR)&udpSocket,
             &lpOverlapped,
             INFINITE
         );

@@ -1,6 +1,7 @@
 #pragma once
 #include <mutex>
-#include <ws2tcpip.h>
+#include <cstdint>
+#include <windows.h>
 
 class CircularBuffer {
 public:
