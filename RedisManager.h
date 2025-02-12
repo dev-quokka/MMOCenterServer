@@ -14,12 +14,11 @@
 class RedisManager {
 public:
     void init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_, const HANDLE sIOCPHandle_);
-    void EndRedisThreads(); // End Redis Threads
     void SetConnUserManager(ConnUsersManager* connUsersManager_);
     void PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_); // Push Redis Packet
     void Disconnect(SOCKET userSkt);
 
-    // // Send Data to Web Server for Synchronization With Redis
+    // Send Data to Web Server for Synchronization With Redis
     void SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1, RAID_END_REQUEST raidEndReqPacket2);
 
 private:
@@ -38,7 +37,6 @@ private:
 
     // USER STATUS
     void ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void LevleUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
 
     // INVENTORY
     void AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
@@ -65,7 +63,7 @@ private:
     bool redisRun = 0;
 
     // 8 bytes
-    SOCKET webServerSocket = 0;
+    SOCKET webServerSkt = 0;
     sw::redis::RedisCluster redis;
     std::uniform_int_distribution<int> dist;
 

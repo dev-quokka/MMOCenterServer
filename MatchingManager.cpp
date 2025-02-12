@@ -12,7 +12,6 @@ void MatchingManager::Init(const UINT16 maxClientCount_, RedisManager* redisMana
 
     udpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1); // 마지막 매개변수 = udp 소켓 GetQueuedCompletionStatus 쓰레드 개수
 
-
         SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
 
         sockaddr_in udpAddr;
@@ -102,10 +101,18 @@ void MatchingManager::MatchingThread() {
                 if (matchingMap.find(accessor1, i)) {
                     if (!accessor1->second.empty()) { 
                         tempMatching1 = accessor1->second.top();
+                        if (tempMatching1->userId != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching1->userSkt)->GetObjNum()))->GetId() ) { // 이미 나간 유저면 다음으로 넘어가기
+                            accessor1->second.pop();
+                            continue;
+                        }
                         accessor1->second.pop();
                         tbb::concurrent_hash_map<uint8_t, std::priority_queue<MatchingRoom*>>::accessor accessor2;
                         if (!accessor2->second.empty()) { // 두번째 대기 유저가 있음
                             tempMatching2 = accessor2->second.top();
+                            if (tempMatching2->userId != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching2->userSkt)->GetObjNum()))->GetId()) { // 이미 나간 유저면 다음으로 넘어가기
+                                accessor2->second.pop();
+                                continue;
+                            }
                             accessor2->second.pop();
 
                             { // 두명 유저 방 만들어서 넣어주기

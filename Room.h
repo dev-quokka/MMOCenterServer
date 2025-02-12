@@ -31,7 +31,7 @@ public:
 		if (startCheck.fetch_add(1) + 1 == 2) {
 			endTime = std::chrono::steady_clock::now() + std::chrono::minutes(2)+ std::chrono::seconds(8);
 			matchingManager = std::make_unique<MatchingManager>();
-			udpSkt = matchingManager->GetUDPSocket(roomNum);
+			udpSkt = matchingManager->GetUDPSocket();
 			overlappedUDP = new OverlappedUDP;
 			return true;
 		}

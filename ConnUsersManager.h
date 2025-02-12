@@ -7,6 +7,7 @@
 class ConnUsersManager {
 public:
     void InsertUser(SOCKET TempSkt_); // Init ConnUsers
+    void DeleteUser(SOCKET TempSkt_);
     ConnUser* FindUser(SOCKET UserSkt_);
 
 private:

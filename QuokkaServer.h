@@ -36,7 +36,7 @@ private:
     void WorkThread(); // IOCP Complete Event Thread
     void AccepterThread(); // Accept req Thread
 
-    void CloseSocket(ConnUser* connUser, bool isForce_ = false);
+    void CloseUser(ConnUser* connUser, bool isForce_ = false);
 
     // 1 bytes
     bool WorkRun = true;

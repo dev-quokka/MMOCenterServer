@@ -43,11 +43,12 @@ public :
 	}
 
 	void Reset() {
-		isConn = false;
+		shutdown(userSkt, SD_BOTH);
 		memset(acceptBuf, 0, sizeof(acceptBuf));
 		memset(recvBuf, 0, sizeof(recvBuf));
 		userOvlap = {};
 		userIocpHandle = INVALID_HANDLE_VALUE;
+		isConn = false;
 	}
 
 	bool PostAccept(SOCKET ServerSkt_) {
@@ -71,18 +72,6 @@ public :
 		return true;
 	}
 
-	bool BindUser() {
-		auto tIOCPHandle = CreateIoCompletionPort((HANDLE)userSkt, userIocpHandle, (ULONG_PTR)(this), 0);
-		
-		if (tIOCPHandle == INVALID_HANDLE_VALUE)
-		{
-			std::cout << "reateIoCompletionPort()함수 실패 :" << GetLastError() << std::endl;
-			return false;
-		}
-
-		return ConnUserRecv();
-	}
-	
 	bool ConnUserRecv() {
 		DWORD dwFlag = 0;
 		DWORD dwRecvBytes = 0;
@@ -184,7 +173,7 @@ private:
 	HANDLE userIocpHandle = INVALID_HANDLE_VALUE;
 
 	// 56 bytes
-	OverlappedTCP userOvlap = {};
+	OverlappedTCP userOvlap;
 
 	// 120 bytes
 	CircularBuffer circularBuffer; // Make Circular Recv Buffer

@@ -10,7 +10,7 @@ class InGameUserManager {
 public:
 	void Init(UINT16 maxClientCount_);
 	InGameUser* GetInGameUserByObjNum(UINT16 connObjNum_);
-	void Set(std::string userUuid_, UINT32 userPk_, unsigned int userExp_, uint8_t userLevel);
+	void Set(UINT16 connObjNum_, std::string userUuid_, std::string userId_, UINT32 userPk_, unsigned int userExp_, uint8_t userLevel_);
 	void Reset(UINT16 connObjNum_);
 
 private:

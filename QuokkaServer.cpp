@@ -83,6 +83,14 @@ bool QuokkaServer::StartWork() {
             return false;
         }
 
+        auto tIOCPHandle = CreateIoCompletionPort((HANDLE)TempSkt, sIOCPHandle, (ULONG_PTR)(this), 0);
+
+        if (tIOCPHandle == INVALID_HANDLE_VALUE)
+        {
+            std::cout << "reateIoCompletionPort()함수 실패 :" << GetLastError() << std::endl;
+            return false;
+        }
+
         ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA,i, sIOCPHandle);
 
         AcceptQueue.push(connUser); // Push ConnUser
@@ -104,6 +112,14 @@ bool QuokkaServer::StartWork() {
 
         if (TempSkt == INVALID_SOCKET) {
             std::cout << "Client socket Error : " << GetLastError() << std::endl;
+            return false;
+        }
+
+        auto tIOCPHandle = CreateIoCompletionPort((HANDLE)TempSkt, sIOCPHandle, (ULONG_PTR)(this), 0);
+
+        if (tIOCPHandle == INVALID_HANDLE_VALUE)
+        {
+            std::cout << "reateIoCompletionPort()함수 실패 :" << GetLastError() << std::endl;
             return false;
         }
 
@@ -149,39 +165,39 @@ void QuokkaServer::WorkThread() {
             INFINITE
         );
 
-        if (gqSucces && dwIoSize == 0 && lpOverlapped == NULL) {
+        if (gqSucces && dwIoSize == 0 && lpOverlapped == NULL) { // Server End Request
             WorkRun = false;
             continue;
         }
-
+        
         auto overlappedTCP = (OverlappedTCP*)lpOverlapped;
         connUser = p_ConnUsersManagerManager->FindUser(overlappedTCP->userSkt);
+        SOCKET tempUserSkt = overlappedTCP->userSkt;
 
         if (!gqSucces || (dwIoSize == 0 && overlappedTCP->taskType != TaskType::ACCEPT)) { // User Disconnect
-            p_RedisManager->Disconnect(overlappedTCP->userSkt);
-            std::cout << "socket " << overlappedTCP->userSkt << " Disconnect && Data Update Fail" << std::endl;
+            p_RedisManager->Disconnect(tempUserSkt);
+            std::cout << "socket " << tempUserSkt << " Disconnect && Data Update Fail" << std::endl;
+            connUser->Reset(); // Reset ConnUser
             UserCnt.fetch_sub(1); // UserCnt -1
-            CloseSocket(connUser);
             continue;
         }
 
         if (overlappedTCP->taskType == TaskType::ACCEPT) { // User Connect
             if (connUser) {
-                if (connUser->BindUser()) {
+                if (connUser->ConnUserRecv()) {
                     UserCnt.fetch_add(1); // UserCnt +1
-                    std::cout << "socket " << overlappedTCP->userSkt << " Connect" << std::endl;
+                    p_ConnUsersManagerManager->InsertUser(tempUserSkt);
+                    std::cout << "socket " << tempUserSkt << " Connect" << std::endl;
                 }
                 else { // Bind Fail
-                    CloseSocket(connUser, true);
                     connUser->Reset(); // Reset ConnUser
                     AcceptQueue.push(connUser);
                 }
             }
         }
         else if (overlappedTCP->taskType == TaskType::RECV) {
-            p_RedisManager->PushRedisPacket(overlappedTCP->userSkt, dwIoSize, connUser->GetRecvBuffer()); // Proccess In Redismanager
+            p_RedisManager->PushRedisPacket(tempUserSkt, dwIoSize, connUser->GetRecvBuffer()); // Proccess In Redismanager
             connUser->ConnUserRecv(); // Wsarecv Again
-
             delete[] overlappedTCP->wsaBuf.buf;
             delete overlappedTCP;
         }
@@ -201,13 +217,14 @@ void QuokkaServer::AccepterThread() {
             }
         }
         else { // AcceptQueue empty
-            if (WaittingQueue.pop(connUser)) { // WaittingQueue not empty
-                if (!connUser->PostAccept(ServerSKT)) {
-                    AcceptQueue.push(connUser);
+            while (1) {
+                if (WaittingQueue.pop(connUser)) { // WaittingQueue not empty
+                    WaittingQueue.push(connUser);
                 }
-            }
-            else { // WaittingQueue empty
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                else { // WaittingQueue empty
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    break;
+                }
             }
         }
     }
