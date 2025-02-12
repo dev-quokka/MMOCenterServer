@@ -63,7 +63,8 @@ bool QuokkaServer::StartWork() {
         return false;
     }
 
-    p_ConnUsersManagerManager = std::make_unique<ConnUsersManager>();
+    p_RedisManager = new RedisManager;
+    p_ConnUsersManagerManager = new ConnUsersManager;
 
     for (int i = 0; i < maxClientCount; i++) { // Make ConnUsers Queue
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
@@ -129,7 +130,7 @@ bool QuokkaServer::StartWork() {
     }
 
     p_RedisManager->init(MaxThreadCnt, maxClientCount, sIOCPHandle);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
-    p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager.get()); // 
+    p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager); // 
 
     return true;
 }

@@ -40,9 +40,8 @@ public:
 	void MatchingThread();
 	void TimeCheckThread();
 	void DeleteMob(Room* room_);
-	SOCKET GetUDPSocket();
-
 	void SyncMobHp(OverlappedUDP* overlappedUDP_);
+	SOCKET GetUDPSocket();
 
 private:
 	// 1 bytes

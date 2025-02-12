@@ -67,9 +67,9 @@ private:
     sw::redis::RedisCluster redis;
     std::uniform_int_distribution<int> dist;
 
-    std::unique_ptr<InGameUserManager> inGameUserManager;
-    std::unique_ptr<MatchingManager> matchingManager;
-    std::unique_ptr<RoomManager> roomManager;
+    InGameUserManager* inGameUserManager;
+    MatchingManager* matchingManager;
+    RoomManager* roomManager;
 
     // 16 bytes
     std::thread redisThread;

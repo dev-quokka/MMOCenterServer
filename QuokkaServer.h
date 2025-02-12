@@ -20,9 +20,7 @@
 
 class QuokkaServer {
 public:
-    QuokkaServer(UINT16 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {
-        p_RedisManager = std::make_unique<RedisManager>(maxClientCount_);
-    }
+    QuokkaServer(UINT16 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {}
     ~QuokkaServer() {}
 
     bool init(const UINT16 MaxThreadCnt_, int port_);
@@ -53,8 +51,8 @@ private:
     // 8 bytes
     SOCKET ServerSKT = INVALID_SOCKET;
     HANDLE sIOCPHandle = INVALID_HANDLE_VALUE;
-    std::unique_ptr<RedisManager> p_RedisManager;
-    std::unique_ptr<ConnUsersManager> p_ConnUsersManagerManager;
+    RedisManager* p_RedisManager;
+    ConnUsersManager* p_ConnUsersManagerManager;
 
     // 32 bytes
     std::vector<std::thread> workThreads;

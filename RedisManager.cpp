@@ -19,13 +19,13 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
     packetIDTable[26] = &RedisManager::DeleteItem;
     packetIDTable[27] = &RedisManager::MoveItem;
 
-    matchingManager = std::make_unique<MatchingManager>(maxClientCount_);
-    inGameUserManager = std::make_unique<InGameUserManager>();
-    roomManager = std::make_unique<RoomManager>();
-
-    inGameUserManager->Init(maxClientCount_);
+    matchingManager = new MatchingManager;
+    inGameUserManager = new InGameUserManager;
+    roomManager = new RoomManager;
 
     RedisRun(RedisThreadCnt_);
+
+    inGameUserManager->Init(maxClientCount_);
     matchingManager->Init(maxClientCount_, this);
 }
 
