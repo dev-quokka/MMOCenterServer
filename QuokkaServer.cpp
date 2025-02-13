@@ -1,6 +1,6 @@
 #include "QuokkaServer.h"
 
-bool QuokkaServer::init(const UINT16 MaxThreadCnt_, int port_) {
+bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
     WSADATA wsadata;
     int check = 0;
     MaxThreadCnt = MaxThreadCnt_; // 워크 스레드 개수 설정
@@ -40,7 +40,7 @@ bool QuokkaServer::init(const UINT16 MaxThreadCnt_, int port_) {
         return false;
     }
 
-    auto bIOCPHandle = CreateIoCompletionPort((HANDLE)ServerSKT, sIOCPHandle, (UINT32)0, 0);
+    auto bIOCPHandle = CreateIoCompletionPort((HANDLE)ServerSKT, sIOCPHandle, (uint32_t)0, 0);
     if (bIOCPHandle == nullptr) {
         std::cout << "iocp 핸들 바인드 실패" << std::endl;
         return false;
@@ -260,7 +260,12 @@ void QuokkaServer::ServerEnd() {
         delete connUser;
     }
 
-    p_RedisManager->RedisEnd(); // 레디스 종료
+    delete p_RedisManager;
+    delete p_ConnUsersManagerManager;
     CloseHandle(sIOCPHandle); // 핸들 종료
     closesocket(ServerSKT); // 서버 소켓 종료
+
+    std::cout << "종료 5초 대기" << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(5)); // 5초 대기
+    std::cout << "종료" << std::endl;
 }

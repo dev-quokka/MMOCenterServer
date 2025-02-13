@@ -1,21 +1,26 @@
-#pragma 
-#include "MatchingManager.h"
+#pragma once
 
-#include <iostream>
 #include <chrono>
+#include <cstdint>
+#include <iostream>
+#include <winsock2.h>
 #include <ws2tcpip.h>
+
+#include "InGameUser.h"
+#include "MatchingManager.h"
+#include "Define.h"
 
 struct RaidUserInfo {
 	std::atomic<unsigned int> userScore = 0;
-	UINT16 userSkt; // TCP Socket
+	uint16_t userSkt; // TCP Socket
 	sockaddr_in userAddr;
 	InGameUser* inGameUser;
-	RaidUserInfo(UINT16 userSkt_, InGameUser* inGameUser_) : userSkt(userSkt_), inGameUser(inGameUser_) {}
+	RaidUserInfo(uint16_t userSkt_, InGameUser* inGameUser_) : userSkt(userSkt_), inGameUser(inGameUser_) {}
 };
 
 class Room {
 public:
-	void set(MatchingManager* matchingManager_, uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, UINT16 userSkt1_, UINT16 userSkt2_, InGameUser* user1_, InGameUser* user2_) {
+	void set(MatchingManager* matchingManager_, uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, uint16_t userSkt1_, uint16_t userSkt2_, InGameUser* user1_, InGameUser* user2_) {
 		RaidUserInfo ruInfo1(userSkt1_, user1_);
 		ruInfos.emplace_back(ruInfo1);
 		RaidUserInfo ruInfo2(userSkt2_, user2_);
@@ -58,7 +63,7 @@ public:
 		return endTime;
 	}
 
-	UINT16 GetUserSkt(uint8_t userNum) {
+	uint16_t GetUserSkt(uint8_t userNum) {
 		if (userNum == 0) return ruInfos[0].userSkt;
 		else if (userNum == 1) return ruInfos[1].userSkt;
 	}
@@ -68,7 +73,7 @@ public:
 		else if (userNum == 1) return ruInfos[1].userScore;
 	}
 
-	UINT16 GetTeamSkt(uint8_t userNum_) {
+	uint16_t GetTeamSkt(uint8_t userNum_) {
 		if (userNum_ == 1) return ruInfos[0].userSkt;
 		else if (userNum_ == 0) return ruInfos[1].userSkt;
 	}

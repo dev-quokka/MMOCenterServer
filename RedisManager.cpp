@@ -2,40 +2,40 @@
 
 thread_local std::mt19937 RedisManager::gen(std::random_device{}());
 
-void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_, HANDLE sIOCPHandle_) {
+void RedisManager::init(const uint16_t RedisThreadCnt_, const uint16_t maxClientCount_, HANDLE sIOCPHandle_) {
 
     // ---------- SET PACKET PROCESS ---------- 
-    packetIDTable = std::unordered_map<UINT16, RECV_PACKET_FUNCTION>();
+    packetIDTable = std::unordered_map<uint16_t, RECV_PACKET_FUNCTION>();
 
     //SYSTEM
-    packetIDTable[(UINT16)PACKET_ID::USER_CONNECT_REQUEST] = &RedisManager::UserConnect;
-    packetIDTable[(UINT16)PACKET_ID::USER_LOGOUT_REQUEST] = &RedisManager::Logout;
-    packetIDTable[(UINT16)PACKET_ID::IM_WEB_REQUEST] = &RedisManager::ImWebRequest;
+    packetIDTable[(uint16_t)PACKET_ID::USER_CONNECT_REQUEST] = &RedisManager::UserConnect;
+    packetIDTable[(uint16_t)PACKET_ID::USER_LOGOUT_REQUEST] = &RedisManager::Logout;
+    packetIDTable[(uint16_t)PACKET_ID::IM_WEB_REQUEST] = &RedisManager::ImWebRequest;
 
     // USER STATUS
     packetIDTable[(UINT16)PACKET_ID::EXP_UP_REQUEST] = &RedisManager::ExpUp;
 
     // INVENTORY
-    packetIDTable[(UINT16)PACKET_ID::ADD_ITEM_REQUEST] = &RedisManager::AddItem;
-    packetIDTable[(UINT16)PACKET_ID::DEL_ITEM_REQUEST] = &RedisManager::DeleteItem;
-    packetIDTable[(UINT16)PACKET_ID::MOD_ITEM_REQUEST] = &RedisManager::ModifyItem;
-    packetIDTable[(UINT16)PACKET_ID::MOV_ITEM_REQUEST] = &RedisManager::MoveItem;
+    packetIDTable[(uint16_t)PACKET_ID::ADD_ITEM_REQUEST] = &RedisManager::AddItem;
+    packetIDTable[(uint16_t)PACKET_ID::DEL_ITEM_REQUEST] = &RedisManager::DeleteItem;
+    packetIDTable[(uint16_t)PACKET_ID::MOD_ITEM_REQUEST] = &RedisManager::ModifyItem;
+    packetIDTable[(uint16_t)PACKET_ID::MOV_ITEM_REQUEST] = &RedisManager::MoveItem;
 
     //INVENTORY:EQUIPMENT
-    packetIDTable[(UINT16)PACKET_ID::ADD_EQUIPMENT_REQUEST] = &RedisManager::AddEquipment;
-    packetIDTable[(UINT16)PACKET_ID::DEL_EQUIPMENT_REQUEST] = &RedisManager::DeleteEquipment;
-    packetIDTable[(UINT16)PACKET_ID::ENH_EQUIPMENT_REQUEST] = &RedisManager::EnhanceEquipment;
+    packetIDTable[(uint16_t)PACKET_ID::ADD_EQUIPMENT_REQUEST] = &RedisManager::AddEquipment;
+    packetIDTable[(uint16_t)PACKET_ID::DEL_EQUIPMENT_REQUEST] = &RedisManager::DeleteEquipment;
+    packetIDTable[(uint16_t)PACKET_ID::ENH_EQUIPMENT_REQUEST] = &RedisManager::EnhanceEquipment;
 
     //RAID
-    packetIDTable[(UINT16)PACKET_ID::RAID_MATCHING_REQUEST] = &RedisManager::MatchStart;
-    packetIDTable[(UINT16)PACKET_ID::RAID_TEAMINFO_REQUEST] = &RedisManager::RaidReqTeamInfo;
-    packetIDTable[(UINT16)PACKET_ID::RAID_HIT_REQUEST] = &RedisManager::RaidHit;
-    packetIDTable[(UINT16)PACKET_ID::RAID_END_REQUEST] = &RedisManager::RaidEnd;
-    packetIDTable[(UINT16)PACKET_ID::RAID_RANKING_REQUEST] = &RedisManager::GetRanking;
+    packetIDTable[(uint16_t)PACKET_ID::RAID_MATCHING_REQUEST] = &RedisManager::MatchStart;
+    packetIDTable[(uint16_t)PACKET_ID::RAID_TEAMINFO_REQUEST] = &RedisManager::RaidReqTeamInfo;
+    packetIDTable[(uint16_t)PACKET_ID::RAID_HIT_REQUEST] = &RedisManager::RaidHit;
+    packetIDTable[(uint16_t)PACKET_ID::RAID_END_REQUEST] = &RedisManager::RaidEnd;
+    packetIDTable[(uint16_t)PACKET_ID::RAID_RANKING_REQUEST] = &RedisManager::GetRanking;
 
-    matchingManager = new MatchingManager;
     inGameUserManager = new InGameUserManager;
     roomManager = new RoomManager;
+    matchingManager = new MatchingManager;
 
     RedisRun(RedisThreadCnt_);
 
@@ -43,7 +43,7 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
     matchingManager->Init(maxClientCount_, this, inGameUserManager, roomManager);
 }
 
-void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Server
+void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis Server
     try {
         connection_options.host = "127.0.0.1";  // Redis Cluster IP
         connection_options.port = 7001;  // Redis Cluster Master Node Port
@@ -69,7 +69,7 @@ void RedisManager::SetConnUserManager(ConnUsersManager* connUsersManager_) {
     connUsersManager = connUsersManager_;
 }
 
-bool RedisManager::CreateRedisThread(const UINT16 RedisThreadCnt_) {
+bool RedisManager::CreateRedisThread(const uint16_t RedisThreadCnt_) {
     redisRun = true;
     for (int i = 0; i < RedisThreadCnt_; i++) {
         redisThreads.emplace_back(std::thread([this]() {RedisThread(); }));
@@ -102,7 +102,7 @@ void RedisManager::RedisThread() {
     }
 }
 
-void RedisManager::PushRedisPacket(const SOCKET userSkt_, const UINT32 size_, char* recvData_) {
+void RedisManager::PushRedisPacket(const SOCKET userSkt_, const uint32_t size_, char* recvData_) {
     DataPacket tempD(size_,userSkt_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt_);
     TempConnUser->WriteRecvData(recvData_,size_); // Push Data in Circualr Buffer
@@ -119,18 +119,18 @@ void RedisManager::SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1_, RAI
 
 //  ---------------------------- SYSTEM  ----------------------------
 
-void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::UserConnect(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
     inGameUserManager->Set((connUsersManager->FindUser(userSkt)->GetObjNum()), userConn->uuId, userConn->userId, userConn->userPk, userConn->currentExp,userConn->level);
     redis->persist("user:" + userConn->uuId); // Remove TTL Time
 }
 
-void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Normal Disconnect
+void RedisManager::Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) { // Normal Disconnect
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     {  // Send User PK to the Web Server for Synchronization with MySQL
         SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
-        syncLogoutReqPacket.PacketId = (UINT16)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
+        syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.uuId = tempUser->GetUuid();
         syncLogoutReqPacket.userPk = tempUser->GetPk();
@@ -146,7 +146,7 @@ void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
 
     {  // Send User PK to the Web Server for Synchronization with MySQL
         SYNCRONIZE_DISCONNECT_REQUEST syncDisconnReqPacket;
-        syncDisconnReqPacket.PacketId = (UINT16)PACKET_ID::SYNCRONIZE_DISCONNECT_REQUEST;
+        syncDisconnReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_DISCONNECT_REQUEST;
         syncDisconnReqPacket.PacketLength = sizeof(SYNCRONIZE_DISCONNECT_REQUEST);
         syncDisconnReqPacket.uuId = tempUser->GetUuid();
         syncDisconnReqPacket.userPk = tempUser->GetPk();
@@ -157,16 +157,16 @@ void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
     }
 }
 
-void RedisManager::ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::ServerEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     // Process Remain Packet
 
 }
 
-void RedisManager::ImWebRequest(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::ImWebRequest(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     IM_WEB_RESPONSE imWebResPacket;
-    imWebResPacket.PacketId = (UINT16)PACKET_ID::IM_WEB_RESPONSE;
+    imWebResPacket.PacketId = (uint16_t)PACKET_ID::IM_WEB_RESPONSE;
     imWebResPacket.PacketLength = sizeof(IM_WEB_RESPONSE);
     imWebResPacket.uuId = tempUser->GetUuid();
 
@@ -185,12 +185,12 @@ void RedisManager::ImWebRequest(SOCKET userSkt, UINT16 packetSize_, char* pPacke
 
 //  ---------------------------- USER_STATUS  ----------------------------
 
-void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::ExpUp(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto expUpReqPacket = reinterpret_cast<EXP_UP_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     EXP_UP_RESPONSE expUpResPacket;
-    expUpResPacket.PacketId = (UINT16)PACKET_ID::EXP_UP_RESPONSE;
+    expUpResPacket.PacketId = (uint16_t)PACKET_ID::EXP_UP_RESPONSE;
     expUpResPacket.PacketLength = sizeof(EXP_UP_RESPONSE);
     expUpResPacket.uuId = tempUser->GetUuid();
 
@@ -201,7 +201,7 @@ void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
         if (userExp.first!=0) { // Level Up
             LEVEL_UP_RESPONSE levelUpResPacket;
-            levelUpResPacket.PacketId = (UINT16)PACKET_ID::LEVEL_UP_RESPONSE;
+            levelUpResPacket.PacketId = (uint16_t)PACKET_ID::LEVEL_UP_RESPONSE;
             levelUpResPacket.PacketLength = sizeof(LEVEL_UP_RESPONSE);
             levelUpResPacket.uuId = tempUser->GetUuid();
 
@@ -215,7 +215,7 @@ void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
                     ConnUser* TempWebServer = connUsersManager->FindUser(webServerSkt);
 
                     SYNCRONIZE_LEVEL_REQUEST syncLevelReqPacket;
-                    syncLevelReqPacket.PacketId = (UINT16)PACKET_ID::SYNCRONIZE_LEVEL_REQUEST;
+                    syncLevelReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LEVEL_REQUEST;
                     syncLevelReqPacket.PacketLength = sizeof(SYNCRONIZE_LEVEL_REQUEST);
                     syncLevelReqPacket.uuId = tempUser->GetUuid();
                     syncLevelReqPacket.level = userExp.first;
@@ -245,12 +245,12 @@ void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 //  ---------------------------- INVENTORY  ----------------------------
 
-void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::AddItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto addItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
     
     ADD_ITEM_RESPONSE addItemResPacket;
-    addItemResPacket.PacketId = (UINT16)PACKET_ID::ADD_ITEM_RESPONSE;
+    addItemResPacket.PacketId = (uint16_t)PACKET_ID::ADD_ITEM_RESPONSE;
     addItemResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
     addItemResPacket.uuId = tempUser->GetUuid();
 
@@ -271,12 +271,12 @@ void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(ADD_ITEM_RESPONSE),(char*)&addItemResPacket);
 }
 
-void RedisManager::DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::DeleteItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto delItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     DEL_ITEM_RESPONSE delItemResPacket;
-    delItemResPacket.PacketId = (UINT16)PACKET_ID::DEL_ITEM_RESPONSE;
+    delItemResPacket.PacketId = (uint16_t)PACKET_ID::DEL_ITEM_RESPONSE;
     delItemResPacket.PacketLength = sizeof(DEL_ITEM_RESPONSE);
     delItemResPacket.uuId = tempUser->GetUuid();
 
@@ -297,12 +297,12 @@ void RedisManager::DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(DEL_ITEM_RESPONSE),(char*)&delItemResPacket);
 }
 
-void RedisManager::ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::ModifyItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto modItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     MOD_ITEM_RESPONSE modItemResPacket;
-    modItemResPacket.PacketId = (UINT16)PACKET_ID::MOD_ITEM_RESPONSE;
+    modItemResPacket.PacketId = (uint16_t)PACKET_ID::MOD_ITEM_RESPONSE;
     modItemResPacket.PacketLength = sizeof(MOD_ITEM_RESPONSE);
     modItemResPacket.uuId = tempUser->GetUuid();
 
@@ -323,12 +323,12 @@ void RedisManager::ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(MOD_ITEM_RESPONSE), (char*)&modItemResPacket);
 }
 
-void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::MoveItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto movItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     MOV_ITEM_RESPONSE movItemResPacket;
-    movItemResPacket.PacketId = (UINT16)PACKET_ID::MOV_ITEM_RESPONSE;
+    movItemResPacket.PacketId = (uint16_t)PACKET_ID::MOV_ITEM_RESPONSE;
     movItemResPacket.PacketLength = sizeof(MOV_ITEM_RESPONSE);
     movItemResPacket.uuId = tempUser->GetUuid();
 
@@ -352,12 +352,12 @@ void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) 
 
 //  ---------------------------- INVENTORY:EQUIPMENT  ----------------------------
 
-void RedisManager::AddEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::AddEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto addEquipReqPacket = reinterpret_cast<ADD_EQUIPMENT_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     ADD_EQUIPMENT_RESPONSE addEquipResPacket;
-    addEquipResPacket.PacketId = (UINT16)PACKET_ID::ADD_EQUIPMENT_RESPONSE;
+    addEquipResPacket.PacketId = (uint16_t)PACKET_ID::ADD_EQUIPMENT_RESPONSE;
     addEquipResPacket.PacketLength = sizeof(ADD_EQUIPMENT_RESPONSE);
     addEquipResPacket.uuId = tempUser->GetUuid();
 
@@ -379,12 +379,12 @@ void RedisManager::AddEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacke
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(ADD_EQUIPMENT_RESPONSE), (char*)&addEquipResPacket);
 }
 
-void RedisManager::DeleteEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::DeleteEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto delEquipReqPacket = reinterpret_cast<DEL_EQUIPMENT_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     DEL_EQUIPMENT_RESPONSE delEquipResPacket;
-    delEquipResPacket.PacketId = (UINT16)PACKET_ID::DEL_EQUIPMENT_RESPONSE;
+    delEquipResPacket.PacketId = (uint16_t)PACKET_ID::DEL_EQUIPMENT_RESPONSE;
     delEquipResPacket.PacketLength = sizeof(DEL_EQUIPMENT_RESPONSE);
     delEquipResPacket.uuId = tempUser->GetUuid();
 
@@ -405,12 +405,12 @@ void RedisManager::DeleteEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPa
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
 }
 
-void RedisManager::EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::EnhanceEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto delEquipReqPacket = reinterpret_cast<ENH_EQUIPMENT_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     ENH_EQUIPMENT_RESPONSE delEquipResPacket;
-    delEquipResPacket.PacketId = (UINT16)PACKET_ID::ENH_EQUIPMENT_RESPONSE;
+    delEquipResPacket.PacketId = (uint16_t)PACKET_ID::ENH_EQUIPMENT_RESPONSE;
     delEquipResPacket.PacketLength = sizeof(ENH_EQUIPMENT_RESPONSE);
     delEquipResPacket.uuId = tempUser->GetUuid();
 
@@ -443,11 +443,11 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pP
 
 //  ---------------------------- RAID  ----------------------------
 
-void RedisManager::MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { 
+void RedisManager::MatchStart(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) { 
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     RAID_MATCHING_RESPONSE raidMatchResPacket;
-    raidMatchResPacket.PacketId = (UINT16)PACKET_ID::RAID_RANKING_RESPONSE;
+    raidMatchResPacket.PacketId = (uint16_t)PACKET_ID::RAID_RANKING_RESPONSE;
     raidMatchResPacket.PacketLength = sizeof(RAID_RANKING_RESPONSE);
     raidMatchResPacket.uuId = tempUser->GetUuid();
 
@@ -459,7 +459,7 @@ void RedisManager::MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&raidMatchResPacket);
 }
 
-void RedisManager::RaidReqTeamInfo(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::RaidReqTeamInfo(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto raidTeamInfoReqPacket = reinterpret_cast<RAID_TEAMINFO_REQUEST*>(pPacket_);
 
     Room* tempRoom = roomManager->GetRoom(raidTeamInfoReqPacket->roomNum);
@@ -469,7 +469,7 @@ void RedisManager::RaidReqTeamInfo(SOCKET userSkt, UINT16 packetSize_, char* pPa
     InGameUser* teamUser = tempRoom->GetTeamUser(raidTeamInfoReqPacket->myNum);
 
     RAID_TEAMINFO_RESPONSE raidTeamInfoResPacket;
-    raidTeamInfoResPacket.PacketId = (UINT16)PACKET_ID::RAID_TEAMINFO_RESPONSE;
+    raidTeamInfoResPacket.PacketId = (uint16_t)PACKET_ID::RAID_TEAMINFO_RESPONSE;
     raidTeamInfoResPacket.PacketLength = sizeof(RAID_TEAMINFO_RESPONSE);
     raidTeamInfoResPacket.uuId = user->GetUuid();
     raidTeamInfoResPacket.teamLevel = teamUser->GetLevel();
@@ -480,13 +480,13 @@ void RedisManager::RaidReqTeamInfo(SOCKET userSkt, UINT16 packetSize_, char* pPa
     if (tempRoom->StartCheck()) { // 두 명의 유저에게 팀의 정보를 전달하고 둘 다 받음 확인하면 게임 시작 정보 보내주기
 
         RAID_START_REQUEST raidStartReqPacket1;
-        raidStartReqPacket1.PacketId = (UINT16)PACKET_ID::RAID_START_REQUEST;
+        raidStartReqPacket1.PacketId = (uint16_t)PACKET_ID::RAID_START_REQUEST;
         raidStartReqPacket1.PacketLength = sizeof(RAID_START_REQUEST);
         raidStartReqPacket1.uuId = user->GetUuid();
         raidStartReqPacket1.endTime = tempRoom->GetEndTime();
 
         RAID_START_REQUEST raidStartReqPacket2;
-        raidStartReqPacket2.PacketId = (UINT16)PACKET_ID::RAID_START_REQUEST;
+        raidStartReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_START_REQUEST;
         raidStartReqPacket2.PacketLength = sizeof(RAID_START_REQUEST);
         raidStartReqPacket2.uuId = teamUser->GetUuid();
         raidStartReqPacket2.endTime = tempRoom->GetEndTime();
@@ -496,7 +496,7 @@ void RedisManager::RaidReqTeamInfo(SOCKET userSkt, UINT16 packetSize_, char* pPa
     }
 }
 
-void RedisManager::RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto raidTeamInfoReqPacket = reinterpret_cast<RAID_HIT_REQUEST*>(pPacket_);
     InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
@@ -505,7 +505,7 @@ void RedisManager::RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 
-void RedisManager::RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Send User Raid End Packet
+void RedisManager::RaidEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) { // Send User Raid End Packet
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
     
     //redis.zadd("user_scores", score, to_string(user_id));
@@ -513,7 +513,7 @@ void RedisManager::RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 
-void RedisManager::GetRanking(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::GetRanking(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto delEquipReqPacket = reinterpret_cast<RAID_RANKING_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
@@ -521,7 +521,7 @@ void RedisManager::GetRanking(SOCKET userSkt, UINT16 packetSize_, char* pPacket_
     redis->zrevrange("raidscore", delEquipReqPacket->startRank, delEquipReqPacket->startRank+99, inserter(scores, scores.begin()));
 
     RAID_RANKING_RESPONSE raidRankResPacket;
-    raidRankResPacket.PacketId = (UINT16)PACKET_ID::RAID_RANKING_RESPONSE;
+    raidRankResPacket.PacketId = (uint16_t)PACKET_ID::RAID_RANKING_RESPONSE;
     raidRankResPacket.PacketLength = sizeof(RAID_RANKING_RESPONSE);
     raidRankResPacket.uuId = tempUser->GetUuid();
     raidRankResPacket.reqScore = scores;

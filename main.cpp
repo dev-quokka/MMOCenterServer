@@ -1,14 +1,16 @@
 #include "QuokkaServer.h"
-const UINT16 PORT = 8080;
-const UINT16 maxClientCount = 100;
+
+const uint16_t PORT = 8080;
+const uint16_t maxClientCount = 100;
 
 #include <iostream>
+#include <cstdint>
 
 int main() {
 
     QuokkaServer server(maxClientCount);
 
-    UINT16 core= std::thread::hardware_concurrency();
+    uint16_t core= std::thread::hardware_concurrency();
 
     server.init(1,PORT);
 

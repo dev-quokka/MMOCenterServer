@@ -3,15 +3,22 @@
 
 #include <vector>
 #include <string>
+#include <cstdint>
 #include <ws2tcpip.h>
 #include <utility>
 
 class InGameUserManager {
 public:
-	void Init(UINT16 maxClientCount_);
-	InGameUser* GetInGameUserByObjNum(UINT16 connObjNum_);
-	void Set(UINT16 connObjNum_, std::string userUuid_, std::string userId_, UINT32 userPk_, unsigned int userExp_, uint8_t userLevel_);
-	void Reset(UINT16 connObjNum_);
+	~InGameUserManager() {
+		for (int i = 0; i < inGmaeUsers.size(); i++) {
+			delete inGmaeUsers[i];
+		}
+	}
+
+	void Init(uint16_t maxClientCount_);
+	InGameUser* GetInGameUserByObjNum(uint16_t connObjNum_);
+	void Set(uint16_t connObjNum_, std::string userUuid_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint8_t userLevel_);
+	void Reset(uint16_t connObjNum_);
 
 private:
 	std::vector<InGameUser*> inGmaeUsers;

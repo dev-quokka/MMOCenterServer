@@ -1,14 +1,18 @@
 #pragma once
 
+#include <cstdint>
+#include <vector>  
+#include <string>
+
 class InGameUser {
 public:
-	InGameUser(std::vector<short>* expLimit_) : expLimit(expLimit_) {}
+	InGameUser(std::vector<short>& expLimit_) : expLimit(expLimit_) {}
 
 	uint8_t GetLevel() {
 		return userLevel;
 	}
 
-	void Set(std::string userUuid_, std::string userId_, UINT32 userPk_, unsigned int userExp_, uint8_t userLevel_) {
+	void Set(std::string userUuid_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint8_t userLevel_) {
 		userLevel = userLevel_;
 		userExp = userExp_;
 		userPk = userPk_;
@@ -40,8 +44,8 @@ public:
 
 		uint8_t levelUpCnt = 0;
 
-		if ((*expLimit)[userLevel] <= userExp) { // LEVEL UP
-			while (userExp >= (*expLimit)[userLevel]) {
+		if (expLimit[userLevel] <= userExp) { // LEVEL UP
+			while (userExp >= expLimit[userLevel]) {
 				userLevel++;
 				levelUpCnt++;
 			}
@@ -55,10 +59,10 @@ private:
 	uint8_t userLevel;
 
 	// 4 bytes
-	UINT32 userPk;
+	uint32_t userPk;
 	unsigned int userExp;
 
-	std::vector<short>* expLimit;
+	std::vector<short>& expLimit;
 
 	// 40 bytes
 	std::string userUuid;

@@ -1,67 +1,82 @@
 #pragma once
 
-#include "Packet.h"
-#include "ConnUsersManager.h"
-#include "InGameUserManager.h"
-#include "MatchingManager.h"
-
 #include <sw/redis++/redis++.h>
 #include <windef.h>
+#include <cstdint>
 #include <iostream>
 #include <random>
 #include <unordered_map>
 
+#include "Packet.h"
+#include "InGameUserManager.h"
+#include "RoomManager.h"
+#include "MatchingManager.h"
+#include "ConnUsersManager.h"
+
 class RedisManager {
 public:
-    void init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_, const HANDLE sIOCPHandle_);
+    ~RedisManager() {
+        redisRun = false;
+
+        for (int i = 0; i < redisThreads.size(); i++) { // End Redis Threads
+            if (redisThreads[i].joinable()) {
+                redisThreads[i].join();
+            }
+        }
+
+        delete matchingManager;
+        delete inGameUserManager;
+        delete roomManager;
+    }
+
+    void init(const uint16_t RedisThreadCnt_, const uint16_t maxClientCount_, const HANDLE sIOCPHandle_);
     void SetConnUserManager(ConnUsersManager* connUsersManager_);
-    void PushRedisPacket(const SOCKET userSkt, const UINT32 size_, char* recvData_); // Push Redis Packet
+    void PushRedisPacket(const SOCKET userSkt, const uint32_t size_, char* recvData_); // Push Redis Packet
     void Disconnect(SOCKET userSkt);
-    void RedisEnd();
 
     // Send Data to Web Server for Synchronization With Redis
     void SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1, RAID_END_REQUEST raidEndReqPacket2);
 
 private:
-    bool CreateRedisThread(const UINT16 RedisThreadCnt_);
+    bool CreateRedisThread(const uint16_t RedisThreadCnt_);
     bool EquipmentEnhance(short currentEnhanceCount_);
 
-    void RedisRun(const UINT16 RedisThreadCnt_);
+    void RedisRun(const uint16_t RedisThreadCnt_);
     void RedisThread();
 
     //SYSTEM
-    void UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // User Connect
-    void Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // Normal Disconnect (Set Short Time TTL)
+    void UserConnect(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // User Connect
+    void Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // Normal Disconnect (Set Short Time TTL)
     void UserDisConnect(SOCKET userSkt); // Abnormal Disconnect (Set Long Time TTL)
-    void ServerEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void ImWebRequest(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // Web Server Socket Check
+    void ServerEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void ImWebRequest(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // Web Server Socket Check
 
     // USER STATUS
-    void ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void ExpUp(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
 
     // INVENTORY
-    void AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void AddItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void DeleteItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void ModifyItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void MoveItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
 
     // INVENTORY:EQUIPMENT
-    void AddEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void DeleteEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void AddEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void DeleteEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void EnhanceEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
 
     // RAID
-    void MatchStart(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 매치 대기열 삽입
-    void RaidReqTeamInfo(SOCKET userSkt, UINT16 packetSize_, char* pPacket_); // 서로 팀 정보 요청 (상대 대기 확인)
+    void MatchStart(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // 매치 대기열 삽입
+    void RaidReqTeamInfo(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // 서로 팀 정보 요청 (상대 대기 확인)
 
-    void RaidHit(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
 
-    void RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
-    void GetRanking(SOCKET userSkt, UINT16 packetSize_, char* pPacket_);
+    void RaidEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void GetRanking(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
 
 
     // 1 bytes
-    bool redisRun = 0;
+    bool redisRun = false;
 
     // 8 bytes
     SOCKET webServerSkt = 0;
@@ -72,8 +87,8 @@ private:
     std::thread redisThread;
 
     // 32 bytes
-    typedef void(RedisManager::*RECV_PACKET_FUNCTION)(SOCKET, UINT16, char*); 
-    std::unordered_map<UINT16, RECV_PACKET_FUNCTION> packetIDTable;
+    typedef void(RedisManager::*RECV_PACKET_FUNCTION)(SOCKET, uint16_t, char*);
+    std::unordered_map<uint16_t, RECV_PACKET_FUNCTION> packetIDTable;
     std::vector<std::thread> redisThreads;
 
     std::vector<short> enhanceProbabilities = {100,90,80,70,60,50,40,30,20,10};

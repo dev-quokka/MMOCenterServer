@@ -1,10 +1,11 @@
 #pragma once
-
 #include "Define.h"
 #include "ConnUser.h"
 #include "RedisManager.h"
 #include "ConnUsersManager.h"
 
+#include <winsock2.h>
+#include <windows.h>
 #include <atomic>
 #include <iostream>
 #include <vector>
@@ -12,18 +13,20 @@
 #include <mutex>
 #include <deque>
 #include <queue>
+#include <cstdint>
 #include <boost/lockfree/queue.hpp>
 #include <tbb/concurrent_hash_map.h>
 
 #pragma comment(lib, "ws2_32.lib") // 소켓 프로그래밍용
 #pragma comment(lib, "mswsock.lib") // AcceptEx 사용
 
+
 class QuokkaServer {
 public:
-    QuokkaServer(UINT16 maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {}
+    QuokkaServer(uint16_t maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {}
     ~QuokkaServer() {}
 
-    bool init(const UINT16 MaxThreadCnt_, int port_);
+    bool init(const uint16_t MaxThreadCnt_, int port_);
     bool StartWork();
     void ServerEnd();
 
@@ -40,8 +43,8 @@ private:
     std::atomic<bool> UserMaxCheck = false;
 
     // 2 bytes
-    UINT16 MaxThreadCnt = 0;
-    UINT16 maxClientCount = 0;
+    uint16_t MaxThreadCnt = 0;
+    uint16_t maxClientCount = 0;
 
     // 4 bytes
     std::atomic<int> UserCnt = 0; //Check Current UserCnt

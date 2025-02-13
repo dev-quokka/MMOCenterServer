@@ -1,13 +1,13 @@
 #pragma once
 #define WIN32_LEAN_AND_MEAN 
 
-#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <mswsock.h>
+#include <cstdint>
 
-const UINT32 MAX_SOCK = 1024; // Set Max Socket Buf
-const UINT32 MAX_RECV_DATA = 8096;
+const uint32_t MAX_SOCK = 1024; // Set Max Socket Buf
+const uint32_t MAX_RECV_DATA = 8096;
 
 const short MAX_RETRY_COUNT = 3;
 

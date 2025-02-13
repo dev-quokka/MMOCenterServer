@@ -1,30 +1,31 @@
 #pragma once
 #define WIN32_LEAN_AND_MEAN
-
-#include <windows.h>
+#include <winsock2.h>
+#include <cstdint>
 #include <string>
-#include <ws2tcpip.h>
+#include <vector>
+#include <chrono>
 
-const UINT16 PACKET_ID_SIZE = 57; // Last Packet_ID Num + 1
+const uint16_t PACKET_ID_SIZE = 57; // Last Packet_ID Num + 1
 
 struct DataPacket {
-	UINT32 dataSize;
+	uint32_t dataSize;
 	SOCKET userSkt;
-	DataPacket(UINT32 dataSize_,SOCKET userSkt_) : dataSize(dataSize_), userSkt(userSkt_) {}
+	DataPacket(uint32_t dataSize_,SOCKET userSkt_) : dataSize(dataSize_), userSkt(userSkt_) {}
 };
 
 struct PacketInfo
 {
-	UINT16 packetId = 0;
-	UINT16 dataSize = 0;
+	uint16_t packetId = 0;
+	uint16_t dataSize = 0;
 	SOCKET userSkt = 0;
 	char* pData = nullptr;
 };
 
 struct PACKET_HEADER
 {
-	UINT16 PacketLength;
-	UINT16 PacketId; 
+	uint16_t PacketLength;
+	uint16_t PacketId;
 	std::string uuId; // UUID For User Check
 };
 
@@ -37,7 +38,7 @@ struct UserScore {
 
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
 	uint8_t level;
-	UINT16 userPk;
+	uint16_t userPk;
 	unsigned int currentExp;
 	std::string userId;
 };
@@ -56,16 +57,16 @@ struct IM_WEB_RESPONSE : PACKET_HEADER {
 
 struct SYNCRONIZE_LEVEL_REQUEST : PACKET_HEADER {
 	uint8_t level;
-	UINT16 userPk;
+	uint16_t userPk;
 	unsigned int currentExp;
 };
 
 struct SYNCRONIZE_LOGOUT_REQUEST : PACKET_HEADER {
-	UINT16 userPk;
+	uint16_t userPk;
 };
 
 struct SYNCRONIZE_DISCONNECT_REQUEST : PACKET_HEADER {
-	UINT16 userPk;
+	uint16_t userPk;
 };
 
 //  ---------------------------- USER STATUS  ----------------------------
@@ -181,7 +182,7 @@ struct RAID_READY_REQUEST : PACKET_HEADER {
 	uint8_t timer; // Minutes
 	uint8_t roomNum; // If Max RoomNum Up to Short Range, Back to Number One
 	uint8_t yourNum;
-	UINT16 udpPort;   // Server UDP Port Num
+	uint16_t udpPort;   // Server UDP Port Num
 	unsigned int mobHp;
 	char serverIP[16]; // Server IP Address
 };
@@ -231,7 +232,7 @@ struct RAID_RANKING_RESPONSE : PACKET_HEADER {
 	std::vector<std::pair<std::string, unsigned int>> reqScore;
 };
 
-enum class PACKET_ID : UINT16 {
+enum class PACKET_ID : uint16_t {
 	//SYSTEM
 	USER_CONNECT_REQUEST = 1, // 유저는 2번으로 요청 
 	USER_CONNECT_RESPONSE = 2,

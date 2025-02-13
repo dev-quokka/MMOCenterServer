@@ -6,6 +6,12 @@
 
 class ConnUsersManager {
 public:
+    ~ConnUsersManager() {
+        for (auto iter = ConnUsers.begin(); iter != ConnUsers.end(); iter++) {
+            delete iter->second;
+        }
+    }
+
     void InsertUser(SOCKET TempSkt_); // Init ConnUsers
     void DeleteUser(SOCKET TempSkt_);
     ConnUser* FindUser(SOCKET UserSkt_);

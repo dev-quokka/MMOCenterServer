@@ -1,7 +1,7 @@
 #include "MatchingManager.h"
 
-void MatchingManager::Init(const UINT16 maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_) {
-    for (int i = 1; i <= 6; i++ ) { // Max i = MaxLevel/3 + 1 (Level Check Set)
+void MatchingManager::Init(const uint16_t maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_) {
+    for (int i = 1; i <= USER_MAX_LEVEL/3 + 1; i++ ) { // Max i = MaxLevel/3 + 1 (Level Check Set)
         std::priority_queue<MatchingRoom*> k;
         matchingMap.emplace(i, std::priority_queue<MatchingRoom*>());
     }
@@ -54,7 +54,7 @@ SOCKET MatchingManager::GetUDPSocket() {
     return udpSocket;
 }
 
-bool MatchingManager::Insert(uint8_t userLevel_, UINT16 userSkt_, std::string userId_) {
+bool MatchingManager::Insert(uint8_t userLevel_, SOCKET userSkt_, std::string userId_) {
     MatchingRoom* tempRoom;
     tempRoom->userLevel = userLevel_;
     tempRoom->userSkt = userSkt_;
@@ -125,7 +125,7 @@ void MatchingManager::MatchingThread() {
                                 InGameUser* user2 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching2->userSkt)->GetObjNum());
                                 
                                 // Send to User1 With User2 Info
-                                rReadyResPacket1.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
+                                rReadyResPacket1.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
                                 rReadyResPacket1.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
                                 rReadyResPacket1.uuId = user1->GetUuid();
                                 rReadyResPacket1.timer = 2;
@@ -136,7 +136,7 @@ void MatchingManager::MatchingThread() {
                                 strcpy(rReadyResPacket1.serverIP, serverIP);
 
                                 // Send to User2 with User1 Info
-                                rReadyResPacket2.PacketId = (UINT16)PACKET_ID::RAID_MATCHING_RESPONSE;
+                                rReadyResPacket2.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
                                 rReadyResPacket2.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
                                 rReadyResPacket2.uuId = user2->GetUuid();
                                 rReadyResPacket2.timer = 2;
@@ -193,7 +193,7 @@ void MatchingManager::DeleteMob(Room* room_) {
     InGameUser* user2 = room_->GetUser(1);
 
     // Send to User1 With User2 Info
-    raidEndReqPacket1.PacketId = (UINT16)PACKET_ID::RAID_END_REQUEST;
+    raidEndReqPacket1.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
     raidEndReqPacket1.PacketLength = sizeof(RAID_END_REQUEST);
     raidEndReqPacket1.uuId = user1->GetUuid();
     raidEndReqPacket1.userScore = room_->GetScore(0);
@@ -202,7 +202,7 @@ void MatchingManager::DeleteMob(Room* room_) {
     connUsersManager->FindUser(room_->GetUserSkt(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
 
     // Send to User2 with User1 Info
-    raidEndReqPacket2.PacketId = (UINT16)PACKET_ID::RAID_END_REQUEST;
+    raidEndReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
     raidEndReqPacket2.PacketLength = sizeof(RAID_END_REQUEST);
     raidEndReqPacket2.uuId = user2->GetUuid();
     raidEndReqPacket2.teamScore = room_->GetScore(0);
@@ -233,7 +233,7 @@ void MatchingManager::TimeCheckThread() {
                 InGameUser* user2 = room_->GetUser(1);
 
                 // Send to User1 With User2 Info
-                raidEndReqPacket1.PacketId = (UINT16)PACKET_ID::RAID_END_REQUEST;
+                raidEndReqPacket1.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
                 raidEndReqPacket1.PacketLength = sizeof(RAID_END_REQUEST);
                 raidEndReqPacket1.uuId = user1->GetUuid();
                 raidEndReqPacket1.userScore = room_->GetScore(0);
@@ -242,7 +242,7 @@ void MatchingManager::TimeCheckThread() {
                 connUsersManager->FindUser(room_->GetUserSkt(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
 
                 // Send to User2 with User1 Info
-                raidEndReqPacket2.PacketId = (UINT16)PACKET_ID::RAID_END_REQUEST;
+                raidEndReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
                 raidEndReqPacket2.PacketLength = sizeof(RAID_END_REQUEST);
                 raidEndReqPacket2.uuId = user2->GetUuid();
                 raidEndReqPacket2.teamScore = room_->GetScore(0);

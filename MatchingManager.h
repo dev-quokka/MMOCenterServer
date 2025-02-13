@@ -1,20 +1,22 @@
 #pragma once
 
+#include <set>
+#include <thread>
+#include <chrono>
+#include <queue>
+#include <cstdint>
+#include <iostream>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <boost/lockfree/queue.hpp>
+#include <tbb/concurrent_hash_map.h>
+
 #include "RoomManager.h"
 #include "InGameUserManager.h"
 #include "RedisManager.h"
 
-#include <iostream>
-#include <queue>
-#include <set>
-#include <thread>
-#include <chrono>
-#include <ws2tcpip.h>
-
-#include <boost/lockfree/queue.hpp>
-#include <tbb/concurrent_hash_map.h>
-
 constexpr int UDP_PORT = 50000;
+constexpr uint8_t USER_MAX_LEVEL = 15;
 
 struct EndTimeComp {
 	bool operator()(Room* r1, Room* r2) const {
@@ -25,14 +27,50 @@ struct EndTimeComp {
 struct MatchingRoom {
 	uint8_t LoofCnt = 0;
 	uint8_t userLevel;
-	UINT16 userSkt;
+	SOCKET userSkt;
 	std::string userId;
 };
 
 class MatchingManager {
 public:
-	void Init(const UINT16 maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_);
-	bool Insert(uint8_t userLevel_, UINT16 userSkt_, std::string userId);
+	~MatchingManager() {
+		matchRun = false;
+		timeChekcRun = false;
+		workRun = false;
+
+		if (matchingThread.joinable()) {
+			matchingThread.join();
+		}
+
+		if (timeCheckThread.joinable()) {
+			timeCheckThread.join();
+		}
+
+		if (udpWorkThread.joinable()) {
+			udpWorkThread.join();
+		}
+
+		for (Room* room : endRoomCheckSet) {
+			delete room;
+		}
+
+		for (int i = 0; i < USER_MAX_LEVEL; i++) {
+			tbb::concurrent_hash_map<uint8_t, std::priority_queue<MatchingRoom*>>::accessor accessor;
+
+			if (matchingMap.find(accessor, i)) {
+				std::priority_queue<MatchingRoom*> temp = accessor->second;
+				while (!temp.empty()) {
+					delete temp.top();
+					temp.pop();
+				}
+			}
+
+		}
+
+	}
+
+	void Init(const uint16_t maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_);
+	bool Insert(uint8_t userLevel_, SOCKET userSkt_, std::string userId);
 	bool CreateMatchThread();
 	bool CreateUDPWorkThread();
 	bool CreateTimeCheckThread();

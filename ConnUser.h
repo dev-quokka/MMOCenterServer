@@ -4,12 +4,13 @@
 #include "CircularBuffer.h"
 #include "Packet.h"
 
+#include <cstdint>
 #include <iostream>
 #include <boost/lockfree/queue.hpp>
 
 class ConnUser {
 public:
-	ConnUser(SOCKET UserSkt_, UINT32 bufferSize_, UINT16 connObjNum_, HANDLE sIOCPHandle) : userSkt(UserSkt_), connObjNum(connObjNum_), userIocpHandle(sIOCPHandle) {
+	ConnUser(SOCKET UserSkt_, uint32_t bufferSize_, uint16_t connObjNum_, HANDLE sIOCPHandle) : userSkt(UserSkt_), connObjNum(connObjNum_), userIocpHandle(sIOCPHandle) {
 		circularBuffer = std::make_unique<CircularBuffer>(bufferSize_);
 	}
 
@@ -26,15 +27,15 @@ public :
 		return userSkt;
 	}
 
-	UINT16 GetObjNum() {
+	uint16_t GetObjNum() {
 		return connObjNum;
 	}
 
-	bool WriteRecvData(const char* data_, UINT32 size_) {
+	bool WriteRecvData(const char* data_, uint32_t size_) {
 		return circularBuffer->Write(data_,size_);
 	}
 
-	PacketInfo ReadRecvData(char* readData_, UINT32 size_) { // readData_는 값을 불러오기 위한 빈 값
+	PacketInfo ReadRecvData(char* readData_, uint32_t size_) { // readData_는 값을 불러오기 위한 빈 값
 		if (circularBuffer->Read(readData_, size_)) {
 			auto pHeader = (PACKET_HEADER*)readData_;
 
@@ -100,7 +101,7 @@ public :
 		return true;
 	}
 
-	void PushSendMsg(const UINT32 dataSize_, char* sendMsg) {
+	void PushSendMsg(const uint32_t dataSize_, char* sendMsg) {
 		auto sendOverlapped = new OverlappedTCP;
 		ZeroMemory(sendOverlapped, sizeof(OverlappedTCP));
 		sendOverlapped->wsaBuf.len = dataSize_;
@@ -171,7 +172,7 @@ private:
 	char recvBuf[MAX_SOCK];
 
 	// 2 bytes
-	UINT16 connObjNum;
+	uint16_t connObjNum;
 
 	// 8 bytes
 	SOCKET userSkt;

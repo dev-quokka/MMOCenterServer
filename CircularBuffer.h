@@ -5,26 +5,26 @@
 
 class CircularBuffer {
 public:
-	CircularBuffer(UINT32 bufferSize) : bufferSize(bufferSize), buffer(new char[bufferSize]) {}
+	CircularBuffer(uint32_t bufferSize) : bufferSize(bufferSize), buffer(new char[bufferSize]) {}
 	~CircularBuffer() {
 		delete[] buffer;
 	}
 
     // Write Data
-    bool Write(const char* data, UINT32 size_) {}
+    bool Write(const char* data, uint32_t size_) {}
 
     // Read Data
-    bool Read(char* readData_, UINT32 size_) {}
+    bool Read(char* readData_, uint32_t size_) {}
 
-	UINT32 DataSize() const {}
+	uint32_t DataSize() const {}
 
 private:
 	// 8 bytes
 	char* buffer;
-	const UINT32 bufferSize;
-	UINT32 writePos = 0; // Current Write Position
-	UINT32 readPos = 0;  // Current Read Position
-	UINT32 currentSize = 0; // Current Buffer Size
+	const uint32_t bufferSize;
+	uint32_t writePos = 0; // Current Write Position
+	uint32_t readPos = 0;  // Current Read Position
+	uint32_t currentSize = 0; // Current Buffer Size
 
     // 80 bytes
     std::mutex bufferMutex;
