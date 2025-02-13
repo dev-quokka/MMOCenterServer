@@ -15,12 +15,13 @@ struct RaidUserInfo {
 
 class Room {
 public:
-	void set(uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, UINT16 userSkt1_, UINT16 userSkt2_, InGameUser* user1_, InGameUser* user2_) {
+	void set(MatchingManager* matchingManager_, uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, UINT16 userSkt1_, UINT16 userSkt2_, InGameUser* user1_, InGameUser* user2_) {
 		RaidUserInfo ruInfo1(userSkt1_, user1_);
 		ruInfos.emplace_back(ruInfo1);
 		RaidUserInfo ruInfo2(userSkt2_, user2_);
 		ruInfos.emplace_back(ruInfo2);
 		mobHp = mobHp_;
+		matchingManager = matchingManager_;
 	}
 
 	void setSockAddr(uint8_t userNum_, sockaddr_in userAddr_) {
@@ -30,7 +31,6 @@ public:
 	bool StartCheck() {
 		if (startCheck.fetch_add(1) + 1 == 2) {
 			endTime = std::chrono::steady_clock::now() + std::chrono::minutes(2)+ std::chrono::seconds(8);
-			matchingManager = std::make_unique<MatchingManager>();
 			udpSkt = matchingManager->GetUDPSocket();
 			overlappedUDP = new OverlappedUDP;
 			return true;
@@ -122,7 +122,7 @@ private:
 	// 8 bytes
 	SOCKET udpSkt;
 	OverlappedUDP* overlappedUDP;
-	std::unique_ptr<MatchingManager> matchingManager;
+	MatchingManager* matchingManager;
 	std::chrono::time_point<std::chrono::steady_clock> endTime = std::chrono::steady_clock::now()+ std::chrono::minutes(2); // 생성 되자마자 삭제 방지
 
 	// 32 bytes

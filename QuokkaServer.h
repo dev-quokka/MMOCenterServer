@@ -34,8 +34,6 @@ private:
     void WorkThread(); // IOCP Complete Event Thread
     void AccepterThread(); // Accept req Thread
 
-    void CloseUser(ConnUser* connUser, bool isForce_ = false);
-
     // 1 bytes
     bool WorkRun = true;
     bool AccepterRun = true;
@@ -56,7 +54,7 @@ private:
 
     // 32 bytes
     std::vector<std::thread> workThreads;
-    std::thread acceptThread;
+    std::vector<std::thread> acceptThreads;
 
     // 136 bytes 
     boost::lockfree::queue<ConnUser*> AcceptQueue; // For Aceept User Queue

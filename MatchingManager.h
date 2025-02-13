@@ -31,7 +31,7 @@ struct MatchingRoom {
 
 class MatchingManager {
 public:
-	void Init(const UINT16 maxClientCount_, RedisManager* redisManager);
+	void Init(const UINT16 maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_);
 	bool Insert(uint8_t userLevel_, UINT16 userSkt_, std::string userId);
 	bool CreateMatchThread();
 	bool CreateUDPWorkThread();
@@ -78,6 +78,6 @@ private:
 	// 606 bytes
 	ConnUsersManager* connUsersManager;
 
-	// 760 bytes
+	// 776 bytes
 	RedisManager* redisManager;
 };

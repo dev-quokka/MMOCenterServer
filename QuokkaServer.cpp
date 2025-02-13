@@ -140,14 +140,16 @@ bool QuokkaServer::CreateWorkThread() {
     for (int i = 0; i < threadCnt; i++) {
         workThreads.emplace_back([this]() { WorkThread(); });
     }
-    std::cout << "WorkThread start" << std::endl;
+    std::cout << "WorkThread Start" << std::endl;
     return true;
 }
 
 bool QuokkaServer::CreateAccepterThread() {
     auto threadCnt = MaxThreadCnt/4+1; // (core/4)
-    acceptThread = std::thread([this]() { AccepterThread(); });
-    std::cout << "AcceptThread 시작" << std::endl;
+    for (int i = 0; i < threadCnt; i++) {
+        acceptThreads.emplace_back([this]() { AccepterThread(); });
+    }
+    std::cout << "AcceptThread Start" << std::endl;
     return true;
 }
 
@@ -168,6 +170,8 @@ void QuokkaServer::WorkThread() {
 
         if (gqSucces && dwIoSize == 0 && lpOverlapped == NULL) { // Server End Request
             WorkRun = false;
+            AccepterRun = false;
+
             continue;
         }
         
@@ -210,7 +214,7 @@ void QuokkaServer::WorkThread() {
 }
 
 void QuokkaServer::AccepterThread() {
-    ConnUser* connUser = nullptr;
+    ConnUser* connUser;
     while (AccepterRun) {
         if (AcceptQueue.pop(connUser)) { // AcceptQueue not empty
             if (!connUser->PostAccept(ServerSKT)) {
@@ -218,7 +222,7 @@ void QuokkaServer::AccepterThread() {
             }
         }
         else { // AcceptQueue empty
-            while (1) {
+            while (AccepterRun) {
                 if (WaittingQueue.pop(connUser)) { // WaittingQueue not empty
                     WaittingQueue.push(connUser);
                 }
@@ -229,4 +233,34 @@ void QuokkaServer::AccepterThread() {
             }
         }
     }
+}
+
+void QuokkaServer::ServerEnd() {
+    for (int i = 0; i < workThreads.size(); i++) { // Work 쓰레드 종료
+        if (workThreads[i].joinable()) {
+            workThreads[i].join();
+        }
+    }
+
+    for (int i = 0; i < acceptThreads.size(); i++) { // Accept 쓰레드 종료
+        if (acceptThreads[i].joinable()) { 
+            acceptThreads[i].join();
+        }
+    }
+
+    ConnUser* connUser;
+
+    while (AcceptQueue.pop(connUser)) { // 요청 대기큐 유저 객체 삭제
+        closesocket(connUser->GetSocket());
+        delete connUser;
+    }
+
+    while (WaittingQueue.pop(connUser)) { // 접속 대기큐 유저 객체 삭제
+        closesocket(connUser->GetSocket());
+        delete connUser;
+    }
+
+    p_RedisManager->RedisEnd(); // 레디스 종료
+    CloseHandle(sIOCPHandle); // 핸들 종료
+    closesocket(ServerSKT); // 서버 소켓 종료
 }

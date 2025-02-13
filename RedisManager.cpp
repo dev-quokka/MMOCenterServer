@@ -5,19 +5,33 @@ thread_local std::mt19937 RedisManager::gen(std::random_device{}());
 void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCount_, HANDLE sIOCPHandle_) {
 
     // ---------- SET PACKET PROCESS ---------- 
-    packetIDTable = std::vector<RECV_PACKET_FUNCTION>(PACKET_ID_SIZE, nullptr);
+    packetIDTable = std::unordered_map<UINT16, RECV_PACKET_FUNCTION>();
 
     //SYSTEM
-    packetIDTable[1] = &RedisManager::UserConnect;
-    packetIDTable[2] = &RedisManager::Logout;
-    packetIDTable[4] = &RedisManager::ServerEnd;
+    packetIDTable[(UINT16)PACKET_ID::USER_CONNECT_REQUEST] = &RedisManager::UserConnect;
+    packetIDTable[(UINT16)PACKET_ID::USER_LOGOUT_REQUEST] = &RedisManager::Logout;
+    packetIDTable[(UINT16)PACKET_ID::IM_WEB_REQUEST] = &RedisManager::ImWebRequest;
 
     // USER STATUS
+    packetIDTable[(UINT16)PACKET_ID::EXP_UP_REQUEST] = &RedisManager::ExpUp;
 
     // INVENTORY
-    packetIDTable[25] = &RedisManager::AddItem;
-    packetIDTable[26] = &RedisManager::DeleteItem;
-    packetIDTable[27] = &RedisManager::MoveItem;
+    packetIDTable[(UINT16)PACKET_ID::ADD_ITEM_REQUEST] = &RedisManager::AddItem;
+    packetIDTable[(UINT16)PACKET_ID::DEL_ITEM_REQUEST] = &RedisManager::DeleteItem;
+    packetIDTable[(UINT16)PACKET_ID::MOD_ITEM_REQUEST] = &RedisManager::ModifyItem;
+    packetIDTable[(UINT16)PACKET_ID::MOV_ITEM_REQUEST] = &RedisManager::MoveItem;
+
+    //INVENTORY:EQUIPMENT
+    packetIDTable[(UINT16)PACKET_ID::ADD_EQUIPMENT_REQUEST] = &RedisManager::AddEquipment;
+    packetIDTable[(UINT16)PACKET_ID::DEL_EQUIPMENT_REQUEST] = &RedisManager::DeleteEquipment;
+    packetIDTable[(UINT16)PACKET_ID::ENH_EQUIPMENT_REQUEST] = &RedisManager::EnhanceEquipment;
+
+    //RAID
+    packetIDTable[(UINT16)PACKET_ID::RAID_MATCHING_REQUEST] = &RedisManager::MatchStart;
+    packetIDTable[(UINT16)PACKET_ID::RAID_TEAMINFO_REQUEST] = &RedisManager::RaidReqTeamInfo;
+    packetIDTable[(UINT16)PACKET_ID::RAID_HIT_REQUEST] = &RedisManager::RaidHit;
+    packetIDTable[(UINT16)PACKET_ID::RAID_END_REQUEST] = &RedisManager::RaidEnd;
+    packetIDTable[(UINT16)PACKET_ID::RAID_RANKING_REQUEST] = &RedisManager::GetRanking;
 
     matchingManager = new MatchingManager;
     inGameUserManager = new InGameUserManager;
@@ -26,7 +40,7 @@ void RedisManager::init(const UINT16 RedisThreadCnt_, const UINT16 maxClientCoun
     RedisRun(RedisThreadCnt_);
 
     inGameUserManager->Init(maxClientCount_);
-    matchingManager->Init(maxClientCount_, this);
+    matchingManager->Init(maxClientCount_, this, inGameUserManager, roomManager);
 }
 
 void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Server
@@ -37,7 +51,7 @@ void RedisManager::RedisRun(const UINT16 RedisThreadCnt_) { // Connect Redis Ser
         connection_options.keep_alive = true;
 
         // Redis 클러스터 연결
-        redis = sw::redis::RedisCluster(connection_options);
+        redis = std::make_unique<sw::redis::RedisCluster>(connection_options);
         std::cout << "Redis 클러스터 연결 성공!" << std::endl;
 
         CreateRedisThread(RedisThreadCnt_);
@@ -108,7 +122,7 @@ void RedisManager::SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1_, RAI
 void RedisManager::UserConnect(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
     inGameUserManager->Set((connUsersManager->FindUser(userSkt)->GetObjNum()), userConn->uuId, userConn->userId, userConn->userPk, userConn->currentExp,userConn->level);
-    redis.persist("user:" + userConn->uuId); // Remove TTL Time
+    redis->persist("user:" + userConn->uuId); // Remove TTL Time
 }
 
 void RedisManager::Logout(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) { // Normal Disconnect
@@ -182,7 +196,7 @@ void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
     std::string user_slot = "userinfo:" + tempUser->GetUuid();
 
-    if (redis.hincrby(user_slot, "exp", mobExp[expUpReqPacket->mobNum])) { // Exp Up Success
+    if (redis->hincrby(user_slot, "exp", mobExp[expUpReqPacket->mobNum])) { // Exp Up Success
         auto userExp = tempUser->ExpUp(mobExp[expUpReqPacket->mobNum]); // Increase Level Cnt , Current Exp
 
         if (userExp.first!=0) { // Level Up
@@ -191,7 +205,7 @@ void RedisManager::ExpUp(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
             levelUpResPacket.PacketLength = sizeof(LEVEL_UP_RESPONSE);
             levelUpResPacket.uuId = tempUser->GetUuid();
 
-            if (redis.hincrby(user_slot, "level", userExp.first)) { // Level Up Success
+            if (redis->hincrby(user_slot, "level", userExp.first)) { // Level Up Success
                 levelUpResPacket.increaseLevel = userExp.first;
                 levelUpResPacket.currentExp = userExp.second;
 
@@ -243,7 +257,7 @@ void RedisManager::AddItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     if (addItemReqPacket->uuId == tempUser->GetUuid()) { // UUID CORRECT
         std::string inventory_slot = "inventory:" + tempUser->GetUuid();
 
-        if (redis.hset(inventory_slot, itemType[addItemReqPacket->itemType] + std::to_string(addItemReqPacket->itemCode) + std::to_string(addItemReqPacket->itemSlotPos), std::to_string(addItemReqPacket->itemCount))) { // AddItem Success (ItemCode:slotposition, count)
+        if (redis->hset(inventory_slot, itemType[addItemReqPacket->itemType] + std::to_string(addItemReqPacket->itemCode) + std::to_string(addItemReqPacket->itemSlotPos), std::to_string(addItemReqPacket->itemCount))) { // AddItem Success (ItemCode:slotposition, count)
             addItemResPacket.isSuccess = true;
         }
         else { // AddItem Fail
@@ -269,7 +283,7 @@ void RedisManager::DeleteItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_
     if (delItemReqPacket->uuId == tempUser->GetUuid()) { // UUID CORRECT
         std::string inventory_slot = "inventory:" + tempUser->GetUuid();
 
-        if (redis.hdel(inventory_slot, itemType[delItemReqPacket->itemType] + std::to_string(delItemReqPacket->itemCode) + std::to_string(delItemReqPacket->itemSlotPos))) { // DeleteItem Success
+        if (redis->hdel(inventory_slot, itemType[delItemReqPacket->itemType] + std::to_string(delItemReqPacket->itemCode) + std::to_string(delItemReqPacket->itemSlotPos))) { // DeleteItem Success
             delItemResPacket.isSuccess = true;
         }
         else { // DeleteItem Fail
@@ -295,7 +309,7 @@ void RedisManager::ModifyItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_
     if (modItemReqPacket->uuId == tempUser->GetUuid()) { // UUID CORRECT
         std::string inventory_slot = "inventory:" + tempUser->GetUuid();
 
-        if (redis.hset(inventory_slot, itemType[modItemReqPacket->itemType] + std::to_string(modItemReqPacket->itemCode) + std::to_string(modItemReqPacket->itemSlotPos), std::to_string(modItemReqPacket->itemCount))) { // ModifyItem Success
+        if (redis->hset(inventory_slot, itemType[modItemReqPacket->itemType] + std::to_string(modItemReqPacket->itemCode) + std::to_string(modItemReqPacket->itemSlotPos), std::to_string(modItemReqPacket->itemCount))) { // ModifyItem Success
             modItemResPacket.isSuccess = true;
         }
         else { // ModifyItem Fail
@@ -321,7 +335,7 @@ void RedisManager::MoveItem(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) 
     if (movItemReqPacket->uuId == tempUser->GetUuid()) { // UUID CORRECT
         std::string inventory_slot = "inventory:" + tempUser->GetUuid();
 
-        if (redis.hset(inventory_slot, itemType[movItemReqPacket->itemType] + std::to_string(movItemReqPacket->itemCode) + std::to_string(movItemReqPacket->itemSlotPos), std::to_string(movItemReqPacket->itemCount))) { // MoveItem Success
+        if (redis->hset(inventory_slot, itemType[movItemReqPacket->itemType] + std::to_string(movItemReqPacket->itemCode) + std::to_string(movItemReqPacket->itemSlotPos), std::to_string(movItemReqPacket->itemCount))) { // MoveItem Success
             movItemResPacket.isSuccess = true;
         }
         else { // MoveItem Fail
@@ -350,7 +364,7 @@ void RedisManager::AddEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPacke
     if (addEquipReqPacket->uuId == tempUser->GetUuid()) { // UUID CORRECT
         std::string inventory_slot = "inventory:" + tempUser->GetUuid();
 
-        if (redis.hset(inventory_slot, itemType[addEquipReqPacket->itemType] + std::to_string(addEquipReqPacket->itemCode) + std::to_string(addEquipReqPacket->itemSlotPos), std::to_string(addEquipReqPacket->currentEnhanceCount))) { // AddItem Success (ItemCode:slotposition, count)
+        if (redis->hset(inventory_slot, itemType[addEquipReqPacket->itemType] + std::to_string(addEquipReqPacket->itemCode) + std::to_string(addEquipReqPacket->itemSlotPos), std::to_string(addEquipReqPacket->currentEnhanceCount))) { // AddItem Success (ItemCode:slotposition, count)
             addEquipResPacket.isSuccess = true;
         }
         else { // AddItem Fail
@@ -377,7 +391,7 @@ void RedisManager::DeleteEquipment(SOCKET userSkt, UINT16 packetSize_, char* pPa
     if (delEquipReqPacket->uuId == tempUser->GetUuid()) { // UUID CORRECT
         std::string inventory_slot = "inventory:" + tempUser->GetUuid();
 
-        if (redis.hdel(inventory_slot, itemType[delEquipReqPacket->itemType] + std::to_string(delEquipReqPacket->itemCode) + std::to_string(delEquipReqPacket->itemSlotPos))) { // DeleteItem Success
+        if (redis->hdel(inventory_slot, itemType[delEquipReqPacket->itemType] + std::to_string(delEquipReqPacket->itemCode) + std::to_string(delEquipReqPacket->itemSlotPos))) { // DeleteItem Success
             delEquipResPacket.isSuccess = true;
         }
         else { // DeleteItem Fail
@@ -403,7 +417,7 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, UINT16 packetSize_, char* pP
     if (delEquipReqPacket->uuId == tempUser->GetUuid()) { // UUID CORRECT
         std::string inventory_slot = "inventory:" + tempUser->GetUuid();
 
-        if (redis.hdel(inventory_slot, 
+        if (redis->hdel(inventory_slot, 
             itemType[delEquipReqPacket->itemType] + std::to_string(delEquipReqPacket->itemCode) + std::to_string(delEquipReqPacket->itemSlotPos), std::to_string(delEquipReqPacket->currentEnhanceCount))) {
             
             if (EquipmentEnhance(delEquipReqPacket->currentEnhanceCount)) { // Enhance Success
@@ -499,12 +513,12 @@ void RedisManager::RaidEnd(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
 
 }
 
-void RedisManager::GetRaidScore(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
+void RedisManager::GetRanking(SOCKET userSkt, UINT16 packetSize_, char* pPacket_) {
     auto delEquipReqPacket = reinterpret_cast<RAID_RANKING_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     std::vector<std::pair<std::string, unsigned int>> scores;
-    redis.zrevrange("raidscore", delEquipReqPacket->startRank, delEquipReqPacket->startRank+99, inserter(scores, scores.begin()));
+    redis->zrevrange("raidscore", delEquipReqPacket->startRank, delEquipReqPacket->startRank+99, inserter(scores, scores.begin()));
 
     RAID_RANKING_RESPONSE raidRankResPacket;
     raidRankResPacket.PacketId = (UINT16)PACKET_ID::RAID_RANKING_RESPONSE;

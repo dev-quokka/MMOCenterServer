@@ -1,6 +1,6 @@
 #include "MatchingManager.h"
 
-void MatchingManager::Init(const UINT16 maxClientCount_, RedisManager* redisManager_) {
+void MatchingManager::Init(const UINT16 maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_) {
     for (int i = 1; i <= 6; i++ ) { // Max i = MaxLevel/3 + 1 (Level Check Set)
         std::priority_queue<MatchingRoom*> k;
         matchingMap.emplace(i, std::priority_queue<MatchingRoom*>());
@@ -43,6 +43,9 @@ void MatchingManager::Init(const UINT16 maxClientCount_, RedisManager* redisMana
         }  
 
     redisManager = redisManager_;
+    inGameUserManager = inGameUserManager_;
+    roomManager = roomManager_;
+
     CreateMatchThread();
     TimeCheckThread();
 }
@@ -147,7 +150,7 @@ void MatchingManager::MatchingThread() {
                                 redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket1); // Send User1 with Game Info && User2 Info
                                 redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket2); // Send User2 with Game Info && User1 Info
 
-                                endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userSkt, tempMatching2->userSkt, user1, user2));
+                                endRoomCheckSet.insert(roomManager->MakeRoom(this, tempRoomNum, 2, 30, tempMatching1->userSkt, tempMatching2->userSkt, user1, user2));
                             }
 
                             while (!roomNumQueue.pop(tempRoomNum)) { // 룸 넘버 없으면 현재 레벨 위치에서 반환될때까지 대기

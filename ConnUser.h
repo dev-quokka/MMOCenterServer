@@ -9,7 +9,9 @@
 
 class ConnUser {
 public:
-	ConnUser(SOCKET UserSkt_, UINT32 bufferSize_, UINT16 connObjNum_, HANDLE sIOCPHandle) : userSkt(UserSkt_), circularBuffer(bufferSize_), connObjNum(connObjNum_), userIocpHandle(sIOCPHandle) {}
+	ConnUser(SOCKET UserSkt_, UINT32 bufferSize_, UINT16 connObjNum_, HANDLE sIOCPHandle) : userSkt(UserSkt_), connObjNum(connObjNum_), userIocpHandle(sIOCPHandle) {
+		circularBuffer = std::make_unique<CircularBuffer>(bufferSize_);
+	}
 
 public :
 	bool IsConn() { // check connection status
@@ -20,16 +22,20 @@ public :
 		return recvBuf;
 	}
 
+	SOCKET GetSocket() {
+		return userSkt;
+	}
+
 	UINT16 GetObjNum() {
 		return connObjNum;
 	}
 
 	bool WriteRecvData(const char* data_, UINT32 size_) {
-		return circularBuffer.Write(data_,size_);
+		return circularBuffer->Write(data_,size_);
 	}
 
-	PacketInfo ReadRecvData(char* readData_, UINT32 size_) {
-		if (circularBuffer.Read(readData_, size_)) {
+	PacketInfo ReadRecvData(char* readData_, UINT32 size_) { // readData_는 값을 불러오기 위한 빈 값
+		if (circularBuffer->Read(readData_, size_)) {
 			auto pHeader = (PACKET_HEADER*)readData_;
 
 			PacketInfo packetInfo;
@@ -163,7 +169,6 @@ private:
 	std::atomic<bool> isSending = false;
 	char acceptBuf[64];
 	char recvBuf[MAX_SOCK];
-	char* recvCircleBuf;
 
 	// 2 bytes
 	UINT16 connObjNum;
@@ -176,7 +181,7 @@ private:
 	OverlappedTCP userOvlap;
 
 	// 120 bytes
-	CircularBuffer circularBuffer; // Make Circular Recv Buffer
+	std::unique_ptr<CircularBuffer> circularBuffer; // Make Circular Recv Buffer
 
 	// 136 bytes 
 	boost::lockfree::queue<OverlappedTCP*> sendQueue;

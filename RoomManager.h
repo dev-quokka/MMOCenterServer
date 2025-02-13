@@ -8,7 +8,7 @@
 
 class RoomManager {
 public:
-	Room* MakeRoom(uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, UINT16 userSkt1_, UINT16 userSkt2_, InGameUser* user1_, InGameUser* user2_);
+	Room* MakeRoom(MatchingManager* matchingManager_, uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, UINT16 userSkt1_, UINT16 userSkt2_, InGameUser* user1_, InGameUser* user2_);
 	Room* GetRoom(uint8_t roomNum_);
 	bool DeleteRoom(uint8_t roomNum);
 
