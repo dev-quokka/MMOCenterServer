@@ -27,7 +27,7 @@ public:
 		userUuid = "";
 	}
 
-	UINT32 GetPk() {
+	uint32_t GetPk() {
 		return userPk;
 	}
 

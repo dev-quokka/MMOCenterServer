@@ -30,17 +30,17 @@ void MatchingManager::Init(const uint16_t maxClientCount_, RedisManager* redisMa
             std::cerr << "UDP SOCKET IOCP BIND FAIL : " << GetLastError() << std::endl;
         }
 
-        if (serverIP == '\0') { // 처음에만 serverIP에 IP값 할당해두기
-            sockaddr_in addr;
-            int addrSize = sizeof(addr);
+        //if (serverIP == '\0') { // 처음에만 serverIP에 IP값 할당해두기
+        //    sockaddr_in addr;
+        //    int addrSize = sizeof(addr);
 
-            if (getsockname(udpSocket, (SOCKADDR*)&addr, &addrSize) == 0) {
-                inet_ntop(AF_INET, &addr.sin_addr, serverIP, sizeof(serverIP));
-            }
-            else {
-                std::cerr << "GET UDP SOCKET IP FAIL : " << WSAGetLastError() << std::endl;
-            }
-        }  
+        //    if (getsockname(udpSocket, (SOCKADDR*)&addr, &addrSize) == 0) {
+        //        inet_ntop(AF_INET, &addr.sin_addr, serverIP, sizeof(serverIP));
+        //    }
+        //    else {
+        //        std::cerr << "GET UDP SOCKET IP FAIL : " << WSAGetLastError() << std::endl;
+        //    }
+        //}  
 
     redisManager = redisManager_;
     inGameUserManager = inGameUserManager_;
@@ -133,7 +133,7 @@ void MatchingManager::MatchingThread() {
                                 rReadyResPacket1.yourNum = 0;
                                 rReadyResPacket1.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
                                 rReadyResPacket1.udpPort = UDP_PORT;
-                                strcpy(rReadyResPacket1.serverIP, serverIP);
+                                strcpy_s(rReadyResPacket1.serverIP, serverIP);
 
                                 // Send to User2 with User1 Info
                                 rReadyResPacket2.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
@@ -144,7 +144,7 @@ void MatchingManager::MatchingThread() {
                                 rReadyResPacket2.yourNum = 1;
                                 rReadyResPacket2.mobHp = 30; // 나중에 몹당 hp Map 만들어서 설정하기
                                 rReadyResPacket2.udpPort = UDP_PORT;
-                                strcpy(rReadyResPacket2.serverIP, serverIP);
+                                strcpy_s(rReadyResPacket2.serverIP, serverIP);
 
                                 // 마지막 요청 처리 뒤에 방 생성 요청 보내기 (전에 요청 건 다 처리하고 방 생성)
                                 redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket1); // Send User1 with Game Info && User2 Info

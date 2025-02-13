@@ -2,6 +2,7 @@
 
 #include "ConnUser.h"
 
+#include <winsock2.h>
 #include <tbb/concurrent_hash_map.h>
 
 class ConnUsersManager {

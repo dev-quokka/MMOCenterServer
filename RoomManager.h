@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <unordered_map>
 
-#include "MatchingManager.h"
 #include "Room.h"
+#include "MatchingManager.h"
 #include "InGameUser.h"
 
 class RoomManager {

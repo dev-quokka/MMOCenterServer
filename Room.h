@@ -6,9 +6,11 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#include "InGameUser.h"
 #include "MatchingManager.h"
+#include "InGameUser.h"
 #include "Define.h"
+
+class MatchingManager;
 
 struct RaidUserInfo {
 	std::atomic<unsigned int> userScore = 0;
@@ -25,7 +27,7 @@ public:
 		ruInfos.emplace_back(ruInfo1);
 		RaidUserInfo ruInfo2(userSkt2_, user2_);
 		ruInfos.emplace_back(ruInfo2);
-		mobHp = mobHp_;
+		mobHp.store(mobHp_);
 		matchingManager = matchingManager_;
 	}
 

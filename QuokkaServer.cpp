@@ -130,7 +130,7 @@ bool QuokkaServer::StartWork() {
     }
 
     p_RedisManager->init(MaxThreadCnt, maxClientCount, sIOCPHandle);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
-    p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager); // 
+    p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager); 
 
     return true;
 }

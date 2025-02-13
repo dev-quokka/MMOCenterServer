@@ -1,7 +1,7 @@
 #include "RoomManager.h"
 
 Room* RoomManager::MakeRoom(MatchingManager* matchingManager_, uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, uint16_t userSkt1_, uint16_t userSkt2_, InGameUser* user1_, InGameUser* user2_) {
-	Room* room;
+	Room* room = new Room;
 	room->set(matchingManager_, roomNum_, timer_, mobHp_, userSkt1_, userSkt2_, user1_,user2_);
 	roomMap[roomNum_] = room;
 	return room;

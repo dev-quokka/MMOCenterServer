@@ -11,12 +11,12 @@ public:
 	}
 
     // Write Data
-    bool Write(const char* data, uint32_t size_) {}
+	bool Write(const char* data, uint32_t size_);
 
     // Read Data
-    bool Read(char* readData_, uint32_t size_) {}
+	bool Read(char* readData_, uint32_t size_);
 
-	uint32_t DataSize() const {}
+	uint32_t DataSize() const;
 
 private:
 	// 8 bytes

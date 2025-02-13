@@ -1,11 +1,12 @@
 #pragma once
 
-#include <sw/redis++/redis++.h>
+#include <winsock2.h>
 #include <windef.h>
 #include <cstdint>
 #include <iostream>
 #include <random>
 #include <unordered_map>
+#include <sw/redis++/redis++.h>
 
 #include "Packet.h"
 #include "InGameUserManager.h"
@@ -13,8 +14,15 @@
 #include "MatchingManager.h"
 #include "ConnUsersManager.h"
 
+class RoomManager;
+class MatchingManager;
+
 class RedisManager {
 public:
+    RedisManager(){
+        
+    }
+
     ~RedisManager() {
         redisRun = false;
 
@@ -23,10 +31,9 @@ public:
                 redisThreads[i].join();
             }
         }
-
-        delete matchingManager;
         delete inGameUserManager;
         delete roomManager;
+        delete matchingManager;
     }
 
     void init(const uint16_t RedisThreadCnt_, const uint16_t maxClientCount_, const HANDLE sIOCPHandle_);
@@ -97,9 +104,6 @@ private:
 
     // 64 bytes
     InGameUserManager* inGameUserManager;
-
-    // 72 bytes
-    std::condition_variable cv;
 
     // 80 bytes
     std::mutex redisMu;

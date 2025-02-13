@@ -18,6 +18,10 @@
 constexpr int UDP_PORT = 50000;
 constexpr uint8_t USER_MAX_LEVEL = 15;
 
+class RoomManager;
+class ConnUsersManager;
+class RedisManager;
+
 struct EndTimeComp {
 	bool operator()(Room* r1, Room* r2) const {
 		return r1->GetEndTime() < r2->GetEndTime();
@@ -66,7 +70,6 @@ public:
 			}
 
 		}
-
 	}
 
 	void Init(const uint16_t maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_);
