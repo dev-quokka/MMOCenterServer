@@ -41,10 +41,9 @@ void MatchingManager::Init(const uint16_t maxClientCount_, RedisManager* redisMa
         //        std::cerr << "GET UDP SOCKET IP FAIL : " << WSAGetLastError() << std::endl;
         //    }
         //}  
-
-    redisManager = redisManager_;
-    inGameUserManager = inGameUserManager_;
-    roomManager = roomManager_;
+        roomManager = roomManager_;
+        inGameUserManager = inGameUserManager_;
+        redisManager = redisManager_;
 
     CreateMatchThread();
     TimeCheckThread();
@@ -150,7 +149,7 @@ void MatchingManager::MatchingThread() {
                                 redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket1); // Send User1 with Game Info && User2 Info
                                 redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket2); // Send User2 with Game Info && User1 Info
 
-                                endRoomCheckSet.insert(roomManager->MakeRoom(this, tempRoomNum, 2, 30, tempMatching1->userSkt, tempMatching2->userSkt, user1, user2));
+                                endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userSkt, tempMatching2->userSkt, user1, user2));
                             }
 
                             while (!roomNumQueue.pop(tempRoomNum)) { // 룸 넘버 없으면 현재 레벨 위치에서 반환될때까지 대기
@@ -175,7 +174,7 @@ void MatchingManager::MatchingThread() {
 
 void MatchingManager::DeleteMob(Room* room_) {
     {
-        mDeleteRoom.lock();
+        std::lock_guard<std::mutex> guard(mDeleteRoom);
         for (auto iter = endRoomCheckSet.begin(); iter != endRoomCheckSet.end(); iter++) {
             if (*iter == room_) {
                 delete *iter;
@@ -183,7 +182,6 @@ void MatchingManager::DeleteMob(Room* room_) {
                 break;
             }
         }
-        mDeleteRoom.unlock();
     }
 
     // 다른 Raid 관련 요청 보다 타임 종료는 먼저 처리되야 함으로 바로 유저 Send

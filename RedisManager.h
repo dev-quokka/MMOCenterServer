@@ -19,10 +19,6 @@ class MatchingManager;
 
 class RedisManager {
 public:
-    RedisManager(){
-        
-    }
-
     ~RedisManager() {
         redisRun = false;
 

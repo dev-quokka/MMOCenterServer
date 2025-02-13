@@ -11,6 +11,7 @@
 #include <boost/lockfree/queue.hpp>
 #include <tbb/concurrent_hash_map.h>
 
+#include "Define.h"
 #include "RoomManager.h"
 #include "InGameUserManager.h"
 #include "RedisManager.h"
@@ -18,6 +19,7 @@
 constexpr int UDP_PORT = 50000;
 constexpr uint8_t USER_MAX_LEVEL = 15;
 
+class Room;
 class RoomManager;
 class ConnUsersManager;
 class RedisManager;
@@ -52,10 +54,6 @@ public:
 
 		if (udpWorkThread.joinable()) {
 			udpWorkThread.join();
-		}
-
-		for (Room* room : endRoomCheckSet) {
-			delete room;
 		}
 
 		for (int i = 0; i < USER_MAX_LEVEL; i++) {

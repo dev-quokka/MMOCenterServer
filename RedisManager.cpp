@@ -34,8 +34,8 @@ void RedisManager::init(const uint16_t RedisThreadCnt_, const uint16_t maxClient
     packetIDTable[(uint16_t)PACKET_ID::RAID_RANKING_REQUEST] = &RedisManager::GetRanking;
 
     inGameUserManager = new InGameUserManager;
-    roomManager = new RoomManager;
     matchingManager = new MatchingManager;
+    roomManager = new RoomManager(matchingManager);
 
     RedisRun(RedisThreadCnt_);
 

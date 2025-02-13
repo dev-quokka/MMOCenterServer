@@ -9,6 +9,8 @@
 
 class RoomManager {
 public:
+	RoomManager(MatchingManager* matchingManager_) : matchingManager(matchingManager_) {}
+
 	~RoomManager() {
 		for (auto& iter : roomMap) {
 			delete iter.second;
@@ -16,11 +18,12 @@ public:
 	}
 
 	bool DeleteRoom(uint8_t roomNum);
-	Room* MakeRoom(MatchingManager* matchingManager_, uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, uint16_t userSkt1_, uint16_t userSkt2_, InGameUser* user1_, InGameUser* user2_);
+	Room* MakeRoom(uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, uint16_t userSkt1_, uint16_t userSkt2_, InGameUser* user1_, InGameUser* user2_);
 	Room* GetRoom(uint8_t roomNum_);
 
 private:
 	std::unordered_map<uint8_t, Room*> roomMap; // { roomNum, Room }
+	MatchingManager* matchingManager;
 };
 
 
