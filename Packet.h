@@ -218,7 +218,6 @@ struct RAID_HIT_RESPONSE : PACKET_HEADER {
 struct RAID_END_REQUEST : PACKET_HEADER { // Server to USER
 	unsigned int userScore;
 	unsigned int teamScore;
-	std::chrono::time_point<std::chrono::steady_clock> elapsedTime; // Time to Finish Mob
 };
 
 struct RAID_END_RESPONSE : PACKET_HEADER { // User to Server (If Server Get This Packet, Return Room Number)

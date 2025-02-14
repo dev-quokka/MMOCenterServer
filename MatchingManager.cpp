@@ -249,18 +249,6 @@ void MatchingManager::TimeCheckThread() {
     }
 }
 
-
-void MatchingManager::SyncMobHp(OverlappedUDP* overlappedUDP_){
-    DWORD dwSendBytes = 0;
-        int result = WSASendTo(udpSocket, &overlappedUDP_->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&overlappedUDP_->userAddr, sizeof(overlappedUDP_->userAddr), (LPWSAOVERLAPPED)overlappedUDP_, NULL);
-
-        if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-            std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
-            delete[] overlappedUDP_->wsaBuf.buf;
-            delete overlappedUDP_;
-        }
-}
-
 void MatchingManager::UDPWorkThread() {
     LPOVERLAPPED lpOverlapped = NULL;
     DWORD dwIoSize = 0;

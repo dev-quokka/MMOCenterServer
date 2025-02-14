@@ -62,6 +62,10 @@ public:
 		return roomNum;
 	}
 
+	uint8_t GetRoomUserCnt() {
+		return ruInfos.size();
+	}
+
 	InGameUser* GetUser(uint8_t userNum_) {
 		if (userNum_ == 0) return ruInfos[0].inGameUser;
 		else if (userNum_ == 1) return ruInfos[1].inGameUser;
@@ -89,6 +93,11 @@ public:
 	InGameUser* GetTeamUser(uint8_t userNum_) {
 		if (userNum_ == 1) return ruInfos[0].inGameUser;
 		else if (userNum_ == 0) return ruInfos[1].inGameUser;
+	}
+
+	unsigned int GetTeamScore(uint8_t userNum) {
+		if (userNum == 1) return ruInfos[0].userScore;
+		else if (userNum == 0) return ruInfos[1].userScore;
 	}
 
 	std::pair<unsigned int, unsigned int> Hit(uint8_t userNum_, unsigned int damage_){ // current mob hp, score
@@ -142,7 +151,7 @@ private:
 	// 8 bytes
 	SOCKET* udpSkt;
 	MatchingManager* matchingManager;
-	std::chrono::time_point<std::chrono::steady_clock> endTime = std::chrono::steady_clock::now()+ std::chrono::minutes(2); // 생성 되자마자 삭제 방지
+	std::chrono::time_point<std::chrono::steady_clock> endTime = std::chrono::steady_clock::now() + std::chrono::minutes(2); // 생성 되자마자 삭제 방지
 
 	// 32 bytes
 	std::vector<RaidUserInfo> ruInfos;

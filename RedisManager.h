@@ -9,6 +9,7 @@
 #include <sw/redis++/redis++.h>
 
 #include "Packet.h"
+#include "InGameUser.h"
 #include "InGameUserManager.h"
 #include "RoomManager.h"
 #include "MatchingManager.h"
