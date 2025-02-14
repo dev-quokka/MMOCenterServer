@@ -139,6 +139,7 @@
     <ClCompile Include="ConnUsersManager.cpp" />
     <ClCompile Include="IngameUserManager.cpp" />
     <ClCompile Include="MatchingManager.cpp" />
+    <ClCompile Include="OverLappedManager.cpp" />
     <ClCompile Include="RoomManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="QuokkaServer.cpp" />
@@ -150,6 +151,7 @@
     <ClInclude Include="Define.h" />
     <ClInclude Include="InGameUser.h" />
     <ClInclude Include="InGameUserManager.h" />
+    <ClInclude Include="OverLappedManager.h" />
     <ClInclude Include="Room.h" />
     <ClInclude Include="MatchingManager.h" />
     <ClInclude Include="RoomManager.h" />

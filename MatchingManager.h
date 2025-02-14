@@ -90,7 +90,7 @@ private:
 
 	// 8 bytes
 	HANDLE udpHandle;
-	SOCKET udpSocket;
+	SOCKET udpSocket; // 1 Socket Of 300 Users 
 
 	// 16 bytes
 	std::thread udpWorkThread;

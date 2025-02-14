@@ -46,6 +46,9 @@ bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
         return false;
     }
 
+    overLappedManager = new OverLappedManager;
+    overLappedManager->init();
+
     std::cout << "소켓 생성 성공" << std::endl;
     return true;
 }
@@ -63,8 +66,11 @@ bool QuokkaServer::StartWork() {
         return false;
     }
 
-    p_RedisManager = new RedisManager;
-    p_ConnUsersManagerManager = new ConnUsersManager;
+    connUsersManager = new ConnUsersManager;
+    inGameUserManager = new InGameUserManager;
+    roomManager = new RoomManager;
+    matchingManager = new MatchingManager;
+    redisManager = new RedisManager;
 
     for (int i = 0; i < maxClientCount; i++) { // Make ConnUsers Queue
         SOCKET TempSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
@@ -92,10 +98,10 @@ bool QuokkaServer::StartWork() {
             return false;
         }
 
-        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA,i, sIOCPHandle);
+        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA,i, sIOCPHandle, overLappedManager);
 
         AcceptQueue.push(connUser); // Push ConnUser
-        p_ConnUsersManagerManager->InsertUser(TempSkt); // Init ConnUsers
+        connUsersManager->InsertUser(TempSkt); // Init ConnUsers
     }
 
     for (int i = 0; i < maxClientCount; i++) { // Make Waittint Users Queue
@@ -124,13 +130,13 @@ bool QuokkaServer::StartWork() {
             return false;
         }
 
-        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA, maxClientCount, sIOCPHandle);
+        ConnUser* connUser = new ConnUser(TempSkt, MAX_RECV_DATA, maxClientCount, sIOCPHandle, overLappedManager);
 
         WaittingQueue.push(connUser); // Push ConnUser
     }
 
-    p_RedisManager->init(MaxThreadCnt, maxClientCount, sIOCPHandle);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
-    p_RedisManager->SetConnUserManager(p_ConnUsersManagerManager); 
+    redisManager->init(MaxThreadCnt, maxClientCount, sIOCPHandle);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
+    redisManager->SetConnUserManager(connUsersManager); 
 
     return true;
 }
@@ -176,11 +182,11 @@ void QuokkaServer::WorkThread() {
         }
         
         auto overlappedTCP = (OverlappedTCP*)lpOverlapped;
-        connUser = p_ConnUsersManagerManager->FindUser(overlappedTCP->userSkt);
+        connUser = connUsersManager->FindUser(overlappedTCP->userSkt);
         SOCKET tempUserSkt = overlappedTCP->userSkt;
 
         if (!gqSucces || (dwIoSize == 0 && overlappedTCP->taskType != TaskType::ACCEPT)) { // User Disconnect
-            p_RedisManager->Disconnect(tempUserSkt);
+            redisManager->Disconnect(tempUserSkt);
             std::cout << "socket " << tempUserSkt << " Disconnect && Data Update Fail" << std::endl;
             connUser->Reset(); // Reset ConnUser
             UserCnt.fetch_sub(1); // UserCnt -1
@@ -191,7 +197,7 @@ void QuokkaServer::WorkThread() {
             if (connUser) {
                 if (connUser->ConnUserRecv()) {
                     UserCnt.fetch_add(1); // UserCnt +1
-                    p_ConnUsersManagerManager->InsertUser(tempUserSkt);
+                    connUsersManager->InsertUser(tempUserSkt);
                     std::cout << "socket " << tempUserSkt << " Connect" << std::endl;
                 }
                 else { // Bind Fail
@@ -201,7 +207,7 @@ void QuokkaServer::WorkThread() {
             }
         }
         else if (overlappedTCP->taskType == TaskType::RECV) {
-            p_RedisManager->PushRedisPacket(tempUserSkt, dwIoSize, connUser->GetRecvBuffer()); // Proccess In Redismanager
+            redisManager->PushRedisPacket(tempUserSkt, dwIoSize, connUser->GetRecvBuffer()); // Proccess In Redismanager
             connUser->ConnUserRecv(); // Wsarecv Again
             delete[] overlappedTCP->wsaBuf.buf;
             delete overlappedTCP;
@@ -260,8 +266,8 @@ void QuokkaServer::ServerEnd() {
         delete connUser;
     }
 
-    delete p_RedisManager;
-    delete p_ConnUsersManagerManager;
+    delete redisManager;
+    delete connUsersManager;
     CloseHandle(sIOCPHandle); // 핸들 종료
     closesocket(ServerSKT); // 서버 소켓 종료
 

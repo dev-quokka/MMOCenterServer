@@ -497,12 +497,33 @@ void RedisManager::RaidReqTeamInfo(SOCKET userSkt, uint16_t packetSize_, char* p
 }
 
 void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
-    auto raidTeamInfoReqPacket = reinterpret_cast<RAID_HIT_REQUEST*>(pPacket_);
+    auto raidHitReqPacket = reinterpret_cast<RAID_HIT_REQUEST*>(pPacket_);
     InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
-    roomManager->GetRoom(raidTeamInfoReqPacket->roomNum)->Hit(raidTeamInfoReqPacket->myNum, raidTeamInfoReqPacket->damage);
+    RAID_HIT_RESPONSE raidHitResPacket;
+    raidHitResPacket.PacketId = (uint16_t)PACKET_ID::RAID_START_REQUEST;
+    raidHitResPacket.PacketLength = sizeof(RAID_START_REQUEST);
+    raidHitResPacket.uuId = user->GetUuid();
 
+    auto room = roomManager->GetRoom(raidHitReqPacket->roomNum)->Hit(raidHitReqPacket->myNum, raidHitReqPacket->damage);
 
+    if (room.first == 0) { // Mob Dead
+        raidHitResPacket.currentMobHp = 0;
+        raidHitResPacket.yourScore = room.second;
+        connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
+
+        // 레이드 종료 메시지
+
+    }
+    else {
+        raidHitResPacket.currentMobHp = room.first;
+        raidHitResPacket.yourScore = room.second;
+        connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
+    }
+
+    if (room.second != 0) { // Score이 0이 아니면 웹 서버에 동기화 메시지 전송 
+        connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
+    }
 }
 
 void RedisManager::RaidEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) { // Send User Raid End Packet

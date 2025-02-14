@@ -30,27 +30,12 @@ void MatchingManager::Init(const uint16_t maxClientCount_, RedisManager* redisMa
             std::cerr << "UDP SOCKET IOCP BIND FAIL : " << GetLastError() << std::endl;
         }
 
-        //if (serverIP == '\0') { // 처음에만 serverIP에 IP값 할당해두기
-        //    sockaddr_in addr;
-        //    int addrSize = sizeof(addr);
-
-        //    if (getsockname(udpSocket, (SOCKADDR*)&addr, &addrSize) == 0) {
-        //        inet_ntop(AF_INET, &addr.sin_addr, serverIP, sizeof(serverIP));
-        //    }
-        //    else {
-        //        std::cerr << "GET UDP SOCKET IP FAIL : " << WSAGetLastError() << std::endl;
-        //    }
-        //}  
         roomManager = roomManager_;
         inGameUserManager = inGameUserManager_;
         redisManager = redisManager_;
 
     CreateMatchThread();
     TimeCheckThread();
-}
-
-SOCKET MatchingManager::GetUDPSocket() {
-    return udpSocket;
 }
 
 bool MatchingManager::Insert(uint8_t userLevel_, SOCKET userSkt_, std::string userId_) {
@@ -267,7 +252,6 @@ void MatchingManager::TimeCheckThread() {
 
 void MatchingManager::SyncMobHp(OverlappedUDP* overlappedUDP_){
     DWORD dwSendBytes = 0;
-
         int result = WSASendTo(udpSocket, &overlappedUDP_->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&overlappedUDP_->userAddr, sizeof(overlappedUDP_->userAddr), (LPWSAOVERLAPPED)overlappedUDP_, NULL);
 
         if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
@@ -280,13 +264,14 @@ void MatchingManager::SyncMobHp(OverlappedUDP* overlappedUDP_){
 void MatchingManager::UDPWorkThread() {
     LPOVERLAPPED lpOverlapped = NULL;
     DWORD dwIoSize = 0;
+    Room* room;
     bool gqSucces = TRUE;
 
     while (workRun) {
         gqSucces = GetQueuedCompletionStatus(
             udpHandle,
             &dwIoSize,
-            (PULONG_PTR)&udpSocket,
+            (PULONG_PTR)&room,
             &lpOverlapped,
             INFINITE
         );

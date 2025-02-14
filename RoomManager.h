@@ -4,13 +4,12 @@
 #include <unordered_map>
 
 #include "Room.h"
-#include "MatchingManager.h"
-#include "InGameUser.h"
+
+class InGameUser;
 
 class RoomManager {
 public:
-	RoomManager(MatchingManager* matchingManager_) : matchingManager(matchingManager_) {}
-
+	RoomManager(SOCKET* udpSkt_) : udpSkt(udpSkt_) {}
 	~RoomManager() {
 		for (auto& iter : roomMap) {
 			delete iter.second;
@@ -22,8 +21,8 @@ public:
 	Room* GetRoom(uint8_t roomNum_);
 
 private:
+	SOCKET* udpSkt;
 	std::unordered_map<uint8_t, Room*> roomMap; // { roomNum, Room }
-	MatchingManager* matchingManager;
 };
 
 

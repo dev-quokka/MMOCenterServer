@@ -1,11 +1,18 @@
 #pragma once
+
 #include "Define.h"
 #include "ConnUser.h"
-#include "RedisManager.h"
+
+#include "OverLappedManager.h"
 #include "ConnUsersManager.h"
+#include "InGameUserManager.h"
+#include "RoomManager.h"
+#include "MatchingManager.h"
+#include "RedisManager.h"
 
 #include <winsock2.h>
 #include <windows.h>
+#include <cstdint>
 #include <atomic>
 #include <iostream>
 #include <vector>
@@ -13,13 +20,11 @@
 #include <mutex>
 #include <deque>
 #include <queue>
-#include <cstdint>
 #include <boost/lockfree/queue.hpp>
 #include <tbb/concurrent_hash_map.h>
 
 #pragma comment(lib, "ws2_32.lib") // 소켓 프로그래밍용
 #pragma comment(lib, "mswsock.lib") // AcceptEx 사용
-
 
 class QuokkaServer {
 public:
@@ -52,8 +57,13 @@ private:
     // 8 bytes
     SOCKET ServerSKT = INVALID_SOCKET;
     HANDLE sIOCPHandle = INVALID_HANDLE_VALUE;
-    RedisManager* p_RedisManager;
-    ConnUsersManager* p_ConnUsersManagerManager;
+
+    OverLappedManager* overLappedManager;
+    ConnUsersManager* connUsersManager;
+    InGameUserManager* inGameUserManager;
+    RoomManager* roomManager;
+    MatchingManager* matchingManager;
+    RedisManager* redisManager;
 
     // 32 bytes
     std::vector<std::thread> workThreads;
