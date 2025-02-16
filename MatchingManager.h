@@ -41,7 +41,6 @@ class MatchingManager {
 public:
 	~MatchingManager() {
 		matchRun = false;
-		std::cout << "매매 삭제 시작" << std::endl;
 		if (matchingThread.joinable()) {
 			matchingThread.join();
 		}
@@ -61,7 +60,6 @@ public:
 				}
 			}
 		}
-		std::cout << "매매삭제 삭제" << std::endl;
 	}
 
 	void Init(const uint16_t maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_, ConnUsersManager* connUsersManager_);

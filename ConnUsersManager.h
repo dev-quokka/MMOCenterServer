@@ -9,11 +9,9 @@
 class ConnUsersManager {
 public:
     ~ConnUsersManager() {
-        std::cout << "컨매니저 삭제 시작" << std::endl;
         for (auto iter = ConnUsers.begin(); iter != ConnUsers.end(); iter++) {
             delete iter->second;
         }
-        std::cout << "컨매니저 삭제" << std::endl;
     }
 
     void InsertUser(SOCKET TempSkt_); // Init ConnUsers

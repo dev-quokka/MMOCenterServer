@@ -12,11 +12,9 @@ class RoomManager {
 public:
 	RoomManager(SOCKET* udpSkt_) : udpSkt(udpSkt_) {}
 	~RoomManager() {
-		std::cout << "룸메니저 삭제 시작" << std::endl;
 		for (auto& iter : roomMap) {
 			delete iter.second;
 		}
-		std::cout << "룸메니저 삭제" << std::endl;
 	}
 
 	bool DeleteRoom(uint16_t roomNum);

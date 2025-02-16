@@ -21,7 +21,6 @@ class MatchingManager;
 class RedisManager {
 public:
     ~RedisManager() {
-        std::cout << "레디스 삭제 시작" << std::endl;
         redisRun = false;
 
         for (int i = 0; i < redisThreads.size(); i++) { // End Redis Threads
@@ -29,7 +28,6 @@ public:
                 redisThreads[i].join();
             }
         }
-        std::cout << "레디스 삭제" << std::endl;
     }
 
     void init(const uint16_t RedisThreadCnt_, const uint16_t maxClientCount_, const HANDLE sIOCPHandle_);
