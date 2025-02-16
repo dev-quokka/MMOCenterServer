@@ -28,18 +28,13 @@ struct PACKET_HEADER
 {
 	uint16_t PacketLength;
 	uint16_t PacketId;
-	std::string uuId; // UUID For User Check
+	std::string userToken; // userToken For User Check
 };
 
-struct UserScore {
-	unsigned int score;
-	std::string userId;
-};
 
 //  ---------------------------- SYSTEM  ----------------------------
 
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
-	
 	uint16_t level;
 	uint16_t userPk;
 	unsigned int currentExp;
@@ -48,6 +43,10 @@ struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
 
 struct USER_CONNECT_RESPONSE_PACKET : PACKET_HEADER {
 	bool isSuccess;
+};
+
+struct USER_LOGOUT_REQUEST_PACKET : PACKET_HEADER {
+
 };
 
 struct IM_WEB_REQUEST : PACKET_HEADER {

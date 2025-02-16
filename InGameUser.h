@@ -12,11 +12,11 @@ public:
 		return userLevel;
 	}
 
-	void Set(std::string userUuid_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_) {
+	void Set(std::string userToken_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_) {
 		userLevel = userLevel_;
 		userExp = userExp_;
 		userPk = userPk_;
-		userUuid = userUuid_;
+		userToken = userToken_;
 		userId = userId_;
 	}
 
@@ -24,15 +24,15 @@ public:
 		userLevel = 0;
 		userPk = 0;
 		userExp = 0;
-		userUuid = "";
+		userToken = "";
 	}
 
 	uint32_t GetPk() {
 		return userPk;
 	}
 
-	std::string GetUuid() {
-		return userUuid;
+	std::string GetuserToken() {
+		return userToken;
 	}
 
 	std::string GetId() {
@@ -65,6 +65,6 @@ private:
 	std::vector<short>& expLimit;
 
 	// 40 bytes
-	std::string userUuid;
+	std::string userToken;
 	std::string userId;
 };

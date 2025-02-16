@@ -84,7 +84,7 @@ void MatchingManager::MatchingThread() {
                                 // Send to User1 With User2 Info
                                 rReadyResPacket1.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
                                 rReadyResPacket1.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
-                                rReadyResPacket1.uuId = user1->GetUuid();
+                                rReadyResPacket1.userToken = user1->GetuserToken();
                                 rReadyResPacket1.timer = 2;
                                 rReadyResPacket1.roomNum = tempRoomNum;
                                 rReadyResPacket1.yourNum = 0;
@@ -95,7 +95,7 @@ void MatchingManager::MatchingThread() {
                                 // Send to User2 with User1 Info
                                 rReadyResPacket2.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
                                 rReadyResPacket2.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
-                                rReadyResPacket2.uuId = user2->GetUuid();
+                                rReadyResPacket2.userToken = user2->GetuserToken();
                                 rReadyResPacket2.timer = 2;
                                 rReadyResPacket2.roomNum = tempRoomNum;
                                 rReadyResPacket2.yourNum = 1;
@@ -146,7 +146,7 @@ void MatchingManager::DeleteMob(Room* room_) {
     // Send to User1 With User2 Info
     raidEndReqPacket1.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
     raidEndReqPacket1.PacketLength = sizeof(RAID_END_REQUEST);
-    raidEndReqPacket1.uuId = user1->GetUuid();
+    raidEndReqPacket1.userToken = user1->GetuserToken();
     raidEndReqPacket1.userScore = room_->GetScore(0);
     raidEndReqPacket1.teamScore = room_->GetScore(1);
 
@@ -155,7 +155,7 @@ void MatchingManager::DeleteMob(Room* room_) {
     // Send to User2 with User1 Info
     raidEndReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
     raidEndReqPacket2.PacketLength = sizeof(RAID_END_REQUEST);
-    raidEndReqPacket2.uuId = user2->GetUuid();
+    raidEndReqPacket2.userToken = user2->GetuserToken();
     raidEndReqPacket2.teamScore = room_->GetScore(0);
     raidEndReqPacket2.userScore = room_->GetScore(1);
 
@@ -183,7 +183,7 @@ void MatchingManager::TimeCheckThread() {
                 // Send to User1 With User2 Info
                 raidEndReqPacket1.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
                 raidEndReqPacket1.PacketLength = sizeof(RAID_END_REQUEST);
-                raidEndReqPacket1.uuId = user1->GetUuid();
+                raidEndReqPacket1.userToken = user1->GetuserToken();
                 raidEndReqPacket1.userScore = room_->GetScore(0);
                 raidEndReqPacket1.teamScore = room_->GetScore(1);
 
@@ -192,7 +192,7 @@ void MatchingManager::TimeCheckThread() {
                 // Send to User2 with User1 Info
                 raidEndReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
                 raidEndReqPacket2.PacketLength = sizeof(RAID_END_REQUEST);
-                raidEndReqPacket2.uuId = user2->GetUuid();
+                raidEndReqPacket2.userToken = user2->GetuserToken();
                 raidEndReqPacket2.teamScore = room_->GetScore(0);
                 raidEndReqPacket2.userScore = room_->GetScore(1);
 
