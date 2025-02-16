@@ -13,6 +13,7 @@ struct DataPacket {
 	uint32_t dataSize;
 	SOCKET userSkt;
 	DataPacket(uint32_t dataSize_,SOCKET userSkt_) : dataSize(dataSize_), userSkt(userSkt_) {}
+	DataPacket() = default;
 };
 
 struct PacketInfo
@@ -38,7 +39,8 @@ struct UserScore {
 //  ---------------------------- SYSTEM  ----------------------------
 
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
-	uint8_t level;
+	
+	uint16_t level;
 	uint16_t userPk;
 	unsigned int currentExp;
 	std::string userId;
@@ -57,7 +59,7 @@ struct IM_WEB_RESPONSE : PACKET_HEADER {
 };
 
 struct SYNCRONIZE_LEVEL_REQUEST : PACKET_HEADER {
-	uint8_t level;
+	uint16_t level;
 	uint16_t userPk;
 	unsigned int currentExp;
 };
@@ -81,16 +83,16 @@ struct EXP_UP_RESPONSE : PACKET_HEADER {
 };
 
 struct LEVEL_UP_RESPONSE : PACKET_HEADER {
-	uint8_t increaseLevel;
+	uint16_t increaseLevel;
 	unsigned int currentExp;
 };
 
 //  ---------------------------- INVENTORY  ----------------------------
 
 struct ADD_ITEM_REQUEST : PACKET_HEADER {
-	uint8_t itemType; // (Max 3)
-	uint8_t itemSlotPos; // (Max 50)
-	uint8_t itemCount; // (Max 99)
+	uint16_t itemType; // (Max 3)
+	uint16_t itemSlotPos; // (Max 50)
+	uint16_t itemCount; // (Max 99)
 	short itemCode; // (Max 5000)
 };
 
@@ -99,8 +101,8 @@ struct ADD_ITEM_RESPONSE : PACKET_HEADER {
 };
 
 struct DEL_ITEM_REQUEST : PACKET_HEADER {
-	uint8_t itemType; // (Max 3)
-	uint8_t itemSlotPos; // (Max 50)
+	uint16_t itemType; // (Max 3)
+	uint16_t itemSlotPos; // (Max 50)
 	short itemCode; // (Max 5000)
 };
 
@@ -109,8 +111,8 @@ struct DEL_ITEM_RESPONSE : PACKET_HEADER {
 };
 
 struct MOD_ITEM_REQUEST : PACKET_HEADER {
-	uint8_t itemType; // (Max 3)
-	uint8_t itemSlotPos; // (Max 50)
+	uint16_t itemType; // (Max 3)
+	uint16_t itemSlotPos; // (Max 50)
 	int8_t itemCount; // (Max 99)
 	short itemCode; // (Max 5000)
 };
@@ -120,12 +122,12 @@ struct MOD_ITEM_RESPONSE : PACKET_HEADER {
 };
 
 struct MOV_ITEM_REQUEST : PACKET_HEADER {
-	uint8_t dragItemType; // (Max 3)
-	uint8_t dragItemSlotPos; // (Max 50)
-	uint8_t dragItemCount; // (Max 99)
-	uint8_t targetItemType; // (Max 3)
-	uint8_t targetItemSlotPos; // (Max 50)
-	uint8_t targetItemCount; // (Max 99)
+	uint16_t dragItemType; // (Max 3)
+	uint16_t dragItemSlotPos; // (Max 50)
+	uint16_t dragItemCount; // (Max 99)
+	uint16_t targetItemType; // (Max 3)
+	uint16_t targetItemSlotPos; // (Max 50)
+	uint16_t targetItemCount; // (Max 99)
 	short dragItemCode; // (Max 5000)
 	short targetItemCode; // (Max 5000)
 };
@@ -137,9 +139,9 @@ struct MOV_ITEM_RESPONSE : PACKET_HEADER {
 //  ---------------------------- INVENTORY:EQUIPMENT  ----------------------------
 
 struct ADD_EQUIPMENT_REQUEST : PACKET_HEADER {
-	uint8_t itemType; // (Max 3)
-	uint8_t itemSlotPos; // (Max 50)
-	uint8_t currentEnhanceCount; // (Max 20)
+	uint16_t itemType; // (Max 3)
+	uint16_t itemSlotPos; // (Max 50)
+	uint16_t currentEnhanceCount; // (Max 20)
 	short itemCode; // (Max 5000)
 };
 
@@ -148,8 +150,8 @@ struct ADD_EQUIPMENT_RESPONSE : PACKET_HEADER {
 };
 
 struct DEL_EQUIPMENT_REQUEST : PACKET_HEADER {
-	uint8_t itemType; // (Max 3)
-	uint8_t itemSlotPos; // (Max 50)
+	uint16_t itemType; // (Max 3)
+	uint16_t itemSlotPos; // (Max 50)
 	short itemCode; // (Max 5000)
 };
 
@@ -158,9 +160,9 @@ struct DEL_EQUIPMENT_RESPONSE : PACKET_HEADER {
 };
 
 struct ENH_EQUIPMENT_REQUEST : PACKET_HEADER {
-	uint8_t itemType; // (Max 3)
-	uint8_t itemSlotPos; // (Max 50)
-	uint8_t currentEnhanceCount; // (Max 10)
+	uint16_t itemType; // (Max 3)
+	uint16_t itemSlotPos; // (Max 50)
+	uint16_t currentEnhanceCount; // (Max 10)
 	short itemCode; // (Max 5000)
 };
 
@@ -180,9 +182,9 @@ struct RAID_MATCHING_RESPONSE : PACKET_HEADER {
 };
 
 struct RAID_READY_REQUEST : PACKET_HEADER {
-	uint8_t timer; // Minutes
-	uint8_t roomNum; // If Max RoomNum Up to Short Range, Back to Number One
-	uint8_t yourNum;
+	uint16_t timer; // Minutes
+	uint16_t roomNum; // If Max RoomNum Up to Short Range, Back to Number One
+	uint16_t yourNum;
 	uint16_t udpPort;   // Server UDP Port Num
 	unsigned int mobHp;
 	char serverIP[16]; // Server IP Address
@@ -190,13 +192,13 @@ struct RAID_READY_REQUEST : PACKET_HEADER {
 
 struct RAID_TEAMINFO_REQUEST : PACKET_HEADER { // User To Server
 	bool imReady;
-	uint8_t roomNum;
-	uint8_t myNum;
+	uint16_t roomNum;
+	uint16_t myNum;
 	sockaddr_in userAddr;// 유저가 만든 udp 소켓의 sockaddr_in 전달
 };
 
 struct RAID_TEAMINFO_RESPONSE : PACKET_HEADER {
-	uint8_t teamLevel;
+	uint16_t teamLevel;
 	std::string teamId;
 };
 
@@ -205,8 +207,8 @@ struct RAID_START_REQUEST : PACKET_HEADER {
 };
 
 struct RAID_HIT_REQUEST : PACKET_HEADER {
-	uint8_t roomNum;
-	uint8_t myNum;
+	uint16_t roomNum;
+	uint16_t myNum;
 	unsigned int damage;
 };
 

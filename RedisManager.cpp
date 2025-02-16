@@ -30,17 +30,9 @@ void RedisManager::init(const uint16_t RedisThreadCnt_, const uint16_t maxClient
     packetIDTable[(uint16_t)PACKET_ID::RAID_MATCHING_REQUEST] = &RedisManager::MatchStart;
     packetIDTable[(uint16_t)PACKET_ID::RAID_TEAMINFO_REQUEST] = &RedisManager::RaidReqTeamInfo;
     packetIDTable[(uint16_t)PACKET_ID::RAID_HIT_REQUEST] = &RedisManager::RaidHit;
-    packetIDTable[(uint16_t)PACKET_ID::RAID_END_REQUEST] = &RedisManager::RaidEnd;
     packetIDTable[(uint16_t)PACKET_ID::RAID_RANKING_REQUEST] = &RedisManager::GetRanking;
 
-    inGameUserManager = new InGameUserManager;
-    matchingManager = new MatchingManager;
-    roomManager = new RoomManager(matchingManager);
-
     RedisRun(RedisThreadCnt_);
-
-    inGameUserManager->Init(maxClientCount_);
-    matchingManager->Init(maxClientCount_, this, inGameUserManager, roomManager);
 }
 
 void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis Server
@@ -417,8 +409,7 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, uint16_t packetSize_, char* 
     if (delEquipReqPacket->uuId == tempUser->GetUuid()) { // UUID CORRECT
         std::string inventory_slot = "inventory:" + tempUser->GetUuid();
 
-        if (redis->hdel(inventory_slot, 
-            itemType[delEquipReqPacket->itemType] + std::to_string(delEquipReqPacket->itemCode) + std::to_string(delEquipReqPacket->itemSlotPos), std::to_string(delEquipReqPacket->currentEnhanceCount))) {
+        if (1) { // 여기 강화하는 hset or hincryby로 수정
             
             if (EquipmentEnhance(delEquipReqPacket->currentEnhanceCount)) { // Enhance Success
                 delEquipResPacket.isSuccess = true;
@@ -447,8 +438,8 @@ void RedisManager::MatchStart(SOCKET userSkt, uint16_t packetSize_, char* pPacke
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     RAID_MATCHING_RESPONSE raidMatchResPacket;
-    raidMatchResPacket.PacketId = (uint16_t)PACKET_ID::RAID_RANKING_RESPONSE;
-    raidMatchResPacket.PacketLength = sizeof(RAID_RANKING_RESPONSE);
+    raidMatchResPacket.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
+    raidMatchResPacket.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
     raidMatchResPacket.uuId = tempUser->GetUuid();
 
     if (matchingManager->Insert(tempUser->GetLevel(), userSkt, tempUser->GetId())) { // Insert Into Mathcing Queue Success
@@ -526,7 +517,7 @@ void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
             raidEndReqPacket.teamScore = room->GetTeamScore(i);
             connUsersManager->FindUser(room->GetUserSkt(i))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket);
 
-            redis->zadd("Ranking", std::to_string(room->GetScore(i)), inGameUser->GetId()); // 점수 레디스에 동기화
+            //redis->zadd("Ranking", std::to_string(room->GetScore(i)), inGameUser->GetId()); // 점수 레디스에 동기화
         }
 
     }
@@ -544,15 +535,18 @@ void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
 void RedisManager::GetRanking(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto delEquipReqPacket = reinterpret_cast<RAID_RANKING_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
-
+   
     std::vector<std::pair<std::string, unsigned int>> scores;
-    redis->zrevrange("raidscore", delEquipReqPacket->startRank, delEquipReqPacket->startRank+99, inserter(scores, scores.begin()));
+    //redis->zrevrange("user_scores", delEquipReqPacket->startRank, delEquipReqPacket->startRank+99, std::back_inserter(scores));
 
-    RAID_RANKING_RESPONSE raidRankResPacket;
+    //redis->command("ZREVRANGE", "leaderboard", std::to_string(delEquipReqPacket->startRank), std::to_string(delEquipReqPacket->startRank+99), "WITHSCORES", std::back_inserter(scores));
+
+
+    /*RAID_RANKING_RESPONSE raidRankResPacket;
     raidRankResPacket.PacketId = (uint16_t)PACKET_ID::RAID_RANKING_RESPONSE;
     raidRankResPacket.PacketLength = sizeof(RAID_RANKING_RESPONSE);
     raidRankResPacket.uuId = tempUser->GetUuid();
     raidRankResPacket.reqScore = scores;
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_RANKING_RESPONSE), (char*)&raidRankResPacket);
+    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_RANKING_RESPONSE), (char*)&raidRankResPacket);*/
 }

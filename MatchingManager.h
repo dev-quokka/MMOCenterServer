@@ -12,16 +12,15 @@
 #include <tbb/concurrent_hash_map.h>
 
 #include "Define.h"
+#include "RedisManager.h"
+#include "ConnUsersManager.h"
+#include "Room.h"
 #include "RoomManager.h"
 #include "InGameUserManager.h"
-#include "RedisManager.h"
 
 constexpr int UDP_PORT = 50000;
-constexpr uint8_t USER_MAX_LEVEL = 15;
+constexpr uint16_t USER_MAX_LEVEL = 15;
 
-class Room;
-class RoomManager;
-class ConnUsersManager;
 class RedisManager;
 
 struct EndTimeComp {
@@ -31,19 +30,18 @@ struct EndTimeComp {
 };
 
 struct MatchingRoom {
-	uint8_t LoofCnt = 0;
-	uint8_t userLevel;
+	// uint16_t LoofCnt = 0;
+	uint16_t userLevel;
 	SOCKET userSkt;
 	std::string userId;
+	MatchingRoom(uint16_t userLevel_, SOCKET userSkt_, std::string userId_) :userLevel(userLevel_), userSkt(userSkt_), userId(userId_) {}
 };
 
 class MatchingManager {
 public:
 	~MatchingManager() {
 		matchRun = false;
-		timeChekcRun = false;
-		workRun = false;
-
+		std::cout << "매매 삭제 시작" << std::endl;
 		if (matchingThread.joinable()) {
 			matchingThread.join();
 		}
@@ -52,12 +50,8 @@ public:
 			timeCheckThread.join();
 		}
 
-		if (udpWorkThread.joinable()) {
-			udpWorkThread.join();
-		}
-
 		for (int i = 0; i < USER_MAX_LEVEL; i++) {
-			tbb::concurrent_hash_map<uint8_t, std::priority_queue<MatchingRoom*>>::accessor accessor;
+			tbb::concurrent_hash_map<uint16_t, std::priority_queue<MatchingRoom*>>::accessor accessor;
 
 			if (matchingMap.find(accessor, i)) {
 				std::priority_queue<MatchingRoom*> temp = accessor->second;
@@ -66,34 +60,27 @@ public:
 					temp.pop();
 				}
 			}
-
 		}
+		std::cout << "매매삭제 삭제" << std::endl;
 	}
 
-	void Init(const uint16_t maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_);
-	bool Insert(uint8_t userLevel_, SOCKET userSkt_, std::string userId);
+	void Init(const uint16_t maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_, ConnUsersManager* connUsersManager_);
+	bool Insert(uint16_t userLevel_, SOCKET userSkt_, std::string userId);
 	bool CreateMatchThread();
-	bool CreateUDPWorkThread();
 	bool CreateTimeCheckThread();
-	void UDPWorkThread();
 	void MatchingThread();
 	void TimeCheckThread();
 	void DeleteMob(Room* room_);
-	void SyncMobHp(OverlappedUDP* overlappedUDP_);
-	SOCKET GetUDPSocket();
 
 private:
 	// 1 bytes
 	bool matchRun;
 	bool timeChekcRun;
-	bool workRun;
 
 	// 8 bytes
-	HANDLE udpHandle;
 	SOCKET udpSocket; // 1 Socket Of 300 Users 
 
 	// 16 bytes
-	std::thread udpWorkThread;
 	std::thread matchingThread;
 	std::thread timeCheckThread;
 	char serverIP[16];
@@ -108,11 +95,11 @@ private:
 	std::mutex mDeleteRoom;
 
 	// 136 bytes
-	boost::lockfree::queue<uint8_t> roomNumQueue; // Set RoomNum
+	boost::lockfree::queue<uint16_t> roomNumQueue{50}; // MaxClient set
 
 	// 576 bytes
 	RoomManager* roomManager;
-	tbb::concurrent_hash_map<uint8_t, std::priority_queue<MatchingRoom*>> matchingMap; // {Level/3 + 1 (0~2 = 1, 3~5 = 2 ...), UserSkt}
+	tbb::concurrent_hash_map<uint16_t, std::priority_queue<MatchingRoom*>> matchingMap; // {Level/3 + 1 (0~2 = 1, 3~5 = 2 ...), UserSkt}
 
 	// 606 bytes
 	ConnUsersManager* connUsersManager;

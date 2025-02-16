@@ -168,7 +168,7 @@ private:
 
 	// 1 bytes
 	bool isConn = false;
-	std::atomic<uint8_t> sendQueueSize{0};
+	std::atomic<uint16_t> sendQueueSize{0};
 	char acceptBuf[64] = {0};
 	char recvBuf[MAX_SOCK] = {0};
 
@@ -187,7 +187,7 @@ private:
 	std::unique_ptr<CircularBuffer> circularBuffer; // Make Circular Recv Buffer
 
 	// 136 bytes 
-	boost::lockfree::queue<OverlappedTCP*> sendQueue;
+	boost::lockfree::queue<OverlappedTCP*> sendQueue{10};
 };
 
 

@@ -13,34 +13,47 @@ class InGameUser;
 
 struct RaidUserInfo {
 	std::atomic<unsigned int> userScore = 0;
-	uint16_t userSkt; // TCP Socket
+	SOCKET userSkt; // TCP Socket
 	sockaddr_in userAddr;
 	InGameUser* inGameUser;
-	OverlappedUDP* hpOverlapped = new OverlappedUDP;
-	RaidUserInfo(uint16_t userSkt_, InGameUser* inGameUser_) : userSkt(userSkt_), inGameUser(inGameUser_) {}
+	OverlappedUDP* hpOverlapped;
 };
 
 class Room {
 public:
-	Room(SOCKET* udpSkt_) : udpSkt(udpSkt_){}
+	Room(SOCKET* udpSkt_) {
+		RaidUserInfo* ruInfo1 = new RaidUserInfo;
+		ruInfo1->hpOverlapped = new OverlappedUDP;
+		ruInfos.emplace_back(ruInfo1);
 
+		RaidUserInfo* ruInfo2 = new RaidUserInfo;
+		ruInfo2->hpOverlapped = new OverlappedUDP;
+		ruInfos.emplace_back(ruInfo2);
+
+		udpSkt = udpSkt_;
+	}
 	~Room() {
+		std::cout << "룸 삭제 시작" << std::endl;
 		for (int i = 0; i < ruInfos.size(); i++) {
-			delete[] ruInfos[i].hpOverlapped->wsaBuf.buf;
-			delete ruInfos[i].hpOverlapped;
+			delete[] ruInfos[i]->hpOverlapped->wsaBuf.buf;
+			delete ruInfos[i]->hpOverlapped;
+			delete ruInfos[i];
 		}
+		std::cout << "룸 삭제" << std::endl;
 	}
 
-	void set(uint8_t roomNum_, uint8_t timer_, unsigned int mobHp_, uint16_t userSkt1_, uint16_t userSkt2_, InGameUser* user1_, InGameUser* user2_) {
-		RaidUserInfo ruInfo1(userSkt1_, user1_);
-		ruInfos.emplace_back(ruInfo1);
-		RaidUserInfo ruInfo2(userSkt2_, user2_);
-		ruInfos.emplace_back(ruInfo2);
+	void set(uint16_t roomNum_, uint16_t timer_, unsigned int mobHp_, SOCKET userSkt1_, SOCKET userSkt2_, InGameUser* user1_, InGameUser* user2_) {
+		ruInfos[0]->userSkt = userSkt1_;
+		ruInfos[0]->inGameUser = user1_;
+
+		ruInfos[1]->userSkt = userSkt2_;
+		ruInfos[1]->inGameUser = user2_;
+
 		mobHp.store(mobHp_);
 	}
 
-	void setSockAddr(uint8_t userNum_, sockaddr_in userAddr_) {
-		ruInfos[userNum_].userAddr = userAddr_;
+	void setSockAddr(uint16_t userNum_, sockaddr_in userAddr_) {
+		ruInfos[userNum_]->userAddr = userAddr_;
 	}
 
 	bool StartCheck() {
@@ -58,49 +71,49 @@ public:
 		return false;
 	}
 
-	uint8_t GetRoomNum() {
+	uint16_t GetRoomNum() {
 		return roomNum;
 	}
 
-	uint8_t GetRoomUserCnt() {
+	uint16_t GetRoomUserCnt() {
 		return ruInfos.size();
 	}
 
-	InGameUser* GetUser(uint8_t userNum_) {
-		if (userNum_ == 0) return ruInfos[0].inGameUser;
-		else if (userNum_ == 1) return ruInfos[1].inGameUser;
+	InGameUser* GetUser(uint16_t userNum_) {
+		if (userNum_ == 0) return ruInfos[0]->inGameUser;
+		else if (userNum_ == 1) return ruInfos[1]->inGameUser;
 	}
 
 	std::chrono::time_point<std::chrono::steady_clock> GetEndTime() {
 		return endTime;
 	}
 
-	uint16_t GetUserSkt(uint8_t userNum) {
-		if (userNum == 0) return ruInfos[0].userSkt;
-		else if (userNum == 1) return ruInfos[1].userSkt;
+	SOCKET GetUserSkt(uint16_t userNum) {
+		if (userNum == 0) return ruInfos[0]->userSkt;
+		else if (userNum == 1) return ruInfos[1]->userSkt;
 	}
 
-	unsigned int GetScore(uint8_t userNum) {
-		if (userNum == 0) return ruInfos[0].userScore;
-		else if (userNum == 1) return ruInfos[1].userScore;
+	unsigned int GetScore(uint16_t userNum) {
+		if (userNum == 0) return ruInfos[0]->userScore;
+		else if (userNum == 1) return ruInfos[1]->userScore;
 	}
 
-	uint16_t GetTeamSkt(uint8_t userNum_) {
-		if (userNum_ == 1) return ruInfos[0].userSkt;
-		else if (userNum_ == 0) return ruInfos[1].userSkt;
+	SOCKET GetTeamSkt(uint16_t userNum_) {
+		if (userNum_ == 1) return ruInfos[0]->userSkt;
+		else if (userNum_ == 0) return ruInfos[1]->userSkt;
 	}
 
-	InGameUser* GetTeamUser(uint8_t userNum_) {
-		if (userNum_ == 1) return ruInfos[0].inGameUser;
-		else if (userNum_ == 0) return ruInfos[1].inGameUser;
+	InGameUser* GetTeamUser(uint16_t userNum_) {
+		if (userNum_ == 1) return ruInfos[0]->inGameUser;
+		else if (userNum_ == 0) return ruInfos[1]->inGameUser;
 	}
 
-	unsigned int GetTeamScore(uint8_t userNum) {
-		if (userNum == 1) return ruInfos[0].userScore;
-		else if (userNum == 0) return ruInfos[1].userScore;
+	unsigned int GetTeamScore(uint16_t userNum) {
+		if (userNum == 1) return ruInfos[0]->userScore;
+		else if (userNum == 0) return ruInfos[1]->userScore;
 	}
 
-	std::pair<unsigned int, unsigned int> Hit(uint8_t userNum_, unsigned int damage_){ // current mob hp, score
+	std::pair<unsigned int, unsigned int> Hit(uint16_t userNum_, unsigned int damage_){ // current mob hp, score
 		if (mobHp <= 0 || finishCheck.load()) {
 			return {0,0};
 		}
@@ -110,20 +123,20 @@ public:
 
 		if ((currentMobHp_ = mobHp.fetch_sub(damage_))-damage_<=0) { // Hit
 			finishCheck.store(true);
-			score_ = ruInfos[userNum_].userScore.fetch_add(mobHp + damage_) + (mobHp + damage_);
-			return { 0,score_ };
+			score_ = ruInfos[userNum_]->userScore.fetch_add(mobHp + damage_) + (mobHp + damage_);
+			return { 0, score_ };
 		}
 
-		score_ = ruInfos[userNum_].userScore.fetch_add(damage_) + damage_;
+		score_ = ruInfos[userNum_]->userScore.fetch_add(damage_) + damage_;
 		
 		for (int i = 0; i < ruInfos.size(); i++) { // 나머지 유저들에게도 바뀐 몹 hp값 보내주기
-			OverlappedUDP* overlappedUDP = ruInfos[i].hpOverlapped;
+			OverlappedUDP* overlappedUDP = ruInfos[i]->hpOverlapped;
 			ZeroMemory(overlappedUDP, sizeof(OverlappedUDP));
 			overlappedUDP->wsaBuf.len = sizeof(currentMobHp_);
 			overlappedUDP->wsaBuf.buf = new char[sizeof(currentMobHp_)];
 			CopyMemory(overlappedUDP->wsaBuf.buf, &currentMobHp_, sizeof(currentMobHp_));
-			overlappedUDP->addrSize = sizeof(ruInfos[i].userAddr);
-			overlappedUDP->userAddr = ruInfos[i].userAddr;
+			overlappedUDP->addrSize = sizeof(ruInfos[i]->userAddr);
+			overlappedUDP->userAddr = ruInfos[i]->userAddr;
 			overlappedUDP->taskType = TaskType::SEND;
 
 			DWORD dwSendBytes = 0;
@@ -141,9 +154,10 @@ public:
 
 private:
 	// 1 bytes
-	uint8_t roomNum;
+	
+	uint16_t roomNum;
 	std::atomic<bool> finishCheck = false;
-	std::atomic<uint8_t> startCheck = 0;
+	std::atomic<uint16_t> startCheck = 0;
 
 	// 4 bytes
 	std::atomic<unsigned int> mobHp;
@@ -154,8 +168,5 @@ private:
 	std::chrono::time_point<std::chrono::steady_clock> endTime = std::chrono::steady_clock::now() + std::chrono::minutes(2); // 생성 되자마자 삭제 방지
 
 	// 32 bytes
-	std::vector<RaidUserInfo> ruInfos;
-
-	// 256 bytes
-	char buffer[64];
+	std::vector<RaidUserInfo*> ruInfos;
 };

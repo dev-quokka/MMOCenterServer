@@ -29,7 +29,6 @@
 class QuokkaServer {
 public:
     QuokkaServer(uint16_t maxClientCount_) : maxClientCount(maxClientCount_), AcceptQueue(maxClientCount_), WaittingQueue(maxClientCount_) {}
-    ~QuokkaServer() {}
 
     bool init(const uint16_t MaxThreadCnt_, int port_);
     bool StartWork();
@@ -37,14 +36,17 @@ public:
 
 private:
     bool CreateWorkThread();
+    bool CreateUDPWorkThread();
     bool CreateAccepterThread();
 
     void WorkThread(); // IOCP Complete Event Thread
+    void UDPWorkThread();
     void AccepterThread(); // Accept req Thread
 
     // 1 bytes
-    bool WorkRun = true;
-    bool AccepterRun = true;
+    bool WorkRun = false;
+    bool udpWorkRun = false;
+    bool AccepterRun = false;
     std::atomic<bool> UserMaxCheck = false;
 
     // 2 bytes
@@ -55,15 +57,19 @@ private:
     std::atomic<int> UserCnt = 0; //Check Current UserCnt
 
     // 8 bytes
-    SOCKET ServerSKT = INVALID_SOCKET;
+    SOCKET serverSkt = INVALID_SOCKET;
     HANDLE sIOCPHandle = INVALID_HANDLE_VALUE;
-
+    SOCKET udpSkt = INVALID_SOCKET;
+    HANDLE udpHandle = INVALID_HANDLE_VALUE;
+ 
     OverLappedManager* overLappedManager;
     ConnUsersManager* connUsersManager;
     InGameUserManager* inGameUserManager;
     RoomManager* roomManager;
     MatchingManager* matchingManager;
     RedisManager* redisManager;
+
+    std::thread udpWorkThread;
 
     // 32 bytes
     std::vector<std::thread> workThreads;

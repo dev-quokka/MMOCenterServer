@@ -8,11 +8,11 @@ class InGameUser {
 public:
 	InGameUser(std::vector<short>& expLimit_) : expLimit(expLimit_) {}
 
-	uint8_t GetLevel() {
+	uint16_t GetLevel() {
 		return userLevel;
 	}
 
-	void Set(std::string userUuid_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint8_t userLevel_) {
+	void Set(std::string userUuid_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_) {
 		userLevel = userLevel_;
 		userExp = userExp_;
 		userPk = userPk_;
@@ -39,10 +39,10 @@ public:
 		return userId;
 	}
 
-	std::pair<uint8_t, unsigned int> ExpUp(short mobExp_) {
+	std::pair<uint16_t, unsigned int> ExpUp(short mobExp_) {
 		userExp += mobExp_;
 
-		uint8_t levelUpCnt = 0;
+		uint16_t levelUpCnt = 0;
 
 		if (expLimit[userLevel] <= userExp) { // LEVEL UP
 			while (userExp >= expLimit[userLevel]) {
@@ -56,7 +56,7 @@ public:
 
 private:
 	// 1 bytes
-	uint8_t userLevel;
+	uint16_t userLevel;
 
 	// 4 bytes
 	uint32_t userPk;

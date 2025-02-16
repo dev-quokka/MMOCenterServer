@@ -21,6 +21,7 @@ class MatchingManager;
 class RedisManager {
 public:
     ~RedisManager() {
+        std::cout << "레디스 삭제 시작" << std::endl;
         redisRun = false;
 
         for (int i = 0; i < redisThreads.size(); i++) { // End Redis Threads
@@ -28,9 +29,7 @@ public:
                 redisThreads[i].join();
             }
         }
-        delete inGameUserManager;
-        delete roomManager;
-        delete matchingManager;
+        std::cout << "레디스 삭제" << std::endl;
     }
 
     void init(const uint16_t RedisThreadCnt_, const uint16_t maxClientCount_, const HANDLE sIOCPHandle_);
@@ -75,7 +74,6 @@ private:
 
     void RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
 
-    void RaidEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
     void GetRanking(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
 
 
