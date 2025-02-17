@@ -113,10 +113,11 @@ void RedisManager::SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1_, RAI
 
 void RedisManager::UserConnect(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
+    
+    std::unordered_map<std::string, std::string> userData;
+    redis->hgetall("경험치", std::inserter(userData, userData.begin()));
 
-
-    inGameUserManager->Set((connUsersManager->FindUser(userSkt)->GetObjNum()), userConn->userToken, userConn->userId, userConn->userPk, userConn->currentExp,userConn->level);
-    redis->persist("user:" + userConn->userToken); // Remove TTL Time (if success to game start and connect success, delete ttl)
+    inGameUserManager->Set((connUsersManager->FindUser(userSkt)->GetObjNum()), userData["id"], static_cast<uint32_t>(std::stoul(userData["pk"])), std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])));
 }
 
 void RedisManager::Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) { // Normal Disconnect
@@ -126,7 +127,6 @@ void RedisManager::Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) 
         SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
         syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
-        syncLogoutReqPacket.userToken = tempUser->GetuserToken();
         syncLogoutReqPacket.userPk = tempUser->GetPk();
         connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
 
@@ -139,13 +139,11 @@ void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     {  // Send User PK to the Web Server for Synchronization with MySQL
-        SYNCRONIZE_DISCONNECT_REQUEST syncDisconnReqPacket;
-        syncDisconnReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_DISCONNECT_REQUEST;
-        syncDisconnReqPacket.PacketLength = sizeof(SYNCRONIZE_DISCONNECT_REQUEST);
-        syncDisconnReqPacket.userToken = tempUser->GetuserToken();
-        syncDisconnReqPacket.userPk = tempUser->GetPk();
-        connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_DISCONNECT_REQUEST), (char*)&syncDisconnReqPacket);
-
+        SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
+        syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
+        syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
+        syncLogoutReqPacket.userPk = tempUser->GetPk();
+        connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
         connUsersManager->DeleteUser(userSkt);
         tempUser->Reset();
     }
@@ -163,7 +161,6 @@ void RedisManager::ImWebRequest(SOCKET userSkt, uint16_t packetSize_, char* pPac
     IM_WEB_RESPONSE imWebResPacket;
     imWebResPacket.PacketId = (uint16_t)PACKET_ID::IM_WEB_RESPONSE;
     imWebResPacket.PacketLength = sizeof(IM_WEB_RESPONSE);
-    imWebResPacket.userToken = tempUser->GetuserToken();
 
     if (webServerSkt != 0) { // Web Server Already Exist
         imWebResPacket.isSuccess = false;
@@ -188,9 +185,8 @@ void RedisManager::ExpUp(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     EXP_UP_RESPONSE expUpResPacket;
     expUpResPacket.PacketId = (uint16_t)PACKET_ID::EXP_UP_RESPONSE;
     expUpResPacket.PacketLength = sizeof(EXP_UP_RESPONSE);
-    expUpResPacket.userToken = tempUser->GetuserToken();
 
-    std::string user_slot = "userinfo:" + tempUser->GetuserToken();
+    std::string user_slot = "userinfo:" + tempUser->GetPk();
 
     if (redis->hincrby(user_slot, "exp", mobExp[expUpReqPacket->mobNum])) { // Exp Up Success
         auto userExp = tempUser->ExpUp(mobExp[expUpReqPacket->mobNum]); // Increase Level Cnt , Current Exp
@@ -199,7 +195,6 @@ void RedisManager::ExpUp(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
             LEVEL_UP_RESPONSE levelUpResPacket;
             levelUpResPacket.PacketId = (uint16_t)PACKET_ID::LEVEL_UP_RESPONSE;
             levelUpResPacket.PacketLength = sizeof(LEVEL_UP_RESPONSE);
-            levelUpResPacket.userToken = tempUser->GetuserToken();
 
             if (redis->hincrby(user_slot, "level", userExp.first)) { // Level Up Success
                 levelUpResPacket.increaseLevel = userExp.first;
@@ -213,7 +208,6 @@ void RedisManager::ExpUp(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
                     SYNCRONIZE_LEVEL_REQUEST syncLevelReqPacket;
                     syncLevelReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LEVEL_REQUEST;
                     syncLevelReqPacket.PacketLength = sizeof(SYNCRONIZE_LEVEL_REQUEST);
-                    syncLevelReqPacket.userToken = tempUser->GetuserToken();
                     syncLevelReqPacket.level = userExp.first;
                     syncLevelReqPacket.currentExp = userExp.second;
                     syncLevelReqPacket.userPk = tempUser->GetPk();
@@ -248,10 +242,8 @@ void RedisManager::AddItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
     ADD_ITEM_RESPONSE addItemResPacket;
     addItemResPacket.PacketId = (uint16_t)PACKET_ID::ADD_ITEM_RESPONSE;
     addItemResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
-    addItemResPacket.userToken = tempUser->GetuserToken();
 
-    if (addItemReqPacket->userToken == tempUser->GetuserToken()) { // userToken CORRECT
-        std::string inventory_slot = "inventory:" + tempUser->GetuserToken();
+        std::string inventory_slot = "inventory:" + tempUser->GetPk();
 
         if (redis->hset(inventory_slot, itemType[addItemReqPacket->itemType] + std::to_string(addItemReqPacket->itemCode) + std::to_string(addItemReqPacket->itemSlotPos), std::to_string(addItemReqPacket->itemCount))) { // AddItem Success (ItemCode:slotposition, count)
             addItemResPacket.isSuccess = true;
@@ -259,10 +251,7 @@ void RedisManager::AddItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
         else { // AddItem Fail
             addItemResPacket.isSuccess = false;
         }
-    }
-    else { // userToken NOT CORRECT
-        addItemResPacket.isSuccess = false;
-    }
+
 
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(ADD_ITEM_RESPONSE),(char*)&addItemResPacket);
 }
@@ -274,10 +263,8 @@ void RedisManager::DeleteItem(SOCKET userSkt, uint16_t packetSize_, char* pPacke
     DEL_ITEM_RESPONSE delItemResPacket;
     delItemResPacket.PacketId = (uint16_t)PACKET_ID::DEL_ITEM_RESPONSE;
     delItemResPacket.PacketLength = sizeof(DEL_ITEM_RESPONSE);
-    delItemResPacket.userToken = tempUser->GetuserToken();
 
-    if (delItemReqPacket->userToken == tempUser->GetuserToken()) { // userToken CORRECT
-        std::string inventory_slot = "inventory:" + tempUser->GetuserToken();
+    std::string inventory_slot = "inventory:" + tempUser->GetPk();
 
         if (redis->hdel(inventory_slot, itemType[delItemReqPacket->itemType] + std::to_string(delItemReqPacket->itemCode) + std::to_string(delItemReqPacket->itemSlotPos))) { // DeleteItem Success
             delItemResPacket.isSuccess = true;
@@ -285,10 +272,6 @@ void RedisManager::DeleteItem(SOCKET userSkt, uint16_t packetSize_, char* pPacke
         else { // DeleteItem Fail
             delItemResPacket.isSuccess = false;
         }
-    }
-    else { // userToken NOT CORRECT
-        delItemResPacket.isSuccess = false;
-    }
 
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(DEL_ITEM_RESPONSE),(char*)&delItemResPacket);
 }
@@ -300,10 +283,8 @@ void RedisManager::ModifyItem(SOCKET userSkt, uint16_t packetSize_, char* pPacke
     MOD_ITEM_RESPONSE modItemResPacket;
     modItemResPacket.PacketId = (uint16_t)PACKET_ID::MOD_ITEM_RESPONSE;
     modItemResPacket.PacketLength = sizeof(MOD_ITEM_RESPONSE);
-    modItemResPacket.userToken = tempUser->GetuserToken();
 
-    if (modItemReqPacket->userToken == tempUser->GetuserToken()) { // userToken CORRECT
-        std::string inventory_slot = "inventory:" + tempUser->GetuserToken();
+        std::string inventory_slot = "inventory:" + tempUser->GetPk();
 
         if (redis->hset(inventory_slot, itemType[modItemReqPacket->itemType] + std::to_string(modItemReqPacket->itemCode) + std::to_string(modItemReqPacket->itemSlotPos), std::to_string(modItemReqPacket->itemCount))) { // ModifyItem Success
             modItemResPacket.isSuccess = true;
@@ -311,10 +292,6 @@ void RedisManager::ModifyItem(SOCKET userSkt, uint16_t packetSize_, char* pPacke
         else { // ModifyItem Fail
             modItemResPacket.isSuccess = false;
         }
-    }
-    else { // userToken NOT CORRECT
-        modItemResPacket.isSuccess = false;
-    }
 
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(MOD_ITEM_RESPONSE), (char*)&modItemResPacket);
 }
@@ -326,10 +303,8 @@ void RedisManager::MoveItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_
     MOV_ITEM_RESPONSE movItemResPacket;
     movItemResPacket.PacketId = (uint16_t)PACKET_ID::MOV_ITEM_RESPONSE;
     movItemResPacket.PacketLength = sizeof(MOV_ITEM_RESPONSE);
-    movItemResPacket.userToken = tempUser->GetuserToken();
 
-    if (movItemReqPacket->userToken == tempUser->GetuserToken()) { // userToken CORRECT
-        std::string inventory_slot = "inventory:" + tempUser->GetuserToken();
+        std::string inventory_slot = "inventory:" + tempUser->GetPk();
 
         if (redis->hset(inventory_slot, itemType[movItemReqPacket->itemType] + std::to_string(movItemReqPacket->itemCode) + std::to_string(movItemReqPacket->itemSlotPos), std::to_string(movItemReqPacket->itemCount))) { // MoveItem Success
             movItemResPacket.isSuccess = true;
@@ -337,10 +312,6 @@ void RedisManager::MoveItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_
         else { // MoveItem Fail
             movItemResPacket.isSuccess = false;
         }
-    }
-    else { // userToken NOT CORRECT
-        movItemResPacket.isSuccess = false;
-    }
 
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(MOV_ITEM_RESPONSE), (char*)&movItemResPacket);
 }
@@ -355,10 +326,8 @@ void RedisManager::AddEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPac
     ADD_EQUIPMENT_RESPONSE addEquipResPacket;
     addEquipResPacket.PacketId = (uint16_t)PACKET_ID::ADD_EQUIPMENT_RESPONSE;
     addEquipResPacket.PacketLength = sizeof(ADD_EQUIPMENT_RESPONSE);
-    addEquipResPacket.userToken = tempUser->GetuserToken();
 
-    if (addEquipReqPacket->userToken == tempUser->GetuserToken()) { // userToken CORRECT
-        std::string inventory_slot = "inventory:" + tempUser->GetuserToken();
+        std::string inventory_slot = "inventory:" + tempUser->GetPk();
 
         if (redis->hset(inventory_slot, itemType[addEquipReqPacket->itemType] + std::to_string(addEquipReqPacket->itemCode) + std::to_string(addEquipReqPacket->itemSlotPos), std::to_string(addEquipReqPacket->currentEnhanceCount))) { // AddItem Success (ItemCode:slotposition, count)
             addEquipResPacket.isSuccess = true;
@@ -366,11 +335,6 @@ void RedisManager::AddEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPac
         else { // AddItem Fail
             addEquipResPacket.isSuccess = false;
         }
-    }
-
-    else { // userToken NOT CORRECT
-        addEquipResPacket.isSuccess = false;
-    }
 
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(ADD_EQUIPMENT_RESPONSE), (char*)&addEquipResPacket);
 }
@@ -382,10 +346,8 @@ void RedisManager::DeleteEquipment(SOCKET userSkt, uint16_t packetSize_, char* p
     DEL_EQUIPMENT_RESPONSE delEquipResPacket;
     delEquipResPacket.PacketId = (uint16_t)PACKET_ID::DEL_EQUIPMENT_RESPONSE;
     delEquipResPacket.PacketLength = sizeof(DEL_EQUIPMENT_RESPONSE);
-    delEquipResPacket.userToken = tempUser->GetuserToken();
 
-    if (delEquipReqPacket->userToken == tempUser->GetuserToken()) { // userToken CORRECT
-        std::string inventory_slot = "inventory:" + tempUser->GetuserToken();
+    std::string inventory_slot = "inventory:" + tempUser->GetPk();
 
         if (redis->hdel(inventory_slot, itemType[delEquipReqPacket->itemType] + std::to_string(delEquipReqPacket->itemCode) + std::to_string(delEquipReqPacket->itemSlotPos))) { // DeleteItem Success
             delEquipResPacket.isSuccess = true;
@@ -393,10 +355,6 @@ void RedisManager::DeleteEquipment(SOCKET userSkt, uint16_t packetSize_, char* p
         else { // DeleteItem Fail
             delEquipResPacket.isSuccess = false;
         }
-    }
-    else { // userToken NOT CORRECT
-        delEquipResPacket.isSuccess = false;
-    }
 
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
 }
@@ -408,10 +366,8 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, uint16_t packetSize_, char* 
     ENH_EQUIPMENT_RESPONSE delEquipResPacket;
     delEquipResPacket.PacketId = (uint16_t)PACKET_ID::ENH_EQUIPMENT_RESPONSE;
     delEquipResPacket.PacketLength = sizeof(ENH_EQUIPMENT_RESPONSE);
-    delEquipResPacket.userToken = tempUser->GetuserToken();
 
-    if (delEquipReqPacket->userToken == tempUser->GetuserToken()) { // userToken CORRECT
-        std::string inventory_slot = "inventory:" + tempUser->GetuserToken();
+    std::string inventory_slot = "inventory:" + tempUser->GetPk();
 
         if (1) { // 여기 강화하는 hset or hincryby로 수정
             
@@ -427,11 +383,6 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, uint16_t packetSize_, char* 
             delEquipResPacket.isSuccess = false;
         }
 
-    }
-    else { // userToken NOT CORRECT
-        delEquipResPacket.isSuccess = false;
-    }
-
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
 }
 
@@ -444,7 +395,6 @@ void RedisManager::MatchStart(SOCKET userSkt, uint16_t packetSize_, char* pPacke
     RAID_MATCHING_RESPONSE raidMatchResPacket;
     raidMatchResPacket.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
     raidMatchResPacket.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
-    raidMatchResPacket.userToken = tempUser->GetuserToken();
 
     if (matchingManager->Insert(tempUser->GetLevel(), userSkt, tempUser->GetId())) { // Insert Into Mathcing Queue Success
         raidMatchResPacket.insertSuccess = true;
@@ -466,7 +416,6 @@ void RedisManager::RaidReqTeamInfo(SOCKET userSkt, uint16_t packetSize_, char* p
     RAID_TEAMINFO_RESPONSE raidTeamInfoResPacket;
     raidTeamInfoResPacket.PacketId = (uint16_t)PACKET_ID::RAID_TEAMINFO_RESPONSE;
     raidTeamInfoResPacket.PacketLength = sizeof(RAID_TEAMINFO_RESPONSE);
-    raidTeamInfoResPacket.userToken = user->GetuserToken();
     raidTeamInfoResPacket.teamLevel = teamUser->GetLevel();
     raidTeamInfoResPacket.teamId = teamUser->GetId();
 
@@ -477,13 +426,11 @@ void RedisManager::RaidReqTeamInfo(SOCKET userSkt, uint16_t packetSize_, char* p
         RAID_START_REQUEST raidStartReqPacket1;
         raidStartReqPacket1.PacketId = (uint16_t)PACKET_ID::RAID_START_REQUEST;
         raidStartReqPacket1.PacketLength = sizeof(RAID_START_REQUEST);
-        raidStartReqPacket1.userToken = user->GetuserToken();
         raidStartReqPacket1.endTime = tempRoom->GetEndTime();
 
         RAID_START_REQUEST raidStartReqPacket2;
         raidStartReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_START_REQUEST;
         raidStartReqPacket2.PacketLength = sizeof(RAID_START_REQUEST);
-        raidStartReqPacket2.userToken = teamUser->GetuserToken();
         raidStartReqPacket2.endTime = tempRoom->GetEndTime();
 
         connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_START_REQUEST), (char*)&raidStartReqPacket1);
@@ -498,7 +445,6 @@ void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
     RAID_HIT_RESPONSE raidHitResPacket;
     raidHitResPacket.PacketId = (uint16_t)PACKET_ID::RAID_HIT_RESPONSE;
     raidHitResPacket.PacketLength = sizeof(RAID_HIT_RESPONSE);
-    raidHitResPacket.userToken = user->GetuserToken();
 
     auto hit = roomManager->GetRoom(raidHitReqPacket->roomNum)->Hit(raidHitReqPacket->myNum, raidHitReqPacket->damage);
 
@@ -516,7 +462,6 @@ void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
             RAID_END_REQUEST raidEndReqPacket;
             raidEndReqPacket.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
             raidEndReqPacket.PacketLength = sizeof(RAID_END_REQUEST);
-            raidEndReqPacket.userToken = inGameUser->GetuserToken();
             raidEndReqPacket.userScore = room->GetScore(i);
             raidEndReqPacket.teamScore = room->GetTeamScore(i);
             connUsersManager->FindUser(room->GetUserSkt(i))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket);
@@ -541,6 +486,9 @@ void RedisManager::GetRanking(SOCKET userSkt, uint16_t packetSize_, char* pPacke
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
    
     std::vector<std::pair<std::string, unsigned int>> scores;
+
+
+
     //redis->zrevrange("user_scores", delEquipReqPacket->startRank, delEquipReqPacket->startRank+99, std::back_inserter(scores));
 
     //redis->command("ZREVRANGE", "leaderboard", std::to_string(delEquipReqPacket->startRank), std::to_string(delEquipReqPacket->startRank+99), "WITHSCORES", std::back_inserter(scores));

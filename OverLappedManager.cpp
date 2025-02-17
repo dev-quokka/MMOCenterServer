@@ -17,5 +17,6 @@ OverlappedTCP* OverLappedManager::getOvLap() {
 }
 
 void OverLappedManager::returnOvLap(OverlappedTCP* overlappedTCP_){
+	ZeroMemory(overlappedTCP_, sizeof(OverlappedTCP)); // 초기화 후 집어넣기
 	ovLapPool.push(overlappedTCP_);
 }

@@ -237,10 +237,9 @@ void QuokkaServer::WorkThread() {
             }
         }
         else if (overlappedTCP->taskType == TaskType::RECV) {
-            redisManager->PushRedisPacket(tempUserSkt, dwIoSize, connUser->GetRecvBuffer()); // Proccess In Redismanager
+            redisManager->PushRedisPacket(tempUserSkt, dwIoSize, overlappedTCP->wsaBuf.buf); // Proccess In Redismanager
             connUser->ConnUserRecv(); // Wsarecv Again
-            delete[] overlappedTCP->wsaBuf.buf;
-            delete overlappedTCP;
+            overLappedManager->returnOvLap(overlappedTCP);
         }
 
         else if (overlappedTCP->taskType == TaskType::SEND) {

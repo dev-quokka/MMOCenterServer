@@ -28,17 +28,13 @@ struct PACKET_HEADER
 {
 	uint16_t PacketLength;
 	uint16_t PacketId;
-	std::string userToken; // userToken For User Check
 };
 
 
 //  ---------------------------- SYSTEM  ----------------------------
 
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
-	uint16_t level;
-	uint16_t userPk;
-	unsigned int currentExp;
-	std::string userId;
+	std::string userToken; // userToken For User Check
 };
 
 struct USER_CONNECT_RESPONSE_PACKET : PACKET_HEADER {
@@ -64,10 +60,6 @@ struct SYNCRONIZE_LEVEL_REQUEST : PACKET_HEADER {
 };
 
 struct SYNCRONIZE_LOGOUT_REQUEST : PACKET_HEADER {
-	uint16_t userPk;
-};
-
-struct SYNCRONIZE_DISCONNECT_REQUEST : PACKET_HEADER {
 	uint16_t userPk;
 };
 
@@ -242,7 +234,6 @@ enum class PACKET_ID : uint16_t {
 	IM_WEB_RESPONSE = 5,
 	SYNCRONIZE_LEVEL_REQUEST = 6, // SERVER TO WEB SERVER
 	SYNCRONIZE_LOGOUT_REQUEST = 7, // SERVER TO WEB SERVER
-	SYNCRONIZE_DISCONNECT_REQUEST = 8, // SERVER TO WEB SERVER
 	USER_FULL_REQUEST = 9, // SERVER TO USER
 	WAITTING_NUMBER_REQUSET = 10, // SERVER TO USER
 

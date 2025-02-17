@@ -12,11 +12,10 @@ public:
 		return userLevel;
 	}
 
-	void Set(std::string userToken_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_) {
+	void Set(std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_) {
 		userLevel = userLevel_;
 		userExp = userExp_;
 		userPk = userPk_;
-		userToken = userToken_;
 		userId = userId_;
 	}
 
@@ -29,10 +28,6 @@ public:
 
 	uint32_t GetPk() {
 		return userPk;
-	}
-
-	std::string GetuserToken() {
-		return userToken;
 	}
 
 	std::string GetId() {

@@ -8,8 +8,8 @@ void InGameUserManager::Init(uint16_t maxClientCount_) {
 	}
 }
 
-void InGameUserManager::Set(uint16_t connObjNum_, std::string userToken_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_) {
-	inGmaeUsers[connObjNum_]->Set(userToken_, userId_, userPk_, userExp_,userLevel_);
+void InGameUserManager::Set(uint16_t connObjNum_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_) {
+	inGmaeUsers[connObjNum_]->Set(userId_, userPk_, userExp_,userLevel_);
 }
 
 InGameUser* InGameUserManager::GetInGameUserByObjNum(uint16_t connObjNum_) {

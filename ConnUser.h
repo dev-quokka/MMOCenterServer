@@ -191,9 +191,6 @@ private:
 };
 
 
-
-
-
 // -- WSASend Fail --
 
 //boost::lockfree::queue<OverlappedTCP*> sendQueue;
