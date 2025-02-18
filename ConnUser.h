@@ -36,11 +36,11 @@ public:
 		}
 
 		circularBuffer = std::make_unique<CircularBuffer>(bufferSize_);
-		acceptOvlap = new OverlappedTCP;
-		acceptOvlap->taskType = TaskType::ACCEPT;
-		acceptOvlap->userSkt = userSkt;
-		acceptOvlap->wsaBuf.buf = nullptr;
-		acceptOvlap->wsaBuf.len = 0;
+
+		acceptOvlap.taskType = TaskType::ACCEPT;
+		acceptOvlap.userSkt = userSkt;
+		acceptOvlap.wsaBuf.buf = nullptr;
+		acceptOvlap.wsaBuf.len = 0;
 	}
 
 	~ConnUser() {
@@ -123,6 +123,8 @@ public :
 
 	bool ConnUserRecv() {
 
+		std::cout << userSkt << "리시브 준비" << std::endl;
+
 		OverlappedTCP* tempOvLap = overLappedManager->getOvLap();
 
 		if (tempOvLap == nullptr) return false;
@@ -137,8 +139,6 @@ public :
 		tempOvLap->taskType = TaskType::RECV;
 
 		int tempR = WSARecv(userSkt,&(tempOvLap->wsaBuf),1,&dwRecvBytes, &dwFlag,(LPWSAOVERLAPPED)&(tempOvLap),NULL);
-		
-		std::cout << userSkt <<"리시브 준비" << std::endl;
 
 		if (tempR == SOCKET_ERROR && (WSAGetLastError() != ERROR_IO_PENDING))
 		{
@@ -227,7 +227,7 @@ private:
 	OverLappedManager* overLappedManager;
 
 	// 56 bytes
-	OverlappedTCP* acceptOvlap;
+	OverlappedTCP acceptOvlap;
 
 	// 120 bytes
 	std::unique_ptr<CircularBuffer> circularBuffer; // Make Circular Recv Buffer

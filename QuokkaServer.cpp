@@ -180,32 +180,26 @@ void QuokkaServer::WorkThread() {
             continue;
         }
 
-        std::cout << overlappedTCP->userSkt << "의 요청" << std::endl;
+        std::cout << tempUserSkt << "의 요청" << std::endl;
 
         if (overlappedTCP->taskType == TaskType::ACCEPT) { // User Connect
-            if (connUser) {
                 if (connUser->ConnUserRecv()) {
                     UserCnt.fetch_add(1); // UserCnt +1
                     connUsersManager->InsertUser(tempUserSkt);
                     std::cout << "socket " << tempUserSkt << " Connect" << std::endl;
-                    delete[] overlappedTCP->wsaBuf.buf;
-                    delete overlappedTCP;
                 }
                 else { // Bind Fail
                     connUser->Reset(); // Reset ConnUser
                     AcceptQueue.push(connUser);
                     std::cout << "socket " << tempUserSkt << " ConnectFail" << std::endl;
                 }
-            }
         }
         else if (overlappedTCP->taskType == TaskType::RECV) {
-            std::cout << "들어옴 3" << std::endl;
             redisManager->PushRedisPacket(tempUserSkt, dwIoSize, overlappedTCP->wsaBuf.buf); // Proccess In Redismanager
             connUser->ConnUserRecv(); // Wsarecv Again
             overLappedManager->returnOvLap(overlappedTCP);
         }
         else if (overlappedTCP->taskType == TaskType::SEND) {
-            std::cout << "들어옴 4" << std::endl;
             connUser->SendComplete();
         }
     }
