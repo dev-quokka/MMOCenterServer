@@ -46,7 +46,7 @@ struct USER_LOGOUT_REQUEST_PACKET : PACKET_HEADER {
 };
 
 struct IM_WEB_REQUEST : PACKET_HEADER {
-
+	std::string webToken; // userToken For User Check
 };
 
 struct IM_WEB_RESPONSE : PACKET_HEADER {

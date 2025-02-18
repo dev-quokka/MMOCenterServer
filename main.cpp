@@ -1,13 +1,12 @@
 #include "QuokkaServer.h"
 
-const uint16_t PORT = 8080;
-const uint16_t maxClientCount = 100;
+const uint16_t PORT = 9090;
+const uint16_t maxClientCount = 5;
 
 #include <iostream>
 #include <cstdint>
 
 int main() {
-
     QuokkaServer server(maxClientCount);
 
     uint16_t core= std::thread::hardware_concurrency();
@@ -23,6 +22,8 @@ int main() {
         std::cin >> k;
         if (k == "quokka") break;
     }
+
+    std::cout << "종료 준비" << std::endl;
 
     server.ServerEnd();
 

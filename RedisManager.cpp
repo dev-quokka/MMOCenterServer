@@ -114,10 +114,13 @@ void RedisManager::SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1_, RAI
 void RedisManager::UserConnect(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
     
-    std::unordered_map<std::string, std::string> userData;
-    redis->hgetall("°æÇèÄ¡", std::inserter(userData, userData.begin()));
+    auto pk = static_cast<uint32_t>(std::stoul(*redis->hget("jwtcheck", userConn->userToken)));
 
-    inGameUserManager->Set((connUsersManager->FindUser(userSkt)->GetObjNum()), userData["id"], static_cast<uint32_t>(std::stoul(userData["pk"])), std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])));
+    std::unordered_map<std::string, std::string> userData;
+    redis->hgetall("", std::inserter(userData, userData.begin()));
+
+    connUsersManager->FindUser(userSkt)->SetPk(pk);
+    inGameUserManager->Set((connUsersManager->FindUser(userSkt)->GetObjNum()), userData["id"], pk, std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])));
 }
 
 void RedisManager::Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) { // Normal Disconnect
@@ -129,7 +132,7 @@ void RedisManager::Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) 
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
         connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
-
+        
         connUsersManager->DeleteUser(userSkt);
         tempUser->Reset();
     }
@@ -144,6 +147,7 @@ void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
         connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+        
         connUsersManager->DeleteUser(userSkt);
         tempUser->Reset();
     }
@@ -155,19 +159,23 @@ void RedisManager::ServerEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket
 }
 
 void RedisManager::ImWebRequest(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+    auto userConn = reinterpret_cast<IM_WEB_REQUEST*>(pPacket_);
     std::cout << "WebServer Connect Request :" << userSkt << std::endl;
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
     IM_WEB_RESPONSE imWebResPacket;
     imWebResPacket.PacketId = (uint16_t)PACKET_ID::IM_WEB_RESPONSE;
     imWebResPacket.PacketLength = sizeof(IM_WEB_RESPONSE);
 
-    if (webServerSkt != 0) { // Web Server Already Exist
+    uint32_t pk;
+
+    if (pk = static_cast<uint32_t>(std::stoul(*redis->hget("jwtcheck", userConn->webToken)))==0 ) { // Find JWT Fail
         imWebResPacket.isSuccess = false;
         connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
+        // Protect From DDOS
         return;
     }
 
+    connUsersManager->FindUser(userSkt)->SetPk(pk);
     webServerSkt = userSkt;
     imWebResPacket.isSuccess = true;
 
