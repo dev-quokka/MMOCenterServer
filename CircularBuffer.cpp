@@ -1,5 +1,5 @@
 #include "CircularBuffer.h"
-
+#include <iostream>
 // Write Data
 bool CircularBuffer::Write(const char* data, uint32_t size_) {
     std::lock_guard<std::mutex> guard(bufferMutex);
@@ -9,9 +9,11 @@ bool CircularBuffer::Write(const char* data, uint32_t size_) {
     }
 
     uint32_t endSpace = bufferSize - writePos;
+
     if (endSpace >= size_) {
         std::memcpy(buffer + writePos, data, size_);
     }
+
     else {
         std::memcpy(buffer + writePos, data, endSpace);
         std::memcpy(buffer, data + endSpace, size_ - endSpace);
@@ -32,10 +34,10 @@ bool CircularBuffer::Read(char* readData_, uint32_t size_) {
     }
 
     uint32_t endSpace = bufferSize - readPos;
+
     if (endSpace >= size_) {
         std::memcpy(readData_, buffer + readPos, size_);
-    }
-
+    } 
     else {
         std::memcpy(readData_, buffer + readPos, endSpace);
         std::memcpy(readData_ + endSpace, buffer, size_ - endSpace);

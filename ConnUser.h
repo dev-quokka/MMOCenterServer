@@ -81,14 +81,17 @@ public :
 	}
 
 	PacketInfo ReadRecvData(char* readData_, uint32_t size_) { // readData_는 값을 불러오기 위한 빈 값
-		if (circularBuffer->Read(readData_, size_)) {
-			auto pHeader = (PACKET_HEADER*)readData_;
+		CopyMemory(readData, readData_, size_);
 
+		if (circularBuffer->Read(readData, size_)) {
+			auto pHeader = (PACKET_HEADER*)readData;
+
+			std::cout << " 서클버퍼 리드 성공" << std::endl;
 			PacketInfo packetInfo;
 			packetInfo.packetId = pHeader->PacketId;
 			packetInfo.dataSize = pHeader->PacketLength;
 			packetInfo.userSkt = userSkt;
-			packetInfo.pData = readData_;
+			packetInfo.pData = readData;
 
 			return packetInfo;
 		}
@@ -117,19 +120,21 @@ public :
 
 	bool ConnUserRecv() {
 
-		OverlappedTCP* tempOvLap = overLappedManager->getOvLap();
+		OverlappedTCP* tempOvLap = (overLappedManager->getOvLap());
 
 		if (tempOvLap == nullptr) return false;
 
 		DWORD dwFlag = 0;
 		DWORD dwRecvBytes = 0;
 
+		tempOvLap->wsaBuf.len = MAX_RECV_SIZE;
+		tempOvLap->wsaBuf.buf = new char[MAX_RECV_SIZE];
 		tempOvLap->userSkt = userSkt;
 		tempOvLap->taskType = TaskType::RECV;
 
 		int tempR = WSARecv(userSkt,&(tempOvLap->wsaBuf),1,&dwRecvBytes, &dwFlag,(LPWSAOVERLAPPED)tempOvLap,NULL);
 
-		if (tempR == SOCKET_ERROR && (WSAGetLastError() != ERROR_IO_PENDING))
+		if(tempR == SOCKET_ERROR && (WSAGetLastError() != ERROR_IO_PENDING))
 		{
 			std::cout << userSkt << " WSARecv() Fail : " << WSAGetLastError() << std::endl;
 			return false;
@@ -199,7 +204,6 @@ private:
 	// 1 bytes
 	bool isConn = false;
 	std::atomic<uint16_t> sendQueueSize{0};
-	char acceptBuf[64] = {0};
 
 	// 2 bytes
 	uint16_t connObjNum;
@@ -213,12 +217,19 @@ private:
 
 	// 56 bytes
 	OverlappedTCP acceptOvlap;
+	OverlappedTCP recvOvlap;
+
+	// 64 bytes
+	char acceptBuf[64] = { 0 };
 
 	// 120 bytes
 	std::unique_ptr<CircularBuffer> circularBuffer; // Make Circular Recv Buffer
 
 	// 136 bytes 
 	boost::lockfree::queue<OverlappedTCP*> sendQueue{10};
+
+	char recvBuf[1024] = { 0 };
+	char readData[1024];
 };
 
 

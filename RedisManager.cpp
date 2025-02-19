@@ -81,12 +81,14 @@ bool RedisManager::EquipmentEnhance(short currentEnhanceCount_) { //
 void RedisManager::RedisThread() {
     DataPacket tempD(0,0);
     ConnUser* TempConnUser = nullptr;
-    char* tempData = nullptr;
+    char tempData[1024] = {0};
     while (redisRun) {
         if (procSktQueue.pop(tempD)) {
-                TempConnUser = connUsersManager->FindUser(tempD.userSkt);
-                PacketInfo packetInfo = TempConnUser->ReadRecvData(tempData, tempD.dataSize); // GetData
-                (this->*packetIDTable[packetInfo.packetId])(packetInfo.userSkt, packetInfo.dataSize, packetInfo.pData); // Proccess Packet
+            std::memset(tempData, 0, sizeof(tempData));
+            TempConnUser = connUsersManager->FindUser(tempD.userSkt);
+            PacketInfo packetInfo = TempConnUser->ReadRecvData(tempData, tempD.dataSize); // GetData
+            (this->*packetIDTable[packetInfo.packetId])(packetInfo.userSkt, packetInfo.dataSize, packetInfo.pData); // Proccess Packet
+            std::cout << " 레디스 쓰레드 마지막까지옴" << std::endl;
         }
         else { // Empty Queue
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -161,25 +163,31 @@ void RedisManager::ServerEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket
 void RedisManager::ImWebRequest(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<IM_WEB_REQUEST*>(pPacket_);
     std::cout << "WebServer Connect Request :" << userSkt << std::endl;
-
+    std::cout << " 아임웹1" << std::endl;
     IM_WEB_RESPONSE imWebResPacket;
     imWebResPacket.PacketId = (uint16_t)PACKET_ID::IM_WEB_RESPONSE;
     imWebResPacket.PacketLength = sizeof(IM_WEB_RESPONSE);
 
     uint32_t pk;
-
+    std::cout << "받은 웹 토큰은 : " << userConn->webToken << std::endl;
+    std::cout << " 아임웹2" << std::endl;
     if (pk = static_cast<uint32_t>(std::stoul(*redis->hget("jwtcheck", userConn->webToken)))==0 ) { // Find JWT Fail
         imWebResPacket.isSuccess = false;
+        std::cout << " 아임웹3" << std::endl;
         connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
         // Protect From DDOS
+        std::cout << " 아임웹4" << std::endl;
         return;
     }
 
+    std::cout << " 아임웹5" << std::endl;
+    
     connUsersManager->FindUser(userSkt)->SetPk(pk);
     webServerSkt = userSkt;
     imWebResPacket.isSuccess = true;
-
+    std::cout << " 아임웹6" << std::endl;
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
+    std::cout << " 아임웹7" << std::endl;
     std::cout << "WebServer Connect Success : " << userSkt << std::endl;
 }
 

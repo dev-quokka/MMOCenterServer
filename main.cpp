@@ -9,8 +9,6 @@ const uint16_t maxClientCount = 5;
 int main() {
     QuokkaServer server(maxClientCount);
 
-    uint16_t core= std::thread::hardware_concurrency();
-
     server.init(1,PORT);
 
     server.StartWork();

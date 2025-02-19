@@ -162,8 +162,8 @@ void QuokkaServer::WorkThread() {
         }
 
         auto overlappedTCP = (OverlappedTCP*)lpOverlapped;
-        connUser = connUsersManager->FindUser(overlappedTCP->userSkt);
         SOCKET tempUserSkt = overlappedTCP->userSkt;
+        connUser = connUsersManager->FindUser(tempUserSkt);
 
         if (!gqSucces || (dwIoSize == 0 && overlappedTCP->taskType != TaskType::ACCEPT)) { // User Disconnect
             redisManager->Disconnect(tempUserSkt);
