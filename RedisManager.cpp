@@ -95,6 +95,7 @@ void RedisManager::RedisThread() {
 }
 
 void RedisManager::PushRedisPacket(const SOCKET userSkt_, const uint32_t size_, char* recvData_) {
+    std::cout << "PushRedisPacket 요청" << std::endl;
     DataPacket tempD(size_,userSkt_);
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt_);
     TempConnUser->WriteRecvData(recvData_,size_); // Push Data in Circualr Buffer
@@ -139,18 +140,17 @@ void RedisManager::Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) 
 }
 
 void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
-    {  // Send User PK to the Web Server for Synchronization with MySQL
-        SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
-        syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
-        syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
-        syncLogoutReqPacket.userPk = tempUser->GetPk();
-        connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
-        
-        connUsersManager->DeleteUser(userSkt);
-        tempUser->Reset();
-    }
+    std::cout << "레디스 디스 꼰넥트 요청 " << std::endl;
+    //InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+
+    //{  // Send User PK to the Web Server for Synchronization with MySQL
+    //    SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
+    //    syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
+    //    syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
+    //    syncLogoutReqPacket.userPk = tempUser->GetPk();
+    //    connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+    //}
 }
 
 void RedisManager::ServerEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {

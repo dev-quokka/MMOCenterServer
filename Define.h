@@ -6,8 +6,8 @@
 #include <mswsock.h>
 #include <cstdint>
 
-const uint32_t MAX_SOCK = 1024; // Set Max Socket Buf
-const uint32_t MAX_RECV_DATA = 8096;
+const uint32_t MAX_RECV_SIZE = 1024; // Set Max RECV Buf
+const uint32_t MAX_CIRCLE_SIZE = 8096;
 
 const short MAX_RETRY_COUNT = 3;
 
@@ -20,14 +20,10 @@ enum class TaskType {
 struct OverlappedEx {
 	// 4 bytes
 	TaskType taskType; // ACCPET, RECV, SEND INFO
-
 	WSAOVERLAPPED wsaOverlapped;
 };
 
 struct OverlappedTCP : OverlappedEx {
-	// 2 bytes
-	short retryCnt = 0; // Retry Count For Send Proc
-
 	// 8 bytes
 	SOCKET userSkt;
 

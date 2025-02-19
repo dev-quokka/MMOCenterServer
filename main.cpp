@@ -23,8 +23,6 @@ int main() {
         if (k == "quokka") break;
     }
 
-    std::cout << "종료 준비" << std::endl;
-
     server.ServerEnd();
 
     return 0;

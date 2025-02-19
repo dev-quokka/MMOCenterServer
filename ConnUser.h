@@ -22,10 +22,10 @@ public:
 		int optval = 1;
 		setsockopt(userSkt, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
 
-		int recvBufSize = MAX_SOCK;
+		int recvBufSize = MAX_RECV_SIZE;
 		setsockopt(userSkt, SOL_SOCKET, SO_RCVBUF, (char*)&recvBufSize, sizeof(recvBufSize));
 
-		int sendBufSize = MAX_SOCK;
+		int sendBufSize = MAX_RECV_SIZE;
 		setsockopt(userSkt, SOL_SOCKET, SO_SNDBUF, (char*)&sendBufSize, sizeof(sendBufSize));
 
 		auto tIOCPHandle = CreateIoCompletionPort((HANDLE)userSkt, sIOCPHandle, (ULONG_PTR)0, 0);
@@ -58,10 +58,6 @@ public:
 public :
 	bool IsConn() { // check connection status
 		return isConn;
-	}
-
-	char* GetRecvBuffer() {
-		return recvBuf;
 	}
 
 	SOCKET GetSocket() {
@@ -101,7 +97,6 @@ public :
 	void Reset() {
 		shutdown(userSkt, SD_BOTH);
 		memset(acceptBuf, 0, sizeof(acceptBuf));
-		memset(recvBuf, 0, sizeof(recvBuf));
 		acceptOvlap = {};
 		isConn = false;
 	}
@@ -115,15 +110,12 @@ public :
 				std::cout << "AcceptEx Error : " << GetLastError() << std::endl;
 				return false;
 			}
-			std::cout << "Accept request Success Skt : " << userSkt << std::endl;
 		}
 
 		return true;
 	}
 
 	bool ConnUserRecv() {
-
-		std::cout << userSkt << "리시브 준비" << std::endl;
 
 		OverlappedTCP* tempOvLap = overLappedManager->getOvLap();
 
@@ -132,13 +124,10 @@ public :
 		DWORD dwFlag = 0;
 		DWORD dwRecvBytes = 0;
 
-		ZeroMemory(tempOvLap, sizeof(OverlappedTCP));
-		tempOvLap->wsaBuf.len = MAX_SOCK;
-		tempOvLap->wsaBuf.buf = recvBuf;
 		tempOvLap->userSkt = userSkt;
 		tempOvLap->taskType = TaskType::RECV;
 
-		int tempR = WSARecv(userSkt,&(tempOvLap->wsaBuf),1,&dwRecvBytes, &dwFlag,(LPWSAOVERLAPPED)&(tempOvLap),NULL);
+		int tempR = WSARecv(userSkt,&(tempOvLap->wsaBuf),1,&dwRecvBytes, &dwFlag,(LPWSAOVERLAPPED)tempOvLap,NULL);
 
 		if (tempR == SOCKET_ERROR && (WSAGetLastError() != ERROR_IO_PENDING))
 		{
@@ -150,24 +139,20 @@ public :
 	}
 
 	void PushSendMsg(const uint32_t dataSize_, char* sendMsg) {
-		OverlappedTCP* overlappedTCP;
 		OverlappedTCP* tempOvLap = overLappedManager->getOvLap();
 
 		if (tempOvLap == nullptr) { // 오버랩 풀에 여분 없으면 새로 오버랩 생성
-			overlappedTCP = new OverlappedTCP;
+			OverlappedTCP* overlappedTCP = new OverlappedTCP;
 			ZeroMemory(overlappedTCP, sizeof(OverlappedTCP));
-			overlappedTCP->wsaBuf.len = dataSize_;
-			overlappedTCP->wsaBuf.buf = new char[dataSize_];
 			CopyMemory(overlappedTCP->wsaBuf.buf, sendMsg, dataSize_);
 			overlappedTCP->taskType = TaskType::SEND;
 
 			sendQueue.push(overlappedTCP); // Push Send Msg To User
 			sendQueueSize.fetch_add(1);
 		}
+
 		else {
 			ZeroMemory(tempOvLap, sizeof(OverlappedTCP));
-			tempOvLap->wsaBuf.len = dataSize_;
-			tempOvLap->wsaBuf.buf = new char[dataSize_];
 			CopyMemory(tempOvLap->wsaBuf.buf, sendMsg, dataSize_);
 			tempOvLap->taskType = TaskType::SEND;
 
@@ -181,11 +166,11 @@ public :
 	}
 
 	void SendComplete() {
+		std::cout << "send 요청" << std::endl;
 		OverlappedTCP* deleteOverlapped = nullptr;
 
 		if(sendQueue.pop(deleteOverlapped)) {
-			delete[] deleteOverlapped->wsaBuf.buf;
-			delete deleteOverlapped;
+			overLappedManager->returnOvLap(deleteOverlapped);
 			sendQueueSize.fetch_sub(1);
 		}
 
@@ -208,13 +193,13 @@ private:
 				(LPWSAOVERLAPPED)overlappedTCP,
 				NULL);
 		}
+
 	}
 
 	// 1 bytes
 	bool isConn = false;
 	std::atomic<uint16_t> sendQueueSize{0};
 	char acceptBuf[64] = {0};
-	char recvBuf[MAX_SOCK] = {0};
 
 	// 2 bytes
 	uint16_t connObjNum;

@@ -94,20 +94,16 @@ bool QuokkaServer::StartWork() {
     redisManager = new RedisManager;
 
     for (int i = 0; i < maxClientCount; i++) { // Make ConnUsers Queue
-        ConnUser* connUser = new ConnUser(MAX_RECV_DATA,i, sIOCPHandle, overLappedManager);
+        ConnUser* connUser = new ConnUser(MAX_CIRCLE_SIZE,i, sIOCPHandle, overLappedManager);
 
         AcceptQueue.push(connUser); // Push ConnUser
-        connUsersManager->InsertUser(connUser->GetSocket()); // Init ConnUsers
-
-        std::cout << "유저 "<<i << "번 생성완료" << std::endl;
+        connUsersManager->InsertUser(connUser); // Init ConnUsers
     }
 
     for (int i = 0; i < maxClientCount; i++) { // Make Waittint Users Queue
-        ConnUser* connUser = new ConnUser(MAX_RECV_DATA, i, sIOCPHandle, overLappedManager);
+        ConnUser* connUser = new ConnUser(MAX_CIRCLE_SIZE, i, sIOCPHandle, overLappedManager);
 
         WaittingQueue.push(connUser); // Push ConnUser
-
-        std::cout << "대기 " << i << "번 생성완료" << std::endl;
     }
 
     redisManager->init(MaxThreadCnt, maxClientCount, sIOCPHandle);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
@@ -164,7 +160,7 @@ void QuokkaServer::WorkThread() {
             ServerEnd();
             continue;
         }
-        
+
         auto overlappedTCP = (OverlappedTCP*)lpOverlapped;
         connUser = connUsersManager->FindUser(overlappedTCP->userSkt);
         SOCKET tempUserSkt = overlappedTCP->userSkt;
@@ -180,13 +176,11 @@ void QuokkaServer::WorkThread() {
             continue;
         }
 
-        std::cout << tempUserSkt << "의 요청" << std::endl;
-
         if (overlappedTCP->taskType == TaskType::ACCEPT) { // User Connect
+            std::cout << " accept 들어옴" <<std::endl;
                 if (connUser->ConnUserRecv()) {
+                    std::cout << "socket " << tempUserSkt << " Connect Requset" << std::endl;
                     UserCnt.fetch_add(1); // UserCnt +1
-                    connUsersManager->InsertUser(tempUserSkt);
-                    std::cout << "socket " << tempUserSkt << " Connect" << std::endl;
                 }
                 else { // Bind Fail
                     connUser->Reset(); // Reset ConnUser
@@ -195,11 +189,14 @@ void QuokkaServer::WorkThread() {
                 }
         }
         else if (overlappedTCP->taskType == TaskType::RECV) {
+            std::cout << "리시브 태스크 타입 " << std::endl;
+            std::cout << "socket " << tempUserSkt << " Recv Req"<< "푸시 레디스 패킷 시도" << std::endl;
             redisManager->PushRedisPacket(tempUserSkt, dwIoSize, overlappedTCP->wsaBuf.buf); // Proccess In Redismanager
             connUser->ConnUserRecv(); // Wsarecv Again
             overLappedManager->returnOvLap(overlappedTCP);
         }
         else if (overlappedTCP->taskType == TaskType::SEND) {
+            std::cout << "샌드 태스크 타입 " << std::endl;
             connUser->SendComplete();
         }
     }
@@ -235,14 +232,11 @@ void QuokkaServer::UDPWorkThread() {
 
 void QuokkaServer::AccepterThread() {
     ConnUser* connUser;
-    std::cout << "accept 성공" << std::endl;
+
     while (AccepterRun) {
         if (AcceptQueue.pop(connUser)) { // AcceptQueue not empty
             if (!connUser->PostAccept(serverSkt)) {
                 AcceptQueue.push(connUser);
-            }
-            else {
-                std::cout << "accept 성공" << std::endl;
             }
         }
         else { // AcceptQueue empty
