@@ -166,18 +166,22 @@ void QuokkaServer::WorkThread() {
         connUser = connUsersManager->FindUser(tempUserSkt);
 
         if (!gqSucces || (dwIoSize == 0 && overlappedTCP->taskType != TaskType::ACCEPT)) { // User Disconnect
-            redisManager->Disconnect(tempUserSkt);
-
-            std::cout << "socket " << tempUserSkt << " Disconnect && Data Update Fail" << std::endl;
-
+            if (!connUser->IsConn()) { // 유저의 로그아웃 요청 후 종료
+                std::cout << "socket " << tempUserSkt << "Logout" << std::endl;
+            }
+            else { // 비정상적인 종료
+                std::cout << "socket " << tempUserSkt << " Disconnect && Data Update Fail" << std::endl;
+                redisManager->Disconnect(tempUserSkt);
+            }
+            
             inGameUserManager->Reset(connUser->GetObjNum());
             connUser->Reset(); // Reset ConnUser
             UserCnt.fetch_sub(1); // UserCnt -1
+            AcceptQueue.push(connUser);
             continue;
         }
 
         if (overlappedTCP->taskType == TaskType::ACCEPT) { // User Connect
-            std::cout << " accept 들어옴" <<std::endl;
                 if (connUser->ConnUserRecv()) {
                     std::cout << "socket " << tempUserSkt << " Connect Requset" << std::endl;
                     UserCnt.fetch_add(1); // UserCnt +1
@@ -189,15 +193,15 @@ void QuokkaServer::WorkThread() {
                 }
         }
         else if (overlappedTCP->taskType == TaskType::RECV) {
-            std::cout << "리시브 태스크 타입 " << std::endl;
-            std::cout << "socket " << tempUserSkt << " Recv Req"<< "푸시 레디스 패킷 시도" << std::endl;
             redisManager->PushRedisPacket(tempUserSkt, dwIoSize, overlappedTCP->wsaBuf.buf); // Proccess In Redismanager
             connUser->ConnUserRecv(); // Wsarecv Again
             overLappedManager->returnOvLap(overlappedTCP);
         }
         else if (overlappedTCP->taskType == TaskType::SEND) {
-            std::cout << "샌드 태스크 타입 " << std::endl;
+            std::cout << "PushSendMsg 5" << tempUserSkt << std::endl;
+            overLappedManager->returnOvLap(overlappedTCP);
             connUser->SendComplete();
+            std::cout << "샌드 하나 완료" << std::endl;
         }
     }
 }

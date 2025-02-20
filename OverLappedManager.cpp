@@ -9,7 +9,6 @@ void OverLappedManager::init() {
 }
 
 OverlappedTCP* OverLappedManager::getOvLap() {
-	std::cout << " 오버랩 가져감 " << std::endl;
 	OverlappedTCP* overlappedTCP_;
 	if (ovLapPool.pop(overlappedTCP_)) {
 		return overlappedTCP_;

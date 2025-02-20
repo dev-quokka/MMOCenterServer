@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <atomic>
 #include <boost/lockfree/queue.hpp>
 
 class ConnUser {
@@ -86,7 +87,6 @@ public :
 		if (circularBuffer->Read(readData, size_)) {
 			auto pHeader = (PACKET_HEADER*)readData;
 
-			std::cout << " 서클버퍼 리드 성공" << std::endl;
 			PacketInfo packetInfo;
 			packetInfo.packetId = pHeader->PacketId;
 			packetInfo.dataSize = pHeader->PacketLength;
@@ -98,10 +98,10 @@ public :
 	}
 
 	void Reset() {
+		isConn = false;
 		shutdown(userSkt, SD_BOTH);
 		memset(acceptBuf, 0, sizeof(acceptBuf));
 		acceptOvlap = {};
-		isConn = false;
 	}
 
 	bool PostAccept(SOCKET ServerSkt_) {
@@ -144,20 +144,27 @@ public :
 	}
 
 	void PushSendMsg(const uint32_t dataSize_, char* sendMsg) {
+
+		std::cout << "PushSendMsg 1" << std::endl;
 		OverlappedTCP* tempOvLap = overLappedManager->getOvLap();
 
 		if (tempOvLap == nullptr) { // 오버랩 풀에 여분 없으면 새로 오버랩 생성
 			OverlappedTCP* overlappedTCP = new OverlappedTCP;
 			ZeroMemory(overlappedTCP, sizeof(OverlappedTCP));
+			overlappedTCP->wsaBuf.len = MAX_RECV_SIZE;
+			overlappedTCP->wsaBuf.buf = new char[MAX_RECV_SIZE];
+			overlappedTCP->userSkt = userSkt;
 			CopyMemory(overlappedTCP->wsaBuf.buf, sendMsg, dataSize_);
 			overlappedTCP->taskType = TaskType::SEND;
 
 			sendQueue.push(overlappedTCP); // Push Send Msg To User
 			sendQueueSize.fetch_add(1);
 		}
-
 		else {
-			ZeroMemory(tempOvLap, sizeof(OverlappedTCP));
+			std::cout << "PushSendMsg 2" << std::endl;
+			tempOvLap->wsaBuf.len = MAX_RECV_SIZE;
+			tempOvLap->wsaBuf.buf = new char[MAX_RECV_SIZE];
+			tempOvLap->userSkt = userSkt;
 			CopyMemory(tempOvLap->wsaBuf.buf, sendMsg, dataSize_);
 			tempOvLap->taskType = TaskType::SEND;
 
@@ -166,18 +173,15 @@ public :
 		}
 
 		if (sendQueueSize.load() == 1) {
+			std::cout << "PushSendMsg 3" << std::endl;
 			ProcSend();
 		}
 	}
 
 	void SendComplete() {
-		std::cout << "send 요청" << std::endl;
-		OverlappedTCP* deleteOverlapped = nullptr;
-
-		if(sendQueue.pop(deleteOverlapped)) {
-			overLappedManager->returnOvLap(deleteOverlapped);
-			sendQueueSize.fetch_sub(1);
-		}
+		std::cout << "PushSendMsg 6" << std::endl;
+		std::cout << "ㄹㄹ" << sendQueueSize.load() << std::endl;
+		sendQueueSize.fetch_sub(1);
 
 		if (sendQueueSize.load() == 1) {
 			ProcSend();
@@ -186,6 +190,7 @@ public :
 
 private:
 	void ProcSend() {
+		std::cout << "PushSendMsg 4" << std::endl;
 		OverlappedTCP* overlappedTCP;
 
 		if (sendQueue.pop(overlappedTCP)) {
@@ -203,7 +208,7 @@ private:
 
 	// 1 bytes
 	bool isConn = false;
-	std::atomic<uint16_t> sendQueueSize{0};
+	std::atomic<uint16_t> sendQueueSize{ 0 };
 
 	// 2 bytes
 	uint16_t connObjNum;
@@ -217,7 +222,6 @@ private:
 
 	// 56 bytes
 	OverlappedTCP acceptOvlap;
-	OverlappedTCP recvOvlap;
 
 	// 64 bytes
 	char acceptBuf[64] = { 0 };
@@ -229,7 +233,7 @@ private:
 	boost::lockfree::queue<OverlappedTCP*> sendQueue{10};
 
 	char recvBuf[1024] = { 0 };
-	char readData[1024];
+	char readData[1024] = {0};
 };
 
 

@@ -33,8 +33,10 @@ struct PACKET_HEADER
 
 //  ---------------------------- SYSTEM  ----------------------------
 
+const int MAX_JWT_TOKEN_LEN = 256;
+
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
-	std::string userToken; // userToken For User Check
+	char userToken[MAX_JWT_TOKEN_LEN + 1]; // userToken For User Check
 };
 
 struct USER_CONNECT_RESPONSE_PACKET : PACKET_HEADER {
@@ -46,7 +48,7 @@ struct USER_LOGOUT_REQUEST_PACKET : PACKET_HEADER {
 };
 
 struct IM_WEB_REQUEST : PACKET_HEADER {
-	std::string webToken; // userToken For User Check
+	char webToken[MAX_JWT_TOKEN_LEN + 1]; // userToken For User Check
 };
 
 struct IM_WEB_RESPONSE : PACKET_HEADER {

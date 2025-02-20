@@ -85,10 +85,9 @@ void RedisManager::RedisThread() {
     while (redisRun) {
         if (procSktQueue.pop(tempD)) {
             std::memset(tempData, 0, sizeof(tempData));
-            TempConnUser = connUsersManager->FindUser(tempD.userSkt);
+            TempConnUser = connUsersManager->FindUser(tempD.userSkt); // Find User
             PacketInfo packetInfo = TempConnUser->ReadRecvData(tempData, tempD.dataSize); // GetData
             (this->*packetIDTable[packetInfo.packetId])(packetInfo.userSkt, packetInfo.dataSize, packetInfo.pData); // Proccess Packet
-            std::cout << " 레디스 쓰레드 마지막까지옴" << std::endl;
         }
         else { // Empty Queue
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -97,10 +96,10 @@ void RedisManager::RedisThread() {
 }
 
 void RedisManager::PushRedisPacket(const SOCKET userSkt_, const uint32_t size_, char* recvData_) {
-    std::cout << "PushRedisPacket 요청" << std::endl;
-    DataPacket tempD(size_,userSkt_);
+    std::cout << "PushRedisPacket Request" << std::endl;
     ConnUser* TempConnUser = connUsersManager->FindUser(userSkt_);
     TempConnUser->WriteRecvData(recvData_,size_); // Push Data in Circualr Buffer
+    DataPacket tempD(size_, userSkt_);
     procSktQueue.push(tempD);
 }
 
@@ -135,24 +134,19 @@ void RedisManager::Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) 
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
         connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
-        
-        connUsersManager->DeleteUser(userSkt);
-        tempUser->Reset();
     }
 }
 
 void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
 
-    std::cout << "레디스 디스 꼰넥트 요청 " << std::endl;
-    //InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
-
-    //{  // Send User PK to the Web Server for Synchronization with MySQL
-    //    SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
-    //    syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
-    //    syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
-    //    syncLogoutReqPacket.userPk = tempUser->GetPk();
-    //    connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
-    //}
+    {  // Send User PK to the Web Server for Synchronization with MySQL
+        SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
+        syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
+        syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
+        syncLogoutReqPacket.userPk = tempUser->GetPk();
+        connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+    }
 }
 
 void RedisManager::ServerEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
@@ -163,31 +157,25 @@ void RedisManager::ServerEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket
 void RedisManager::ImWebRequest(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<IM_WEB_REQUEST*>(pPacket_);
     std::cout << "WebServer Connect Request :" << userSkt << std::endl;
-    std::cout << " 아임웹1" << std::endl;
+
     IM_WEB_RESPONSE imWebResPacket;
     imWebResPacket.PacketId = (uint16_t)PACKET_ID::IM_WEB_RESPONSE;
     imWebResPacket.PacketLength = sizeof(IM_WEB_RESPONSE);
 
+    std::string str(userConn->webToken);
+
     uint32_t pk;
-    std::cout << "받은 웹 토큰은 : " << userConn->webToken << std::endl;
-    std::cout << " 아임웹2" << std::endl;
-    if (pk = static_cast<uint32_t>(std::stoul(*redis->hget("jwtcheck", userConn->webToken)))==0 ) { // Find JWT Fail
+
+    if (pk = static_cast<uint32_t>(std::stoul(*redis->hget("jwtcheck:{webserver}", str)))==0 ) { // Find JWT Fail(Protect From DDOS(한번 아니라고 판명되면 연결 끊어버리기))
         imWebResPacket.isSuccess = false;
-        std::cout << " 아임웹3" << std::endl;
         connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
-        // Protect From DDOS
-        std::cout << " 아임웹4" << std::endl;
         return;
     }
 
-    std::cout << " 아임웹5" << std::endl;
-    
     connUsersManager->FindUser(userSkt)->SetPk(pk);
     webServerSkt = userSkt;
     imWebResPacket.isSuccess = true;
-    std::cout << " 아임웹6" << std::endl;
     connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
-    std::cout << " 아임웹7" << std::endl;
     std::cout << "WebServer Connect Success : " << userSkt << std::endl;
 }
 
