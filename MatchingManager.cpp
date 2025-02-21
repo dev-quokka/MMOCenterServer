@@ -19,8 +19,8 @@ void MatchingManager::Init(const uint16_t maxClientCount_, RedisManager* redisMa
     TimeCheckThread();
 }
 
-bool MatchingManager::Insert(uint16_t userLevel_, SOCKET userSkt_, std::string userId_) {
-    MatchingRoom* tempRoom = new MatchingRoom(userLevel_, userSkt_, userId_);
+bool MatchingManager::Insert(uint16_t userLevel_, uint16_t userObjNum_, std::string userId_) {
+    MatchingRoom* tempRoom = new MatchingRoom(userLevel_, userObjNum_, userId_);
 
     tbb::concurrent_hash_map<uint16_t, std::priority_queue<MatchingRoom*>>::accessor accessor;
 
@@ -59,7 +59,7 @@ void MatchingManager::MatchingThread() {
                 if (matchingMap.find(accessor1, i)) {
                     if (!accessor1->second.empty()) { 
                         tempMatching1 = accessor1->second.top();
-                        if (tempMatching1->userId != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching1->userSkt)->GetObjNum()))->GetId() ) { // 이미 나간 유저면 다음으로 넘어가기
+                        if (tempMatching1->userId != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching1->userObjNum)->GetObjNum()))->GetId() ) { // 이미 나간 유저면 다음으로 넘어가기
                             accessor1->second.pop();
                             delete tempMatching1;
                             continue;
@@ -68,7 +68,7 @@ void MatchingManager::MatchingThread() {
 
                         if (!accessor1->second.empty()) { // 두번째 대기 유저가 있음
                             tempMatching2 = accessor1->second.top();
-                            if (tempMatching2->userId != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching2->userSkt)->GetObjNum()))->GetId()) { // 이미 나간 유저면 다음으로 넘어가기
+                            if (tempMatching2->userId != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching2->userObjNum)->GetObjNum()))->GetId()) { // 이미 나간 유저면 다음으로 넘어가기
                                 accessor1->second.pop();
                                 delete tempMatching2;
                                 continue;
@@ -78,8 +78,8 @@ void MatchingManager::MatchingThread() {
                             { // 두명 유저 방 만들어서 넣어주기
                                 RAID_READY_REQUEST rReadyResPacket1;
                                 RAID_READY_REQUEST rReadyResPacket2;
-                                InGameUser* user1 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching1->userSkt)->GetObjNum());
-                                InGameUser* user2 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching2->userSkt)->GetObjNum());
+                                InGameUser* user1 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching1->userObjNum)->GetObjNum());
+                                InGameUser* user2 = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(tempMatching2->userObjNum)->GetObjNum());
                                 
                                 // Send to User1 With User2 Info
                                 rReadyResPacket1.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
@@ -102,10 +102,10 @@ void MatchingManager::MatchingThread() {
                                 strcpy_s(rReadyResPacket2.serverIP, serverIP);
 
                                 // 마지막 요청 처리 뒤에 방 생성 요청 보내기 (전에 요청 건 다 처리하고 방 생성)
-                                redisManager->PushRedisPacket(tempMatching1->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket1); // Send User1 with Game Info && User2 Info
-                                redisManager->PushRedisPacket(tempMatching2->userSkt, sizeof(PacketInfo), (char*)&rReadyResPacket2); // Send User2 with Game Info && User1 Info
+                                redisManager->PushRedisPacket(tempMatching1->userObjNum, sizeof(PacketInfo), (char*)&rReadyResPacket1); // Send User1 with Game Info && User2 Info
+                                redisManager->PushRedisPacket(tempMatching2->userObjNum, sizeof(PacketInfo), (char*)&rReadyResPacket2); // Send User2 with Game Info && User1 Info
 
-                                endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userSkt, tempMatching2->userSkt, user1, user2));
+                                endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userObjNum, tempMatching2->userObjNum, user1, user2));
                             }
                             delete tempMatching1;
                             delete tempMatching2;
@@ -147,7 +147,7 @@ void MatchingManager::DeleteMob(Room* room_) {
     raidEndReqPacket1.userScore = room_->GetScore(0);
     raidEndReqPacket1.teamScore = room_->GetScore(1);
 
-    connUsersManager->FindUser(room_->GetUserSkt(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
+    connUsersManager->FindUser(room_->GetUserObjNum(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
 
     // Send to User2 with User1 Info
     raidEndReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
@@ -155,7 +155,7 @@ void MatchingManager::DeleteMob(Room* room_) {
     raidEndReqPacket2.teamScore = room_->GetScore(0);
     raidEndReqPacket2.userScore = room_->GetScore(1);
 
-    connUsersManager->FindUser(room_->GetUserSkt(1))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket2);
+    connUsersManager->FindUser(room_->GetUserObjNum(1))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket2);
 
     roomManager->DeleteRoom(room_->GetRoomNum());
     roomNumQueue.push(room_->GetRoomNum());
@@ -182,7 +182,7 @@ void MatchingManager::TimeCheckThread() {
                 raidEndReqPacket1.userScore = room_->GetScore(0);
                 raidEndReqPacket1.teamScore = room_->GetScore(1);
 
-                connUsersManager->FindUser(room_->GetUserSkt(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
+                connUsersManager->FindUser(room_->GetUserObjNum(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
 
                 // Send to User2 with User1 Info
                 raidEndReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
@@ -190,7 +190,7 @@ void MatchingManager::TimeCheckThread() {
                 raidEndReqPacket2.teamScore = room_->GetScore(0);
                 raidEndReqPacket2.userScore = room_->GetScore(1);
 
-                connUsersManager->FindUser(room_->GetUserSkt(1))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket2);
+                connUsersManager->FindUser(room_->GetUserObjNum(1))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket2);
 
                 // Send Message To Redis Cluster For Syncronize
                 redisManager->SyncRaidScoreToRedis(raidEndReqPacket1, raidEndReqPacket2);

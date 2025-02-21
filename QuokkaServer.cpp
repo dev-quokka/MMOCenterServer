@@ -97,10 +97,10 @@ bool QuokkaServer::StartWork() {
         ConnUser* connUser = new ConnUser(MAX_CIRCLE_SIZE,i, sIOCPHandle, overLappedManager);
 
         AcceptQueue.push(connUser); // Push ConnUser
-        connUsersManager->InsertUser(connUser); // Init ConnUsers
+        connUsersManager->InsertUser(i, connUser); // Init ConnUsers
     }
 
-    for (int i = 0; i < maxClientCount; i++) { // Make Waittint Users Queue
+    for (int i = maxClientCount; i < maxClientCount+maxClientCount; i++) { // Make Waitting Users Queue
         ConnUser* connUser = new ConnUser(MAX_CIRCLE_SIZE, i, sIOCPHandle, overLappedManager);
 
         WaittingQueue.push(connUser); // Push ConnUser
@@ -162,16 +162,16 @@ void QuokkaServer::WorkThread() {
         }
 
         auto overlappedTCP = (OverlappedTCP*)lpOverlapped;
-        SOCKET tempUserSkt = overlappedTCP->userSkt;
-        connUser = connUsersManager->FindUser(tempUserSkt);
+        uint16_t connObjNum = overlappedTCP->connObjNum;
+        connUser = connUsersManager->FindUser(connObjNum);
 
         if (!gqSucces || (dwIoSize == 0 && overlappedTCP->taskType != TaskType::ACCEPT)) { // User Disconnect
             if (!connUser->IsConn()) { // 유저의 로그아웃 요청 후 종료
-                std::cout << "socket " << tempUserSkt << "Logout" << std::endl;
+                std::cout << "socket " << connUser->GetSocket() << " Logout" << std::endl;
             }
             else { // 비정상적인 종료
-                std::cout << "socket " << tempUserSkt << " Disconnect && Data Update Fail" << std::endl;
-                redisManager->Disconnect(tempUserSkt);
+                std::cout << "socket " << connUser->GetSocket() << " Disconnect && Data Update Fail" << std::endl;
+                redisManager->Disconnect(connObjNum);
             }
             
             inGameUserManager->Reset(connUser->GetObjNum());
@@ -183,25 +183,23 @@ void QuokkaServer::WorkThread() {
 
         if (overlappedTCP->taskType == TaskType::ACCEPT) { // User Connect
                 if (connUser->ConnUserRecv()) {
-                    std::cout << "socket " << tempUserSkt << " Connect Requset" << std::endl;
+                    std::cout << "socket " << connUser->GetSocket() << " Connect Requset" << std::endl;
                     UserCnt.fetch_add(1); // UserCnt +1
                 }
                 else { // Bind Fail
                     connUser->Reset(); // Reset ConnUser
                     AcceptQueue.push(connUser);
-                    std::cout << "socket " << tempUserSkt << " ConnectFail" << std::endl;
+                    std::cout << "socket " << connUser->GetSocket() << " ConnectFail" << std::endl;
                 }
         }
         else if (overlappedTCP->taskType == TaskType::RECV) {
-            redisManager->PushRedisPacket(tempUserSkt, dwIoSize, overlappedTCP->wsaBuf.buf); // Proccess In Redismanager
+            redisManager->PushRedisPacket(connObjNum, dwIoSize, overlappedTCP->wsaBuf.buf); // Proccess In Redismanager
             connUser->ConnUserRecv(); // Wsarecv Again
             overLappedManager->returnOvLap(overlappedTCP);
         }
         else if (overlappedTCP->taskType == TaskType::SEND) {
-            std::cout << "PushSendMsg 5" << tempUserSkt << std::endl;
             overLappedManager->returnOvLap(overlappedTCP);
             connUser->SendComplete();
-            std::cout << "샌드 하나 완료" << std::endl;
         }
     }
 }
@@ -242,17 +240,22 @@ void QuokkaServer::AccepterThread() {
             if (!connUser->PostAccept(serverSkt)) {
                 AcceptQueue.push(connUser);
             }
+            else {
+                std::cout << "유저 하나 예약했다." << std::endl;
+            }
         }
         else { // AcceptQueue empty
-            while (AccepterRun) {
-                if (WaittingQueue.pop(connUser)) { // WaittingQueue not empty
-                    WaittingQueue.push(connUser);
-                }
-                else { // WaittingQueue empty
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    break;
-                }
-            }
+            std::cout << "억셉트 큐 비었다." << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            //while (AccepterRun) {
+            //    if (WaittingQueue.pop(connUser)) { // WaittingQueue not empty
+            //        WaittingQueue.push(connUser);
+            //    }
+            //    else { // WaittingQueue empty
+            //        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            //        break;
+            //    }
+            //}
         }
     }
 }

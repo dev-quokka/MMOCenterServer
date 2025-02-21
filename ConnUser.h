@@ -12,24 +12,14 @@
 
 class ConnUser {
 public:
-	ConnUser(uint32_t bufferSize_, uint16_t connObjNum_, HANDLE sIOCPHandle, OverLappedManager* overLappedManager_) : connObjNum(connObjNum_), overLappedManager(overLappedManager_){
+	ConnUser(uint32_t bufferSize_, uint16_t connObjNum_, HANDLE sIOCPHandle_, OverLappedManager* overLappedManager_) : connObjNum(connObjNum_), sIOCPHandle(sIOCPHandle_), overLappedManager(overLappedManager_){
 		userSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
 		if (userSkt == INVALID_SOCKET) {
 			std::cout << "Client socket Error : " << GetLastError() << std::endl;
 		}
 
-		// For Reuse Socket Set
-		int optval = 1;
-		setsockopt(userSkt, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(optval));
-
-		int recvBufSize = MAX_RECV_SIZE;
-		setsockopt(userSkt, SOL_SOCKET, SO_RCVBUF, (char*)&recvBufSize, sizeof(recvBufSize));
-
-		int sendBufSize = MAX_RECV_SIZE;
-		setsockopt(userSkt, SOL_SOCKET, SO_SNDBUF, (char*)&sendBufSize, sizeof(sendBufSize));
-
-		auto tIOCPHandle = CreateIoCompletionPort((HANDLE)userSkt, sIOCPHandle, (ULONG_PTR)0, 0);
+		auto tIOCPHandle = CreateIoCompletionPort((HANDLE)userSkt, sIOCPHandle_, (ULONG_PTR)0, 0);
 
 		if (tIOCPHandle == INVALID_HANDLE_VALUE)
 		{
@@ -39,7 +29,7 @@ public:
 		circularBuffer = std::make_unique<CircularBuffer>(bufferSize_);
 
 		acceptOvlap.taskType = TaskType::ACCEPT;
-		acceptOvlap.userSkt = userSkt;
+		acceptOvlap.connObjNum = connObjNum_;
 		acceptOvlap.wsaBuf.buf = nullptr;
 		acceptOvlap.wsaBuf.len = 0;
 	}
@@ -90,7 +80,7 @@ public :
 			PacketInfo packetInfo;
 			packetInfo.packetId = pHeader->PacketId;
 			packetInfo.dataSize = pHeader->PacketLength;
-			packetInfo.userSkt = userSkt;
+			packetInfo.connObjNum = connObjNum;
 			packetInfo.pData = readData;
 
 			return packetInfo;
@@ -100,8 +90,22 @@ public :
 	void Reset() {
 		isConn = false;
 		shutdown(userSkt, SD_BOTH);
+		closesocket(userSkt);
 		memset(acceptBuf, 0, sizeof(acceptBuf));
 		acceptOvlap = {};
+		userSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
+
+		if (userSkt == INVALID_SOCKET) {
+			std::cout << "Client socket Error : " << GetLastError() << std::endl;
+		}
+
+		auto tIOCPHandle = CreateIoCompletionPort((HANDLE)userSkt, sIOCPHandle, (ULONG_PTR)0, 0);
+
+		if (tIOCPHandle == INVALID_HANDLE_VALUE)
+		{
+			std::cout << "reateIoCompletionPort()함수 실패 :" << GetLastError() << std::endl;
+		}
+		std::cout << userSkt << "초기화 성공" << std::endl;
 	}
 
 	bool PostAccept(SOCKET ServerSkt_) {
@@ -129,7 +133,7 @@ public :
 
 		tempOvLap->wsaBuf.len = MAX_RECV_SIZE;
 		tempOvLap->wsaBuf.buf = new char[MAX_RECV_SIZE];
-		tempOvLap->userSkt = userSkt;
+		tempOvLap->connObjNum = connObjNum;
 		tempOvLap->taskType = TaskType::RECV;
 
 		int tempR = WSARecv(userSkt,&(tempOvLap->wsaBuf),1,&dwRecvBytes, &dwFlag,(LPWSAOVERLAPPED)tempOvLap,NULL);
@@ -145,7 +149,6 @@ public :
 
 	void PushSendMsg(const uint32_t dataSize_, char* sendMsg) {
 
-		std::cout << "PushSendMsg 1" << std::endl;
 		OverlappedTCP* tempOvLap = overLappedManager->getOvLap();
 
 		if (tempOvLap == nullptr) { // 오버랩 풀에 여분 없으면 새로 오버랩 생성
@@ -153,7 +156,7 @@ public :
 			ZeroMemory(overlappedTCP, sizeof(OverlappedTCP));
 			overlappedTCP->wsaBuf.len = MAX_RECV_SIZE;
 			overlappedTCP->wsaBuf.buf = new char[MAX_RECV_SIZE];
-			overlappedTCP->userSkt = userSkt;
+			overlappedTCP->connObjNum = connObjNum;
 			CopyMemory(overlappedTCP->wsaBuf.buf, sendMsg, dataSize_);
 			overlappedTCP->taskType = TaskType::SEND;
 
@@ -161,10 +164,9 @@ public :
 			sendQueueSize.fetch_add(1);
 		}
 		else {
-			std::cout << "PushSendMsg 2" << std::endl;
 			tempOvLap->wsaBuf.len = MAX_RECV_SIZE;
 			tempOvLap->wsaBuf.buf = new char[MAX_RECV_SIZE];
-			tempOvLap->userSkt = userSkt;
+			tempOvLap->connObjNum = connObjNum;
 			CopyMemory(tempOvLap->wsaBuf.buf, sendMsg, dataSize_);
 			tempOvLap->taskType = TaskType::SEND;
 
@@ -173,14 +175,11 @@ public :
 		}
 
 		if (sendQueueSize.load() == 1) {
-			std::cout << "PushSendMsg 3" << std::endl;
 			ProcSend();
 		}
 	}
 
 	void SendComplete() {
-		std::cout << "PushSendMsg 6" << std::endl;
-		std::cout << "ㄹㄹ" << sendQueueSize.load() << std::endl;
 		sendQueueSize.fetch_sub(1);
 
 		if (sendQueueSize.load() == 1) {
@@ -190,7 +189,6 @@ public :
 
 private:
 	void ProcSend() {
-		std::cout << "PushSendMsg 4" << std::endl;
 		OverlappedTCP* overlappedTCP;
 
 		if (sendQueue.pop(overlappedTCP)) {
@@ -218,6 +216,7 @@ private:
 
 	// 8 bytes
 	SOCKET userSkt;
+	HANDLE sIOCPHandle;
 	OverLappedManager* overLappedManager;
 
 	// 56 bytes

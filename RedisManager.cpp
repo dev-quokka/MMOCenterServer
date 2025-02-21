@@ -53,8 +53,8 @@ void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis S
     }
 }
 
-void RedisManager::Disconnect(SOCKET userSkt) {
-    UserDisConnect(userSkt);
+void RedisManager::Disconnect(uint16_t connObjNum_) {
+    UserDisConnect(connObjNum_);
 }
 
 void RedisManager::SetConnUserManager(ConnUsersManager* connUsersManager_) {
@@ -69,7 +69,7 @@ bool RedisManager::CreateRedisThread(const uint16_t RedisThreadCnt_) {
     return true;
 }
 
-bool RedisManager::EquipmentEnhance(short currentEnhanceCount_) { // 
+bool RedisManager::EquipmentEnhance(short currentEnhanceCount_) {
     if (currentEnhanceCount_ < 0 || currentEnhanceCount_ >= enhanceProbabilities.size()) { // Strange Enhance
         return false;
     }
@@ -85,9 +85,9 @@ void RedisManager::RedisThread() {
     while (redisRun) {
         if (procSktQueue.pop(tempD)) {
             std::memset(tempData, 0, sizeof(tempData));
-            TempConnUser = connUsersManager->FindUser(tempD.userSkt); // Find User
+            TempConnUser = connUsersManager->FindUser(tempD.connObjNum); // Find User
             PacketInfo packetInfo = TempConnUser->ReadRecvData(tempData, tempD.dataSize); // GetData
-            (this->*packetIDTable[packetInfo.packetId])(packetInfo.userSkt, packetInfo.dataSize, packetInfo.pData); // Proccess Packet
+            (this->*packetIDTable[packetInfo.packetId])(packetInfo.connObjNum, packetInfo.dataSize, packetInfo.pData); // Proccess Packet
         }
         else { // Empty Queue
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -95,17 +95,16 @@ void RedisManager::RedisThread() {
     }
 }
 
-void RedisManager::PushRedisPacket(const SOCKET userSkt_, const uint32_t size_, char* recvData_) {
-    std::cout << "PushRedisPacket Request" << std::endl;
-    ConnUser* TempConnUser = connUsersManager->FindUser(userSkt_);
+void RedisManager::PushRedisPacket(const uint16_t connObjNum_, const uint32_t size_, char* recvData_) {
+    ConnUser* TempConnUser = connUsersManager->FindUser(connObjNum_);
     TempConnUser->WriteRecvData(recvData_,size_); // Push Data in Circualr Buffer
-    DataPacket tempD(size_, userSkt_);
+    DataPacket tempD(size_, connObjNum_);
     procSktQueue.push(tempD);
 }
 
 void RedisManager::SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1_, RAID_END_REQUEST raidEndReqPacket2_) {
-    connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&raidEndReqPacket1_);
-    connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&raidEndReqPacket2_);
+    connUsersManager->FindUser(webServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&raidEndReqPacket1_);
+    connUsersManager->FindUser(webServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&raidEndReqPacket2_);
 }
 
 
@@ -113,7 +112,7 @@ void RedisManager::SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1_, RAI
 
 //  ---------------------------- SYSTEM  ----------------------------
 
-void RedisManager::UserConnect(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
     
     auto pk = static_cast<uint32_t>(std::stoul(*redis->hget("jwtcheck", userConn->userToken)));
@@ -121,42 +120,42 @@ void RedisManager::UserConnect(SOCKET userSkt, uint16_t packetSize_, char* pPack
     std::unordered_map<std::string, std::string> userData;
     redis->hgetall("", std::inserter(userData, userData.begin()));
 
-    connUsersManager->FindUser(userSkt)->SetPk(pk);
-    inGameUserManager->Set((connUsersManager->FindUser(userSkt)->GetObjNum()), userData["id"], pk, std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])));
+    connUsersManager->FindUser(connObjNum_)->SetPk(pk);
+    inGameUserManager->Set(connObjNum_, userData["id"], pk, std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])));
 }
 
-void RedisManager::Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) { // Normal Disconnect
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+void RedisManager::Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) { // Normal Disconnect
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     {  // Send User PK to the Web Server for Synchronization with MySQL
         SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
         syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
-        connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+        connUsersManager->FindUser(webServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
     }
 }
 
-void RedisManager::UserDisConnect(SOCKET userSkt) { // Abnormal Disconnect
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+void RedisManager::UserDisConnect(uint16_t connObjNum_) { // Abnormal Disconnect
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     {  // Send User PK to the Web Server for Synchronization with MySQL
         SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
         syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
-        connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+        connUsersManager->FindUser(webServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
     }
 }
 
-void RedisManager::ServerEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::ServerEnd(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     // Process Remain Packet
 
 }
 
-void RedisManager::ImWebRequest(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::ImWebRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<IM_WEB_REQUEST*>(pPacket_);
-    std::cout << "WebServer Connect Request :" << userSkt << std::endl;
+    std::cout << "WebServer Connect Request :" << connObjNum_ << std::endl;
 
     IM_WEB_RESPONSE imWebResPacket;
     imWebResPacket.PacketId = (uint16_t)PACKET_ID::IM_WEB_RESPONSE;
@@ -168,23 +167,23 @@ void RedisManager::ImWebRequest(SOCKET userSkt, uint16_t packetSize_, char* pPac
 
     if (pk = static_cast<uint32_t>(std::stoul(*redis->hget("jwtcheck:{webserver}", str)))==0 ) { // Find JWT Fail(Protect From DDOS(한번 아니라고 판명되면 연결 끊어버리기))
         imWebResPacket.isSuccess = false;
-        connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
+        connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
         return;
     }
 
-    connUsersManager->FindUser(userSkt)->SetPk(pk);
-    webServerSkt = userSkt;
+    connUsersManager->FindUser(connObjNum_)->SetPk(pk);
+    webServerObjNum = connObjNum_;
     imWebResPacket.isSuccess = true;
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
-    std::cout << "WebServer Connect Success : " << userSkt << std::endl;
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(IM_WEB_RESPONSE), (char*)&imWebResPacket);
+    std::cout << "WebServer Connect Success : " << connObjNum_ << std::endl;
 }
 
 
 //  ---------------------------- USER_STATUS  ----------------------------
 
-void RedisManager::ExpUp(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto expUpReqPacket = reinterpret_cast<EXP_UP_REQUEST*>(pPacket_);
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     EXP_UP_RESPONSE expUpResPacket;
     expUpResPacket.PacketId = (uint16_t)PACKET_ID::EXP_UP_RESPONSE;
@@ -204,10 +203,10 @@ void RedisManager::ExpUp(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
                 levelUpResPacket.increaseLevel = userExp.first;
                 levelUpResPacket.currentExp = userExp.second;
 
-                connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
+                connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
 
                 { // Send User PK, Level, Exp data to the Web Server for Synchronization with MySQL
-                    ConnUser* TempWebServer = connUsersManager->FindUser(webServerSkt);
+                    ConnUser* TempWebServer = connUsersManager->FindUser(webServerObjNum);
 
                     SYNCRONIZE_LEVEL_REQUEST syncLevelReqPacket;
                     syncLevelReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LEVEL_REQUEST;
@@ -222,26 +221,26 @@ void RedisManager::ExpUp(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
             else { // Level Up Fail
                 levelUpResPacket.increaseLevel = 0;
                 levelUpResPacket.currentExp = 0;
-                connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
+                connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
             }
         }
         else { // Just Exp Up
             expUpResPacket.expUp = userExp.second;
-            connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
+            connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
         }
     }
     else{ // Exp Up Fail
         expUpResPacket.expUp = 0;
-        connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
+        connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
     }
 }
 
 
 //  ---------------------------- INVENTORY  ----------------------------
 
-void RedisManager::AddItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::AddItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto addItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
     
     ADD_ITEM_RESPONSE addItemResPacket;
     addItemResPacket.PacketId = (uint16_t)PACKET_ID::ADD_ITEM_RESPONSE;
@@ -257,12 +256,12 @@ void RedisManager::AddItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
         }
 
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(ADD_ITEM_RESPONSE),(char*)&addItemResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(ADD_ITEM_RESPONSE),(char*)&addItemResPacket);
 }
 
-void RedisManager::DeleteItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::DeleteItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto delItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     DEL_ITEM_RESPONSE delItemResPacket;
     delItemResPacket.PacketId = (uint16_t)PACKET_ID::DEL_ITEM_RESPONSE;
@@ -277,12 +276,12 @@ void RedisManager::DeleteItem(SOCKET userSkt, uint16_t packetSize_, char* pPacke
             delItemResPacket.isSuccess = false;
         }
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(DEL_ITEM_RESPONSE),(char*)&delItemResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(DEL_ITEM_RESPONSE),(char*)&delItemResPacket);
 }
 
-void RedisManager::ModifyItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::ModifyItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto modItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     MOD_ITEM_RESPONSE modItemResPacket;
     modItemResPacket.PacketId = (uint16_t)PACKET_ID::MOD_ITEM_RESPONSE;
@@ -297,12 +296,12 @@ void RedisManager::ModifyItem(SOCKET userSkt, uint16_t packetSize_, char* pPacke
             modItemResPacket.isSuccess = false;
         }
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(MOD_ITEM_RESPONSE), (char*)&modItemResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MOD_ITEM_RESPONSE), (char*)&modItemResPacket);
 }
 
-void RedisManager::MoveItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::MoveItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto movItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     MOV_ITEM_RESPONSE movItemResPacket;
     movItemResPacket.PacketId = (uint16_t)PACKET_ID::MOV_ITEM_RESPONSE;
@@ -317,15 +316,15 @@ void RedisManager::MoveItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_
             movItemResPacket.isSuccess = false;
         }
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(MOV_ITEM_RESPONSE), (char*)&movItemResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MOV_ITEM_RESPONSE), (char*)&movItemResPacket);
 }
 
 
 //  ---------------------------- INVENTORY:EQUIPMENT  ----------------------------
 
-void RedisManager::AddEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::AddEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto addEquipReqPacket = reinterpret_cast<ADD_EQUIPMENT_REQUEST*>(pPacket_);
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     ADD_EQUIPMENT_RESPONSE addEquipResPacket;
     addEquipResPacket.PacketId = (uint16_t)PACKET_ID::ADD_EQUIPMENT_RESPONSE;
@@ -340,12 +339,12 @@ void RedisManager::AddEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPac
             addEquipResPacket.isSuccess = false;
         }
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(ADD_EQUIPMENT_RESPONSE), (char*)&addEquipResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(ADD_EQUIPMENT_RESPONSE), (char*)&addEquipResPacket);
 }
 
-void RedisManager::DeleteEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::DeleteEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto delEquipReqPacket = reinterpret_cast<DEL_EQUIPMENT_REQUEST*>(pPacket_);
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     DEL_EQUIPMENT_RESPONSE delEquipResPacket;
     delEquipResPacket.PacketId = (uint16_t)PACKET_ID::DEL_EQUIPMENT_RESPONSE;
@@ -360,12 +359,12 @@ void RedisManager::DeleteEquipment(SOCKET userSkt, uint16_t packetSize_, char* p
             delEquipResPacket.isSuccess = false;
         }
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
 }
 
-void RedisManager::EnhanceEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::EnhanceEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto delEquipReqPacket = reinterpret_cast<ENH_EQUIPMENT_REQUEST*>(pPacket_);
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     ENH_EQUIPMENT_RESPONSE delEquipResPacket;
     delEquipResPacket.PacketId = (uint16_t)PACKET_ID::ENH_EQUIPMENT_RESPONSE;
@@ -387,34 +386,34 @@ void RedisManager::EnhanceEquipment(SOCKET userSkt, uint16_t packetSize_, char* 
             delEquipResPacket.isSuccess = false;
         }
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
 }
 
 
 //  ---------------------------- RAID  ----------------------------
 
-void RedisManager::MatchStart(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) { 
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+void RedisManager::MatchStart(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) { 
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     RAID_MATCHING_RESPONSE raidMatchResPacket;
     raidMatchResPacket.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
     raidMatchResPacket.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
 
-    if (matchingManager->Insert(tempUser->GetLevel(), userSkt, tempUser->GetId())) { // Insert Into Mathcing Queue Success
+    if (matchingManager->Insert(tempUser->GetLevel(), connObjNum_, tempUser->GetId())) { // Insert Into Mathcing Queue Success
         raidMatchResPacket.insertSuccess = true;
     }
     else raidMatchResPacket.insertSuccess = false; // Mathing Queue Full
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&raidMatchResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&raidMatchResPacket);
 }
 
-void RedisManager::RaidReqTeamInfo(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::RaidReqTeamInfo(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto raidTeamInfoReqPacket = reinterpret_cast<RAID_TEAMINFO_REQUEST*>(pPacket_);
 
     Room* tempRoom = roomManager->GetRoom(raidTeamInfoReqPacket->roomNum);
     tempRoom->setSockAddr(raidTeamInfoReqPacket->myNum, raidTeamInfoReqPacket->userAddr); // Set User UDP Socket Info
 
-    InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
     InGameUser* teamUser = tempRoom->GetTeamUser(raidTeamInfoReqPacket->myNum);
 
     RAID_TEAMINFO_RESPONSE raidTeamInfoResPacket;
@@ -423,7 +422,7 @@ void RedisManager::RaidReqTeamInfo(SOCKET userSkt, uint16_t packetSize_, char* p
     raidTeamInfoResPacket.teamLevel = teamUser->GetLevel();
     raidTeamInfoResPacket.teamId = teamUser->GetId();
 
-    connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_TEAMINFO_RESPONSE), (char*)&raidTeamInfoResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_TEAMINFO_RESPONSE), (char*)&raidTeamInfoResPacket);
 
     if (tempRoom->StartCheck()) { // 두 명의 유저에게 팀의 정보를 전달하고 둘 다 받음 확인하면 게임 시작 정보 보내주기
 
@@ -437,14 +436,14 @@ void RedisManager::RaidReqTeamInfo(SOCKET userSkt, uint16_t packetSize_, char* p
         raidStartReqPacket2.PacketLength = sizeof(RAID_START_REQUEST);
         raidStartReqPacket2.endTime = tempRoom->GetEndTime();
 
-        connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_START_REQUEST), (char*)&raidStartReqPacket1);
-        connUsersManager->FindUser(tempRoom->GetTeamSkt(raidTeamInfoReqPacket->myNum))->PushSendMsg(sizeof(RAID_START_REQUEST), (char*)&raidStartReqPacket2);
+        connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_START_REQUEST), (char*)&raidStartReqPacket1);
+        connUsersManager->FindUser(tempRoom->GetTeamObjNum(raidTeamInfoReqPacket->myNum))->PushSendMsg(sizeof(RAID_START_REQUEST), (char*)&raidStartReqPacket2);
     }
 }
 
-void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::RaidHit(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto raidHitReqPacket = reinterpret_cast<RAID_HIT_REQUEST*>(pPacket_);
-    InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* user = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     RAID_HIT_RESPONSE raidHitResPacket;
     raidHitResPacket.PacketId = (uint16_t)PACKET_ID::RAID_HIT_RESPONSE;
@@ -455,7 +454,7 @@ void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
     if (hit.first == 0) { // Mob Dead
         raidHitResPacket.currentMobHp = 0;
         raidHitResPacket.yourScore = hit.second;
-        connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
+        connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
         
         auto room = roomManager->GetRoom(raidHitReqPacket->roomNum);
 
@@ -468,7 +467,7 @@ void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
             raidEndReqPacket.PacketLength = sizeof(RAID_END_REQUEST);
             raidEndReqPacket.userScore = room->GetScore(i);
             raidEndReqPacket.teamScore = room->GetTeamScore(i);
-            connUsersManager->FindUser(room->GetUserSkt(i))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket);
+            connUsersManager->FindUser(room->GetUserObjNum(i))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket);
 
             //redis->zadd("Ranking", std::to_string(room->GetScore(i)), inGameUser->GetId()); // 점수 레디스에 동기화
         }
@@ -477,17 +476,17 @@ void RedisManager::RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_)
     else {
         raidHitResPacket.currentMobHp = hit.first;
         raidHitResPacket.yourScore = hit.second;
-        connUsersManager->FindUser(userSkt)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
+        connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
     }
 
     if (hit.second != 0) { // Score이 0이 아니면 웹 서버에 동기화 메시지 전송 
-        connUsersManager->FindUser(webServerSkt)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
+        connUsersManager->FindUser(webServerObjNum)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
     }
 }
 
-void RedisManager::GetRanking(SOCKET userSkt, uint16_t packetSize_, char* pPacket_) {
+void RedisManager::GetRanking(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto delEquipReqPacket = reinterpret_cast<RAID_RANKING_REQUEST*>(pPacket_);
-    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connUsersManager->FindUser(userSkt)->GetObjNum());
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
    
     std::vector<std::pair<std::string, unsigned int>> scores;
 

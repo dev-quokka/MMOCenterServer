@@ -24,8 +24,9 @@ struct OverlappedEx {
 };
 
 struct OverlappedTCP : OverlappedEx {
-	// 8 bytes
-	SOCKET userSkt;
+	// 2 bytes
+	uint16_t connObjNum;
+
 	// 16 bytes
 	WSABUF wsaBuf; // TCP Buffer
 };

@@ -11,8 +11,8 @@ const uint16_t PACKET_ID_SIZE = 57; // Last Packet_ID Num + 1
 
 struct DataPacket {
 	uint32_t dataSize;
-	SOCKET userSkt;
-	DataPacket(uint32_t dataSize_,SOCKET userSkt_) : dataSize(dataSize_), userSkt(userSkt_) {}
+	uint16_t connObjNum;
+	DataPacket(uint32_t dataSize_, uint16_t connObjNum_) : dataSize(dataSize_), connObjNum(connObjNum_) {}
 	DataPacket() = default;
 };
 
@@ -20,7 +20,7 @@ struct PacketInfo
 {
 	uint16_t packetId = 0;
 	uint16_t dataSize = 0;
-	SOCKET userSkt = 0;
+	uint16_t connObjNum = 0;
 	char* pData = nullptr;
 };
 

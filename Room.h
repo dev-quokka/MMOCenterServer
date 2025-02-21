@@ -13,7 +13,7 @@ class InGameUser;
 
 struct RaidUserInfo {
 	std::atomic<unsigned int> userScore = 0;
-	SOCKET userSkt; // TCP Socket
+	uint16_t userObjNum; // TCP Socket
 	sockaddr_in userAddr;
 	InGameUser* inGameUser;
 	OverlappedUDP* hpOverlapped;
@@ -33,20 +33,18 @@ public:
 		udpSkt = udpSkt_;
 	}
 	~Room() {
-		std::cout << "·ë »èÁ¦ ½ÃÀÛ" << std::endl;
 		for (int i = 0; i < ruInfos.size(); i++) {
 			delete[] ruInfos[i]->hpOverlapped->wsaBuf.buf;
 			delete ruInfos[i]->hpOverlapped;
 			delete ruInfos[i];
 		}
-		std::cout << "·ë »èÁ¦" << std::endl;
 	}
 
-	void set(uint16_t roomNum_, uint16_t timer_, unsigned int mobHp_, SOCKET userSkt1_, SOCKET userSkt2_, InGameUser* user1_, InGameUser* user2_) {
-		ruInfos[0]->userSkt = userSkt1_;
+	void set(uint16_t roomNum_, uint16_t timer_, unsigned int mobHp_, uint16_t userObjNum1_, uint16_t userObjNum2_, InGameUser* user1_, InGameUser* user2_) {
+		ruInfos[0]->userObjNum = userObjNum1_;
 		ruInfos[0]->inGameUser = user1_;
 
-		ruInfos[1]->userSkt = userSkt2_;
+		ruInfos[1]->userObjNum = userObjNum2_;
 		ruInfos[1]->inGameUser = user2_;
 
 		mobHp.store(mobHp_);
@@ -88,9 +86,9 @@ public:
 		return endTime;
 	}
 
-	SOCKET GetUserSkt(uint16_t userNum) {
-		if (userNum == 0) return ruInfos[0]->userSkt;
-		else if (userNum == 1) return ruInfos[1]->userSkt;
+	SOCKET GetUserObjNum(uint16_t userNum) {
+		if (userNum == 0) return ruInfos[0]->userObjNum;
+		else if (userNum == 1) return ruInfos[1]->userObjNum;
 	}
 
 	unsigned int GetScore(uint16_t userNum) {
@@ -98,9 +96,9 @@ public:
 		else if (userNum == 1) return ruInfos[1]->userScore;
 	}
 
-	SOCKET GetTeamSkt(uint16_t userNum_) {
-		if (userNum_ == 1) return ruInfos[0]->userSkt;
-		else if (userNum_ == 0) return ruInfos[1]->userSkt;
+	SOCKET GetTeamObjNum(uint16_t userNum_) {
+		if (userNum_ == 1) return ruInfos[0]->userObjNum;
+		else if (userNum_ == 0) return ruInfos[1]->userObjNum;
 	}
 
 	InGameUser* GetTeamUser(uint16_t userNum_) {

@@ -32,8 +32,8 @@ public:
 
     void init(const uint16_t RedisThreadCnt_, const uint16_t maxClientCount_, const HANDLE sIOCPHandle_);
     void SetConnUserManager(ConnUsersManager* connUsersManager_);
-    void PushRedisPacket(const SOCKET userSkt, const uint32_t size_, char* recvData_); // Push Redis Packet
-    void Disconnect(SOCKET userSkt);
+    void PushRedisPacket(const uint16_t connObjNum_, const uint32_t size_, char* recvData_); // Push Redis Packet
+    void Disconnect(uint16_t connObjNum_);
 
     // Send Data to Web Server for Synchronization With Redis
     void SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1, RAID_END_REQUEST raidEndReqPacket2);
@@ -46,40 +46,40 @@ private:
     void RedisThread();
 
     //SYSTEM
-    void UserConnect(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // User Connect
-    void Logout(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // Normal Disconnect (Set Short Time TTL)
-    void UserDisConnect(SOCKET userSkt); // Abnormal Disconnect (Set Long Time TTL)
-    void ServerEnd(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
-    void ImWebRequest(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // Web Server Socket Check
+    void UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // User Connect
+    void Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Normal Disconnect (Set Short Time TTL)
+    void UserDisConnect(uint16_t connObjNum_); // Abnormal Disconnect (Set Long Time TTL)
+    void ServerEnd(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void ImWebRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Web Server Socket Check
 
     // USER STATUS
-    void ExpUp(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
     // INVENTORY
-    void AddItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
-    void DeleteItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
-    void ModifyItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
-    void MoveItem(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void AddItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void DeleteItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void ModifyItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void MoveItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
     // INVENTORY:EQUIPMENT
-    void AddEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
-    void DeleteEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
-    void EnhanceEquipment(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void AddEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void DeleteEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void EnhanceEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
     // RAID
-    void MatchStart(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // 매치 대기열 삽입
-    void RaidReqTeamInfo(SOCKET userSkt, uint16_t packetSize_, char* pPacket_); // 서로 팀 정보 요청 (상대 대기 확인)
+    void MatchStart(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 매치 대기열 삽입
+    void RaidReqTeamInfo(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 서로 팀 정보 요청 (상대 대기 확인)
 
-    void RaidHit(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void RaidHit(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
-    void GetRanking(SOCKET userSkt, uint16_t packetSize_, char* pPacket_);
+    void GetRanking(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
 
     // 1 bytes
     bool redisRun = false;
 
     // 8 bytes
-    SOCKET webServerSkt = 0;
+    uint16_t webServerObjNum = 0;
     std::unique_ptr<sw::redis::RedisCluster> redis;
     std::uniform_int_distribution<int> dist;
 
@@ -87,7 +87,7 @@ private:
     std::thread redisThread;
 
     // 32 bytes
-    typedef void(RedisManager::*RECV_PACKET_FUNCTION)(SOCKET, uint16_t, char*);
+    typedef void(RedisManager::*RECV_PACKET_FUNCTION)(uint16_t, uint16_t, char*);
     std::unordered_map<uint16_t, RECV_PACKET_FUNCTION> packetIDTable;
     std::vector<std::thread> redisThreads;
 

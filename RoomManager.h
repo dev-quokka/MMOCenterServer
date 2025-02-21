@@ -18,7 +18,7 @@ public:
 	}
 
 	bool DeleteRoom(uint16_t roomNum);
-	Room* MakeRoom(uint16_t roomNum_, uint16_t timer_, unsigned int mobHp_, uint16_t userSkt1_, uint16_t userSkt2_, InGameUser* user1_, InGameUser* user2_);
+	Room* MakeRoom(uint16_t roomNum_, uint16_t timer_, unsigned int mobHp_, uint16_t userObjNum1_, uint16_t userObjNum2_, InGameUser* user1_, InGameUser* user2_);
 	Room* GetRoom(uint16_t roomNum_);
 
 private:

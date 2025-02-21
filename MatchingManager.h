@@ -32,9 +32,9 @@ struct EndTimeComp {
 struct MatchingRoom {
 	// uint16_t LoofCnt = 0;
 	uint16_t userLevel;
-	SOCKET userSkt;
+	uint16_t userObjNum;
 	std::string userId;
-	MatchingRoom(uint16_t userLevel_, SOCKET userSkt_, std::string userId_) :userLevel(userLevel_), userSkt(userSkt_), userId(userId_) {}
+	MatchingRoom(uint16_t userLevel_, uint16_t userObjNum_, std::string userId_) :userLevel(userLevel_), userObjNum(userObjNum_), userId(userId_) {}
 };
 
 class MatchingManager {
@@ -63,7 +63,7 @@ public:
 	}
 
 	void Init(const uint16_t maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_, ConnUsersManager* connUsersManager_);
-	bool Insert(uint16_t userLevel_, SOCKET userSkt_, std::string userId);
+	bool Insert(uint16_t userLevel_, uint16_t userObjNum_, std::string userId);
 	bool CreateMatchThread();
 	bool CreateTimeCheckThread();
 	void MatchingThread();
