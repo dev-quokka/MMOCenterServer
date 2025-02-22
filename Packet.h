@@ -33,9 +33,11 @@ struct PACKET_HEADER
 
 //  ---------------------------- SYSTEM  ----------------------------
 
+const int MAX_USER_ID_LEN = 32;
 const int MAX_JWT_TOKEN_LEN = 256;
 
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
+	char userId[MAX_USER_ID_LEN + 1];
 	char userToken[MAX_JWT_TOKEN_LEN + 1]; // userToken For User Check
 };
 

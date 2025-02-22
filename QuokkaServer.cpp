@@ -87,7 +87,7 @@ bool QuokkaServer::StartWork() {
         return false;
     } 
 
-    connUsersManager = new ConnUsersManager;
+    connUsersManager = new ConnUsersManager(maxClientCount);
     inGameUserManager = new InGameUserManager;
     roomManager = new RoomManager(&udpSkt);
     matchingManager = new MatchingManager;
@@ -100,7 +100,7 @@ bool QuokkaServer::StartWork() {
         connUsersManager->InsertUser(i, connUser); // Init ConnUsers
     }
 
-    for (int i = maxClientCount; i < maxClientCount+maxClientCount; i++) { // Make Waitting Users Queue
+    for (int i = maxClientCount; i < maxClientCount*2; i++) { // Make Waitting Users Queue
         ConnUser* connUser = new ConnUser(MAX_CIRCLE_SIZE, i, sIOCPHandle, overLappedManager);
 
         WaittingQueue.push(connUser); // Push ConnUser
@@ -166,6 +166,7 @@ void QuokkaServer::WorkThread() {
         connUser = connUsersManager->FindUser(connObjNum);
 
         if (!gqSucces || (dwIoSize == 0 && overlappedTCP->taskType != TaskType::ACCEPT)) { // User Disconnect
+
             if (!connUser->IsConn()) { // 유저의 로그아웃 요청 후 종료
                 std::cout << "socket " << connUser->GetSocket() << " Logout" << std::endl;
             }
@@ -173,11 +174,12 @@ void QuokkaServer::WorkThread() {
                 std::cout << "socket " << connUser->GetSocket() << " Disconnect && Data Update Fail" << std::endl;
                 redisManager->Disconnect(connObjNum);
             }
-            
-            inGameUserManager->Reset(connUser->GetObjNum());
-            connUser->Reset(); // Reset ConnUser
+    
+            inGameUserManager->Reset(connObjNum);
+            connUser->Reset(); // Reset 
             UserCnt.fetch_sub(1); // UserCnt -1
             AcceptQueue.push(connUser);
+            std::cout << "워크 쓰레드는 클리어" << std::endl;
             continue;
         }
 
@@ -240,12 +242,8 @@ void QuokkaServer::AccepterThread() {
             if (!connUser->PostAccept(serverSkt)) {
                 AcceptQueue.push(connUser);
             }
-            else {
-                std::cout << "유저 하나 예약했다." << std::endl;
-            }
         }
         else { // AcceptQueue empty
-            std::cout << "억셉트 큐 비었다." << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             //while (AccepterRun) {
             //    if (WaittingQueue.pop(connUser)) { // WaittingQueue not empty

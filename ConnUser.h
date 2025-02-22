@@ -27,11 +27,6 @@ public:
 		}
 
 		circularBuffer = std::make_unique<CircularBuffer>(bufferSize_);
-
-		acceptOvlap.taskType = TaskType::ACCEPT;
-		acceptOvlap.connObjNum = connObjNum_;
-		acceptOvlap.wsaBuf.buf = nullptr;
-		acceptOvlap.wsaBuf.len = 0;
 	}
 
 	~ConnUser() {
@@ -91,8 +86,8 @@ public :
 		isConn = false;
 		shutdown(userSkt, SD_BOTH);
 		closesocket(userSkt);
-		memset(acceptBuf, 0, sizeof(acceptBuf));
-		acceptOvlap = {};
+		//memset(acceptBuf, 0, sizeof(acceptBuf));
+		//acceptOvlap = {};
 		userSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
 		if (userSkt == INVALID_SOCKET) {
@@ -105,10 +100,17 @@ public :
 		{
 			std::cout << "reateIoCompletionPort()함수 실패 :" << GetLastError() << std::endl;
 		}
-		std::cout << userSkt << "초기화 성공" << std::endl;
+
 	}
 
 	bool PostAccept(SOCKET ServerSkt_) {
+		acceptOvlap = {};
+
+		acceptOvlap.taskType = TaskType::ACCEPT;
+		acceptOvlap.connObjNum = connObjNum;
+		acceptOvlap.wsaBuf.buf = nullptr;
+		acceptOvlap.wsaBuf.len = 0;
+
 		DWORD bytes = 0;
 		DWORD flags = 0;
 

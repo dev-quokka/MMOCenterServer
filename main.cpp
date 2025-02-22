@@ -1,6 +1,7 @@
 #include "QuokkaServer.h"
 
 const uint16_t PORT = 9090;
+const uint16_t maxThreadCount = 1;
 const uint16_t maxClientCount = 5;
 
 #include <iostream>
@@ -9,7 +10,7 @@ const uint16_t maxClientCount = 5;
 int main() {
     QuokkaServer server(maxClientCount);
 
-    server.init(1,PORT);
+    server.init(maxThreadCount, PORT);
 
     server.StartWork();
 

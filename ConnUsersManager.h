@@ -8,6 +8,7 @@
 
 class ConnUsersManager {
 public:
+    ConnUsersManager(uint16_t maxClientCount_) : ConnUsers(maxClientCount_) {}
     ~ConnUsersManager() {
         for (int i = 0; i < ConnUsers.size(); i++) {
             delete ConnUsers[i];

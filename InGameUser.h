@@ -3,10 +3,11 @@
 #include <cstdint>
 #include <vector>  
 #include <string>
+#include <iostream>
 
 class InGameUser {
 public:
-	InGameUser(std::vector<short>& expLimit_) : expLimit(expLimit_) {}
+	InGameUser(std::vector<short> &expLimit_) : expLimit(expLimit_) {}
 
 	uint16_t GetLevel() {
 		return userLevel;
@@ -17,13 +18,14 @@ public:
 		userExp = userExp_;
 		userPk = userPk_;
 		userId = userId_;
+		std::cout << "Ingame One User Come" << std::endl;
+		std::cout << userLevel << " " << userExp << " " << userId;
 	}
 
 	void Reset() {
 		userLevel = 0;
 		userPk = 0;
 		userExp = 0;
-		userToken = "";
 	}
 
 	uint32_t GetPk() {
@@ -60,6 +62,5 @@ private:
 	std::vector<short>& expLimit;
 
 	// 40 bytes
-	std::string userToken;
 	std::string userId;
 };

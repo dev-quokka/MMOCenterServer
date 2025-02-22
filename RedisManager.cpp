@@ -114,14 +114,18 @@ void RedisManager::SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1_, RAI
 
 void RedisManager::UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<USER_CONNECT_REQUEST_PACKET*>(pPacket_);
-    
-    auto pk = static_cast<uint32_t>(std::stoul(*redis->hget("jwtcheck", userConn->userToken)));
 
+    std::string key = "jwtcheck:{" + (std::string)userConn->userId + "}";
+    auto pk = static_cast<uint32_t>(std::stoul(*redis->hget(key, (std::string)userConn->userToken)));
+    
+    std::string userInfokey = "userinfo:{" + std::to_string(pk) + "}";
     std::unordered_map<std::string, std::string> userData;
-    redis->hgetall("", std::inserter(userData, userData.begin()));
+    redis->hgetall(userInfokey, std::inserter(userData, userData.begin()));
 
     connUsersManager->FindUser(connObjNum_)->SetPk(pk);
     inGameUserManager->Set(connObjNum_, userData["id"], pk, std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])));
+
+    std::cout << userData["id"] << "Connect" << std::endl;
 }
 
 void RedisManager::Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) { // Normal Disconnect
