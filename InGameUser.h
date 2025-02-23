@@ -18,8 +18,6 @@ public:
 		userExp = userExp_;
 		userPk = userPk_;
 		userId = userId_;
-		std::cout << "Ingame One User Come" << std::endl;
-		std::cout << userLevel << " " << userExp << " " << userId;
 	}
 
 	void Reset() {

@@ -42,14 +42,13 @@ void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis S
         connection_options.socket_timeout = std::chrono::seconds(10);
         connection_options.keep_alive = true;
 
-        // Redis 클러스터 연결
         redis = std::make_unique<sw::redis::RedisCluster>(connection_options);
-        std::cout << "Redis 클러스터 연결 성공!" << std::endl;
+        std::cout << "Redis Cluster Connect Success !" << std::endl;
 
         CreateRedisThread(RedisThreadCnt_);
     }
     catch (const  sw::redis::Error& err) {
-        std::cout << "Redis 에러 발생: " << err.what() << std::endl;
+        std::cout << "Redis Connect Error : " << err.what() << std::endl;
     }
 }
 
@@ -57,8 +56,11 @@ void RedisManager::Disconnect(uint16_t connObjNum_) {
     UserDisConnect(connObjNum_);
 }
 
-void RedisManager::SetConnUserManager(ConnUsersManager* connUsersManager_) {
+void RedisManager::SetManager(ConnUsersManager* connUsersManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_, MatchingManager* matchingManager_) {
     connUsersManager = connUsersManager_;
+    inGameUserManager = inGameUserManager_;
+    roomManager = roomManager_; 
+    matchingManager = matchingManager_;
 }
 
 bool RedisManager::CreateRedisThread(const uint16_t RedisThreadCnt_) {
@@ -123,9 +125,14 @@ void RedisManager::UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char*
     redis->hgetall(userInfokey, std::inserter(userData, userData.begin()));
 
     connUsersManager->FindUser(connObjNum_)->SetPk(pk);
-    inGameUserManager->Set(connObjNum_, userData["id"], pk, std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])));
+    inGameUserManager->Set(connObjNum_, (std::string)userConn->userId, pk, std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])));
+    
+    USER_CONNECT_RESPONSE_PACKET ucReq;
+    ucReq.PacketId = (uint16_t)PACKET_ID::USER_CONNECT_RESPONSE;
+    ucReq.PacketLength = sizeof(USER_CONNECT_RESPONSE_PACKET);
+    ucReq.isSuccess = true;
 
-    std::cout << userData["id"] << "Connect" << std::endl;
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(USER_CONNECT_RESPONSE_PACKET), (char*)&ucReq);
 }
 
 void RedisManager::Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) { // Normal Disconnect
@@ -137,6 +144,7 @@ void RedisManager::Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPac
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
         connUsersManager->FindUser(webServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+        std::cout << "유저 로그아웃 싱크로 메시지 전송" << std::endl;
     }
 }
 
@@ -149,6 +157,7 @@ void RedisManager::UserDisConnect(uint16_t connObjNum_) { // Abnormal Disconnect
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
         connUsersManager->FindUser(webServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+        std::cout << "유저 디스커넥트 싱크로 메시지 전송" << std::endl;
     }
 }
 
@@ -189,13 +198,8 @@ void RedisManager::ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPack
     auto expUpReqPacket = reinterpret_cast<EXP_UP_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
-    EXP_UP_RESPONSE expUpResPacket;
-    expUpResPacket.PacketId = (uint16_t)PACKET_ID::EXP_UP_RESPONSE;
-    expUpResPacket.PacketLength = sizeof(EXP_UP_RESPONSE);
+    std::string key = "userinfo:{" +  std::to_string(tempUser->GetPk()) + "}";
 
-    std::string user_slot = "userinfo:" + tempUser->GetPk();
-
-    if (redis->hincrby(user_slot, "exp", mobExp[expUpReqPacket->mobNum])) { // Exp Up Success
         auto userExp = tempUser->ExpUp(mobExp[expUpReqPacket->mobNum]); // Increase Level Cnt , Current Exp
 
         if (userExp.first!=0) { // Level Up
@@ -203,11 +207,17 @@ void RedisManager::ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPack
             levelUpResPacket.PacketId = (uint16_t)PACKET_ID::LEVEL_UP_RESPONSE;
             levelUpResPacket.PacketLength = sizeof(LEVEL_UP_RESPONSE);
 
-            if (redis->hincrby(user_slot, "level", userExp.first)) { // Level Up Success
-                levelUpResPacket.increaseLevel = userExp.first;
-                levelUpResPacket.currentExp = userExp.second;
+            auto pipe = redis->pipeline(std::to_string(tempUser->GetPk()));
 
-                connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
+            pipe.hset(key, "exp", std::to_string(userExp.second))
+                .hincrby(key, "level", userExp.first);
+
+            pipe.exec();
+
+            levelUpResPacket.increaseLevel = userExp.first;
+            levelUpResPacket.currentExp = userExp.second;
+
+            connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
 
                 { // Send User PK, Level, Exp data to the Web Server for Synchronization with MySQL
                     ConnUser* TempWebServer = connUsersManager->FindUser(webServerObjNum);
@@ -221,22 +231,21 @@ void RedisManager::ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPack
 
                     TempWebServer->PushSendMsg(sizeof(SYNCRONIZE_LEVEL_REQUEST), (char*)&syncLevelReqPacket);
                 }
-            }
-            else { // Level Up Fail
-                levelUpResPacket.increaseLevel = 0;
-                levelUpResPacket.currentExp = 0;
-                connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
-            }
         }
         else { // Just Exp Up
-            expUpResPacket.expUp = userExp.second;
-            connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
+            EXP_UP_RESPONSE expUpResPacket;
+            expUpResPacket.PacketId = (uint16_t)PACKET_ID::EXP_UP_RESPONSE;
+            expUpResPacket.PacketLength = sizeof(EXP_UP_RESPONSE);
+
+            if (redis->hincrby(key, "exp", userExp.second)) { // Exp Up Success
+                expUpResPacket.expUp = userExp.second;
+                connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
+            }
+            else { // Exp Up Fail
+                expUpResPacket.expUp = 0;
+                connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
+            }
         }
-    }
-    else{ // Exp Up Fail
-        expUpResPacket.expUp = 0;
-        connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
-    }
 }
 
 

@@ -49,8 +49,6 @@ bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
     overLappedManager = new OverLappedManager;
     overLappedManager->init();
 
-    std::cout << "TCP 소켓 생성 성공" << std::endl;
-
     udpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1); // 마지막 매개변수 = udp 소켓 GetQueuedCompletionStatus 쓰레드 개수
 
     SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -107,10 +105,9 @@ bool QuokkaServer::StartWork() {
     }
 
     redisManager->init(MaxThreadCnt, maxClientCount, sIOCPHandle);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
-    redisManager->SetConnUserManager(connUsersManager);
     inGameUserManager->Init(maxClientCount);
     matchingManager->Init(maxClientCount, redisManager, inGameUserManager, roomManager, connUsersManager);
-
+    redisManager->SetManager(connUsersManager, inGameUserManager, roomManager, matchingManager);
     return true;
 }
 
@@ -179,7 +176,6 @@ void QuokkaServer::WorkThread() {
             connUser->Reset(); // Reset 
             UserCnt.fetch_sub(1); // UserCnt -1
             AcceptQueue.push(connUser);
-            std::cout << "워크 쓰레드는 클리어" << std::endl;
             continue;
         }
 

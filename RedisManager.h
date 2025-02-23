@@ -31,7 +31,7 @@ public:
     }
 
     void init(const uint16_t RedisThreadCnt_, const uint16_t maxClientCount_, const HANDLE sIOCPHandle_);
-    void SetConnUserManager(ConnUsersManager* connUsersManager_);
+    void SetManager(ConnUsersManager* connUsersManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_, MatchingManager* matchingManager_);
     void PushRedisPacket(const uint16_t connObjNum_, const uint32_t size_, char* recvData_); // Push Redis Packet
     void Disconnect(uint16_t connObjNum_);
 
@@ -95,6 +95,8 @@ private:
     std::vector<unsigned int> mobExp = { 0,1,2,3,4,5,6,7,8,9,10 };
     std::vector<std::string> itemType = {"equipment", "consumables", "materials" };
 
+    ConnUsersManager* connUsersManager;
+
     // 64 bytes
     InGameUserManager* inGameUserManager;
 
@@ -107,9 +109,6 @@ private:
 
     // 242 bytes
     sw::redis::ConnectionOptions connection_options;
-
-    // 576 bytes
-    ConnUsersManager* connUsersManager;
 
     // 936 bytes
     MatchingManager* matchingManager;

@@ -6,8 +6,6 @@ void InGameUserManager::Init(uint16_t maxClientCount_) {
 	for (int i = 0; i < maxClientCount_; i++) {
 		inGmaeUsers[i] = new InGameUser(expLimit);
 	}
-
-
 }
 
 void InGameUserManager::Set(uint16_t connObjNum_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_) {

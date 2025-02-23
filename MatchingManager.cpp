@@ -36,14 +36,14 @@ bool MatchingManager::Insert(uint16_t userLevel_, uint16_t userObjNum_, std::str
 bool MatchingManager::CreateMatchThread() {
 	matchRun = true;
     matchingThread = std::thread([this]() {MatchingThread(); });
-    std::cout << "MatchThread 시작" << std::endl;
+    std::cout << "MatchThread Start" << std::endl;
     return true;
 }
 
 bool MatchingManager::CreateTimeCheckThread() {
     timeChekcRun = true;
     timeCheckThread = std::thread([this]() {TimeCheckThread(); });
-    std::cout << "TimeCheckThread 시작" << std::endl;
+    std::cout << "TimeCheckThread Start" << std::endl;
     return true;
 }
 
