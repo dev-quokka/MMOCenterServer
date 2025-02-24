@@ -74,7 +74,8 @@ struct EXP_UP_REQUEST : PACKET_HEADER {
 };
 
 struct EXP_UP_RESPONSE : PACKET_HEADER {
-	unsigned int expUp;
+	uint16_t increaseLevel;
+	unsigned int currentExp;
 };
 
 struct LEVEL_UP_RESPONSE : PACKET_HEADER {

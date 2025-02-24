@@ -202,11 +202,11 @@ void RedisManager::ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPack
 
         auto userExp = tempUser->ExpUp(mobExp[expUpReqPacket->mobNum]); // Increase Level Cnt , Current Exp
 
-        if (userExp.first!=0) { // Level Up
-            LEVEL_UP_RESPONSE levelUpResPacket;
-            levelUpResPacket.PacketId = (uint16_t)PACKET_ID::LEVEL_UP_RESPONSE;
-            levelUpResPacket.PacketLength = sizeof(LEVEL_UP_RESPONSE);
+        EXP_UP_RESPONSE expUpResPacket;
+        expUpResPacket.PacketId = (uint16_t)PACKET_ID::EXP_UP_RESPONSE;
+        expUpResPacket.PacketLength = sizeof(EXP_UP_RESPONSE);
 
+        if (userExp.first!=0) { // Level Up
             auto pipe = redis->pipeline(std::to_string(tempUser->GetPk()));
 
             pipe.hset(key, "exp", std::to_string(userExp.second))
@@ -214,10 +214,10 @@ void RedisManager::ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPack
 
             pipe.exec();
 
-            levelUpResPacket.increaseLevel = userExp.first;
-            levelUpResPacket.currentExp = userExp.second;
+            expUpResPacket.increaseLevel = userExp.first;
+            expUpResPacket.currentExp = userExp.second;
 
-            connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&levelUpResPacket);
+            connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&expUpResPacket);
 
                 { // Send User PK, Level, Exp data to the Web Server for Synchronization with MySQL
                     ConnUser* TempWebServer = connUsersManager->FindUser(webServerObjNum);
@@ -233,16 +233,14 @@ void RedisManager::ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPack
                 }
         }
         else { // Just Exp Up
-            EXP_UP_RESPONSE expUpResPacket;
-            expUpResPacket.PacketId = (uint16_t)PACKET_ID::EXP_UP_RESPONSE;
-            expUpResPacket.PacketLength = sizeof(EXP_UP_RESPONSE);
-
             if (redis->hincrby(key, "exp", userExp.second)) { // Exp Up Success
-                expUpResPacket.expUp = userExp.second;
+                expUpResPacket.increaseLevel = userExp.first;
+                expUpResPacket.currentExp = userExp.second;
                 connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
             }
             else { // Exp Up Fail
-                expUpResPacket.expUp = 0;
+                expUpResPacket.increaseLevel = 0;
+                expUpResPacket.currentExp = 0;
                 connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(EXP_UP_RESPONSE), (char*)&expUpResPacket);
             }
         }
