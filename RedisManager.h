@@ -65,6 +65,7 @@ private:
     void AddEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void DeleteEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void EnhanceEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void MoveEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
     // RAID
     void MatchStart(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 매치 대기열 삽입

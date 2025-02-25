@@ -25,6 +25,7 @@ void RedisManager::init(const uint16_t RedisThreadCnt_, const uint16_t maxClient
     packetIDTable[(uint16_t)PACKET_ID::ADD_EQUIPMENT_REQUEST] = &RedisManager::AddEquipment;
     packetIDTable[(uint16_t)PACKET_ID::DEL_EQUIPMENT_REQUEST] = &RedisManager::DeleteEquipment;
     packetIDTable[(uint16_t)PACKET_ID::ENH_EQUIPMENT_REQUEST] = &RedisManager::EnhanceEquipment;
+    packetIDTable[(uint16_t)PACKET_ID::MOV_EQUIPMENT_REQUEST] = &RedisManager::MoveItem;
 
     //RAID
     packetIDTable[(uint16_t)PACKET_ID::RAID_MATCHING_REQUEST] = &RedisManager::MatchStart;
@@ -311,21 +312,25 @@ void RedisManager::ModifyItem(uint16_t connObjNum_, uint16_t packetSize_, char* 
 }
 
 void RedisManager::MoveItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
-    auto movItemReqPacket = reinterpret_cast<ADD_ITEM_REQUEST*>(pPacket_);
+    auto movItemReqPacket = reinterpret_cast<MOV_ITEM_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
-    MOV_ITEM_RESPONSE movItemResPacket;
-    movItemResPacket.PacketId = (uint16_t)PACKET_ID::MOV_ITEM_RESPONSE;
-    movItemResPacket.PacketLength = sizeof(MOV_ITEM_RESPONSE);
+    std::string inventory_slot = itemType[movItemReqPacket->ItemType]+":";
+        std::string tag = "{" + std::to_string(tempUser->GetPk()) +"}";
 
-        std::string inventory_slot = "inventory:" + tempUser->GetPk();
+        auto pipe = redis->pipeline(tag);
 
-        if (redis->hset(inventory_slot, itemType[movItemReqPacket->itemType] + std::to_string(movItemReqPacket->itemCode) + std::to_string(movItemReqPacket->itemSlotPos), std::to_string(movItemReqPacket->itemCount))) { // MoveItem Success
-            movItemResPacket.isSuccess = true;
-        }
-        else { // MoveItem Fail
-            movItemResPacket.isSuccess = false;
-        }
+        pipe.hset(inventory_slot, std::to_string(movItemReqPacket->dragItemSlotPos), std::to_string(movItemReqPacket->dragItemCode) + "," + std::to_string(movItemReqPacket->dragItemCount))
+            .hset(inventory_slot, std::to_string(movItemReqPacket->targetItemSlotPos), std::to_string(movItemReqPacket->targetItemCode) + "," + std::to_string(movItemReqPacket->targetItemCount));
+
+        pipe.exec();
+
+        MOV_ITEM_RESPONSE movItemResPacket;
+        movItemResPacket.PacketId = (uint16_t)PACKET_ID::MOV_ITEM_RESPONSE;
+        movItemResPacket.PacketLength = sizeof(MOV_ITEM_RESPONSE);
+
+        
+        movItemResPacket.isSuccess = true;
 
     connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MOV_ITEM_RESPONSE), (char*)&movItemResPacket);
 }
@@ -398,6 +403,31 @@ void RedisManager::EnhanceEquipment(uint16_t connObjNum_, uint16_t packetSize_, 
         }
 
     connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
+}
+
+void RedisManager::MoveEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    auto movItemReqPacket = reinterpret_cast<MOV_EQUIPMENT_REQUEST*>(pPacket_);
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
+
+    std::string inventory_slot = itemType[0] + ":";
+    std::string tag = "{" + std::to_string(tempUser->GetPk()) + "}";
+
+    auto pipe = redis->pipeline(tag);
+
+    pipe.hset(inventory_slot, std::to_string(movItemReqPacket->dragItemSlotPos), std::to_string(movItemReqPacket->dragItemCode) + "," + std::to_string(movItemReqPacket->dragItemEnhance))
+        .hset(inventory_slot, std::to_string(movItemReqPacket->targetItemSlotPos), std::to_string(movItemReqPacket->targetItemCode) + "," + std::to_string(movItemReqPacket->dragItemEnhance));
+
+    pipe.exec();
+
+
+    MOV_EQUIPMENT_RESPONSE movItemResPacket;
+    movItemResPacket.PacketId = (uint16_t)PACKET_ID::MOV_EQUIPMENT_RESPONSE;
+    movItemResPacket.PacketLength = sizeof(MOV_EQUIPMENT_RESPONSE);
+
+
+    movItemResPacket.isSuccess = true;
+
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MOV_ITEM_RESPONSE), (char*)&movItemResPacket);
 }
 
 

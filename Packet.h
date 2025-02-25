@@ -118,14 +118,15 @@ struct MOD_ITEM_RESPONSE : PACKET_HEADER {
 };
 
 struct MOV_ITEM_REQUEST : PACKET_HEADER {
-	uint16_t dragItemType; // (Max 3)
-	uint16_t dragItemSlotPos; // (Max 50)
+	uint16_t ItemType; // (Max 3)
+
+	uint16_t dragItemSlotPos; // (Max 10)
+	uint16_t dragItemCode;
 	uint16_t dragItemCount; // (Max 99)
-	uint16_t targetItemType; // (Max 3)
-	uint16_t targetItemSlotPos; // (Max 50)
+
+	uint16_t targetItemSlotPos; // (Max 10)
+	uint16_t targetItemCode;
 	uint16_t targetItemCount; // (Max 99)
-	short dragItemCode; // (Max 5000)
-	short targetItemCode; // (Max 5000)
 };
 
 struct MOV_ITEM_RESPONSE : PACKET_HEADER {
@@ -163,6 +164,20 @@ struct ENH_EQUIPMENT_REQUEST : PACKET_HEADER {
 };
 
 struct ENH_EQUIPMENT_RESPONSE : PACKET_HEADER {
+	bool isSuccess;
+};
+
+struct MOV_EQUIPMENT_REQUEST : PACKET_HEADER {
+	uint16_t dragItemSlotPos; // (Max 10)
+	uint16_t dragItemCode;
+	uint16_t dragItemEnhance;
+
+	uint16_t targetItemSlotPos; // (Max 10)
+	uint16_t targetItemCode;
+	uint16_t targetItemEnhance;
+};
+
+struct MOV_EQUIPMENT_RESPONSE : PACKET_HEADER {
 	bool isSuccess;
 };
 
@@ -263,6 +278,8 @@ enum class PACKET_ID : uint16_t {
 	DEL_EQUIPMENT_RESPONSE = 36,
 	ENH_EQUIPMENT_REQUEST = 37,  // 유저는 11번으로 요청 
 	ENH_EQUIPMENT_RESPONSE = 38,
+	MOV_EQUIPMENT_REQUEST = 39,
+	MOV_EQUIPMENT_RESPONSE = 40,
 
 	// RAID (45~)
 	RAID_MATCHING_REQUEST = 45,  // 유저는 12번으로 요청 
