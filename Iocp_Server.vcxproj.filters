@@ -63,6 +63,9 @@
     <ClCompile Include="OverLappedManager.cpp">
       <Filter>헤더 파일\Network</Filter>
     </ClCompile>
+    <ClCompile Include="UdpOverLappedManager.cpp">
+      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="QuokkaServer.h">
@@ -103,6 +106,9 @@
     </ClInclude>
     <ClInclude Include="OverLappedManager.h">
       <Filter>헤더 파일\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="UdpOverLappedManager.h">
+      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

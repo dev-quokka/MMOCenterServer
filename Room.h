@@ -7,6 +7,7 @@
 #include <ws2tcpip.h>
 
 #include "Define.h"
+#include "UdpOverLappedManager.h"
 
 class MatchingManager;
 class InGameUser;
@@ -16,31 +17,27 @@ struct RaidUserInfo {
 	uint16_t userObjNum; // TCP Socket
 	sockaddr_in userAddr;
 	InGameUser* inGameUser;
-	OverlappedUDP* hpOverlapped;
 };
 
 class Room {
 public:
-	Room(SOCKET* udpSkt_) {
+	Room(SOCKET* udpSkt_, UdpOverLappedManager* udpOverLappedManager_) {
 		RaidUserInfo* ruInfo1 = new RaidUserInfo;
-		ruInfo1->hpOverlapped = new OverlappedUDP;
 		ruInfos.emplace_back(ruInfo1);
 
 		RaidUserInfo* ruInfo2 = new RaidUserInfo;
-		ruInfo2->hpOverlapped = new OverlappedUDP;
 		ruInfos.emplace_back(ruInfo2);
 
 		udpSkt = udpSkt_;
+		udpOverLappedManager = udpOverLappedManager_;
 	}
 	~Room() {
 		for (int i = 0; i < ruInfos.size(); i++) {
-			delete[] ruInfos[i]->hpOverlapped->wsaBuf.buf;
-			delete ruInfos[i]->hpOverlapped;
 			delete ruInfos[i];
 		}
 	}
 
-	void set(uint16_t roomNum_, uint16_t timer_, unsigned int mobHp_, uint16_t userObjNum1_, uint16_t userObjNum2_, InGameUser* user1_, InGameUser* user2_) {
+	void set(uint16_t roomNum_, uint16_t timer_, int mobHp_, uint16_t userObjNum1_, uint16_t userObjNum2_, InGameUser* user1_, InGameUser* user2_) {
 		ruInfos[0]->userObjNum = userObjNum1_;
 		ruInfos[0]->inGameUser = user1_;
 
@@ -63,7 +60,7 @@ public:
 	}
 
 	bool EndCheck() {
-		if (startCheck.fetch_sub(1) + 1 == 0) {
+		if (startCheck.fetch_sub(1) - 1 == 0) {
 			return true;
 		}
 		return false;
@@ -83,6 +80,7 @@ public:
 	}
 
 	std::chrono::time_point<std::chrono::steady_clock> GetEndTime() {
+		endTime = std::chrono::steady_clock::now() + std::chrono::minutes(2);
 		return endTime;
 	}
 
@@ -111,39 +109,66 @@ public:
 		else if (userNum == 0) return ruInfos[1]->userScore;
 	}
 
-	std::pair<unsigned int, unsigned int> Hit(uint16_t userNum_, unsigned int damage_){ // current mob hp, score
+	std::pair<unsigned int, unsigned int> Hit(uint16_t userNum_, unsigned int damage_){ // current mobhp, score
 		if (mobHp <= 0 || finishCheck.load()) {
+			std::cout << "몹 이미 죽음." << std::endl;
 			return {0,0};
 		}
 		
 		unsigned int score_;
-		unsigned int currentMobHp_;
+		int currentMobHp_;
 
-		if ((currentMobHp_ = mobHp.fetch_sub(damage_))-damage_<=0) { // Hit
+		if ((currentMobHp_ = mobHp.fetch_sub(damage_) - damage_)<=0) { // Hit
 			finishCheck.store(true);
-			score_ = ruInfos[userNum_]->userScore.fetch_add(mobHp + damage_) + (mobHp + damage_);
+			std::cout << "LAST hp " << currentMobHp_ << std::endl;
+			std::cout << "LAST da" << damage_ << std::endl;
+			std::cout << "LAST " << currentMobHp_ + damage_<< std::endl;
+			score_ = ruInfos[userNum_]->userScore.fetch_add(currentMobHp_ + damage_) + (currentMobHp_ + damage_);
+			std::cout << "몹 이미 죽음. 나머지 스코어 전송" << std::endl;
 			return { 0, score_ };
 		}
 
 		score_ = ruInfos[userNum_]->userScore.fetch_add(damage_) + damage_;
 		
 		for (int i = 0; i < ruInfos.size(); i++) { // 나머지 유저들에게도 바뀐 몹 hp값 보내주기
-			OverlappedUDP* overlappedUDP = ruInfos[i]->hpOverlapped;
-			ZeroMemory(overlappedUDP, sizeof(OverlappedUDP));
-			overlappedUDP->wsaBuf.len = sizeof(currentMobHp_);
-			overlappedUDP->wsaBuf.buf = new char[sizeof(currentMobHp_)];
-			CopyMemory(overlappedUDP->wsaBuf.buf, &currentMobHp_, sizeof(currentMobHp_));
-			overlappedUDP->addrSize = sizeof(ruInfos[i]->userAddr);
-			overlappedUDP->userAddr = ruInfos[i]->userAddr;
-			overlappedUDP->taskType = TaskType::SEND;
 
-			DWORD dwSendBytes = 0;
-			int result = WSASendTo(*udpSkt, &overlappedUDP->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&overlappedUDP->userAddr, sizeof(overlappedUDP->userAddr), (LPWSAOVERLAPPED)overlappedUDP, NULL);
+			OverlappedUDP* overlappedUDP = udpOverLappedManager->getOvLap();
 
-			if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-				std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
-				delete[] overlappedUDP->wsaBuf.buf;
-				delete overlappedUDP;
+			if (overlappedUDP == nullptr) { // 오버랩 풀에 여분 없으면 새로 오버랩 생성
+				OverlappedUDP* overlappedUDP = new OverlappedUDP;
+				ZeroMemory(overlappedUDP, sizeof(OverlappedUDP));
+				overlappedUDP->wsaBuf.len = sizeof(currentMobHp_);
+				overlappedUDP->wsaBuf.buf = new char[sizeof(currentMobHp_)];
+				CopyMemory(overlappedUDP->wsaBuf.buf, &currentMobHp_, sizeof(currentMobHp_));
+				overlappedUDP->addrSize = sizeof(ruInfos[i]->userAddr);
+				overlappedUDP->userAddr = ruInfos[i]->userAddr;
+				overlappedUDP->taskType = TaskType::NEWSEND;
+
+				DWORD dwSendBytes = 0;
+				int result = WSASendTo(*udpSkt, &overlappedUDP->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&ruInfos[i]->userAddr, sizeof(ruInfos[i]->userAddr), (LPWSAOVERLAPPED)overlappedUDP, NULL);
+
+				std::cout << "여분 없는 스코어 전송" << std::endl;
+				std::cout <<"현재 몹 HP : " << mobHp << std::endl;
+				if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+					std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
+				}
+			}
+			else {
+				overlappedUDP->wsaBuf.len = sizeof(currentMobHp_);
+				overlappedUDP->wsaBuf.buf = new char[sizeof(currentMobHp_)];
+				CopyMemory(overlappedUDP->wsaBuf.buf, &currentMobHp_, sizeof(currentMobHp_));
+				overlappedUDP->addrSize = sizeof(ruInfos[i]->userAddr);
+				overlappedUDP->userAddr = ruInfos[i]->userAddr;
+				overlappedUDP->taskType = TaskType::SEND;
+
+				DWORD dwSendBytes = 0;
+				int result = WSASendTo(*udpSkt, &overlappedUDP->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&ruInfos[i]->userAddr, sizeof(ruInfos[i]->userAddr), (LPWSAOVERLAPPED)overlappedUDP, NULL);
+
+				std::cout << "스코어 전송" << std::endl;
+				std::cout << "현재 몹 HP : " << mobHp << std::endl;
+				if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+					std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
+				}
 			}
 		}
 
@@ -153,16 +178,19 @@ public:
 private:
 	// 1 bytes
 	
-	uint16_t roomNum;
 	std::atomic<bool> finishCheck = false;
 	std::atomic<uint16_t> startCheck = 0;
 
+	// 2 bytes
+	uint16_t roomNum;
+
 	// 4 bytes
-	std::atomic<unsigned int> mobHp;
+	std::atomic<int> mobHp;
 
 	// 8 bytes
 	SOCKET* udpSkt;
 	MatchingManager* matchingManager;
+	UdpOverLappedManager* udpOverLappedManager;
 	std::chrono::time_point<std::chrono::steady_clock> endTime = std::chrono::steady_clock::now() + std::chrono::minutes(2); // 생성 되자마자 삭제 방지
 
 	// 32 bytes

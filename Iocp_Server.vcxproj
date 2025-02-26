@@ -148,6 +148,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="QuokkaServer.cpp" />
     <ClCompile Include="RedisManager.cpp" />
+    <ClCompile Include="UdpOverLappedManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConnUser.h" />
@@ -163,6 +164,7 @@
     <ClInclude Include="QuokkaServer.h" />
     <ClInclude Include="RedisManager.h" />
     <ClInclude Include="CircularBuffer.h" />
+    <ClInclude Include="UdpOverLappedManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

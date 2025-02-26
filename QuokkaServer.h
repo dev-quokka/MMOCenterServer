@@ -4,6 +4,7 @@
 #include "ConnUser.h"
 
 #include "OverLappedManager.h"
+#include "UdpOverLappedManager.h"
 #include "ConnUsersManager.h"
 #include "InGameUserManager.h"
 #include "RoomManager.h"
@@ -65,6 +66,7 @@ private:
     HANDLE udpHandle = INVALID_HANDLE_VALUE;
  
     OverLappedManager* overLappedManager;
+    UdpOverLappedManager* udpOverLappedManager;
     ConnUsersManager* connUsersManager;
     InGameUserManager* inGameUserManager;
     RoomManager* roomManager;

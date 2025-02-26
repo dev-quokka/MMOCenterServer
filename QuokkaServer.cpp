@@ -49,24 +49,31 @@ bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
     overLappedManager = new OverLappedManager;
     overLappedManager->init();
 
-    udpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1); // 마지막 매개변수 = udp 소켓 GetQueuedCompletionStatus 쓰레드 개수
+    udpOverLappedManager = new UdpOverLappedManager;
+    udpOverLappedManager->init();
 
-    SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    udpSkt = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, NULL, NULL, WSA_FLAG_OVERLAPPED);
+    if (udpSkt == INVALID_SOCKET) {
+        std::cout << "Server Socket 생성 실패" << std::endl;
+        return false;
+    }
 
     sockaddr_in udpAddr = {0};
     udpAddr.sin_family = AF_INET;
     udpAddr.sin_port = htons(UDP_PORT);
     udpAddr.sin_addr.s_addr = INADDR_ANY;
 
-    if (bind(udpSocket, (SOCKADDR*)&udpAddr, sizeof(udpAddr)) == SOCKET_ERROR) {
+    if (bind(udpSkt, (SOCKADDR*)&udpAddr, sizeof(udpAddr)) == SOCKET_ERROR) {
         std::cout << "UDP SOCKET BIND FAIL" << std::endl;
-        closesocket(udpSocket);
+        closesocket(udpSkt);
     }
 
-    HANDLE result = CreateIoCompletionPort((HANDLE)udpSocket, udpHandle, (ULONG_PTR)0, 0);
+    udpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
 
-    if (result == NULL) {
-        std::cerr << "UDP SOCKET IOCP BIND FAIL : " << GetLastError() << std::endl;
+    auto result = CreateIoCompletionPort((HANDLE)udpSkt, udpHandle, (ULONG_PTR)udpSkt, 0);
+    if (result == nullptr) {
+        std::cout << "iocp UDP 핸들 바인드 실패" << std::endl;
+        return false;
     }
 
     return true;
@@ -87,7 +94,7 @@ bool QuokkaServer::StartWork() {
 
     connUsersManager = new ConnUsersManager(maxClientCount);
     inGameUserManager = new InGameUserManager;
-    roomManager = new RoomManager(&udpSkt);
+    roomManager = new RoomManager(&udpSkt, udpOverLappedManager);
     matchingManager = new MatchingManager;
     redisManager = new RedisManager;
 
@@ -163,15 +170,8 @@ void QuokkaServer::WorkThread() {
         connUser = connUsersManager->FindUser(connObjNum);
 
         if (!gqSucces || (dwIoSize == 0 && overlappedTCP->taskType != TaskType::ACCEPT)) { // User Disconnect
-
-            if (!connUser->IsConn()) { // 유저의 로그아웃 요청 후 종료
-                std::cout << "socket " << connUser->GetSocket() << " Logout" << std::endl;
-            }
-            else { // 비정상적인 종료
-                std::cout << "socket " << connUser->GetSocket() << " Disconnect && Data Update Fail" << std::endl;
-                redisManager->Disconnect(connObjNum);
-            }
-    
+            std::cout << "socket " << connUser->GetSocket() << " Disconnect" << std::endl;
+            
             inGameUserManager->Reset(connObjNum);
             connUser->Reset(); // Reset 
             UserCnt.fetch_sub(1); // UserCnt -1
@@ -195,8 +195,19 @@ void QuokkaServer::WorkThread() {
             connUser->ConnUserRecv(); // Wsarecv Again
             overLappedManager->returnOvLap(overlappedTCP);
         }
+        else if (overlappedTCP->taskType == TaskType::NEWRECV) {
+            redisManager->PushRedisPacket(connObjNum, dwIoSize, overlappedTCP->wsaBuf.buf); // Proccess In Redismanager
+            connUser->ConnUserRecv(); // Wsarecv Again
+            delete[] overlappedTCP->wsaBuf.buf;
+            delete overlappedTCP;
+        }
         else if (overlappedTCP->taskType == TaskType::SEND) {
             overLappedManager->returnOvLap(overlappedTCP);
+            connUser->SendComplete();
+        }
+        else if (overlappedTCP->taskType == TaskType::NEWSEND) {
+            delete[] overlappedTCP->wsaBuf.buf;
+            delete overlappedTCP;
             connUser->SendComplete();
         }
     }
@@ -205,21 +216,29 @@ void QuokkaServer::WorkThread() {
 void QuokkaServer::UDPWorkThread() {
     LPOVERLAPPED lpOverlapped = NULL;
     DWORD dwIoSize = 0;
-    Room* room;
+    ULONG_PTR completionKey;
     bool gqSucces = TRUE;
 
     while (udpWorkRun) {
         gqSucces = GetQueuedCompletionStatus(
             udpHandle,
             &dwIoSize,
-            (PULONG_PTR)&room,
+            &completionKey,
             &lpOverlapped,
             INFINITE
         );
 
         auto overlappedUDP = (OverlappedUDP*)lpOverlapped;
 
+        std::cout << "UDP OVERLAPPED SEND REQ" << std::endl;
+
         if (overlappedUDP->taskType == TaskType::SEND) {
+            std::cout << "UDP OVERLAPPED SEND" << std::endl;
+            udpOverLappedManager->returnOvLap(overlappedUDP);
+        }
+
+        else if (overlappedUDP->taskType == TaskType::NEWSEND) {
+            std::cout << "UDP OVERLAPPED SEND" << std::endl;
             delete[] overlappedUDP->wsaBuf.buf;
             delete overlappedUDP;
         }

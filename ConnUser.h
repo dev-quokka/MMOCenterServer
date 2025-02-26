@@ -160,7 +160,7 @@ public :
 			overlappedTCP->wsaBuf.buf = new char[MAX_RECV_SIZE];
 			overlappedTCP->connObjNum = connObjNum;
 			CopyMemory(overlappedTCP->wsaBuf.buf, sendMsg, dataSize_);
-			overlappedTCP->taskType = TaskType::SEND;
+			overlappedTCP->taskType = TaskType::NEWSEND;
 
 			sendQueue.push(overlappedTCP); // Push Send Msg To User
 			sendQueueSize.fetch_add(1);

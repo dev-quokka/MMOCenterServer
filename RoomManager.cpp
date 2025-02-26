@@ -1,7 +1,7 @@
 #include "RoomManager.h"
 
 Room* RoomManager::MakeRoom(uint16_t roomNum_, uint16_t timer_, unsigned int mobHp_, uint16_t userObjNum1_, uint16_t userObjNum2_, InGameUser* user1_, InGameUser* user2_) {
-	Room* room = new Room(udpSkt);
+	Room* room = new Room(udpSkt, udpOverLappedManager);
 	room->set(roomNum_, timer_, mobHp_, userObjNum1_, userObjNum2_, user1_,user2_);
 	roomMap[roomNum_] = room;
 	return room;

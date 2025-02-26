@@ -7,10 +7,11 @@
 #include "Room.h"
 
 class InGameUser;
+class UdpOverLappedManager;
 
 class RoomManager {
 public:
-	RoomManager(SOCKET* udpSkt_) : udpSkt(udpSkt_) {}
+	RoomManager(SOCKET* udpSkt_, UdpOverLappedManager* udpOverLappedManager_) : udpSkt(udpSkt_), udpOverLappedManager(udpOverLappedManager_) {}
 	~RoomManager() {
 		for (auto& iter : roomMap) {
 			delete iter.second;
@@ -23,6 +24,8 @@ public:
 
 private:
 	SOCKET* udpSkt;
+
+	UdpOverLappedManager* udpOverLappedManager;
 	std::unordered_map<uint16_t, Room*> roomMap; // { roomNum, Room }
 };
 

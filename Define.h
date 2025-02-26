@@ -14,7 +14,9 @@ const short MAX_RETRY_COUNT = 3;
 enum class TaskType {
 	ACCEPT,
 	RECV,
-	SEND
+	SEND,
+	NEWRECV, // 오버랩 풀 다 써서 새로 만들어서 사용한것. (이건 다 쓰면 삭제)
+	NEWSEND
 };
 
 struct OverlappedEx {
