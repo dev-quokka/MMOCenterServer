@@ -240,7 +240,7 @@ struct RAID_RANKING_REQUEST : PACKET_HEADER {
 };
 
 struct RAID_RANKING_RESPONSE : PACKET_HEADER {
-	std::vector<std::pair<std::string, unsigned int>> reqScore;
+	std::vector<std::pair<std::string, double>> reqScore;
 };
 
 enum class PACKET_ID : uint16_t {

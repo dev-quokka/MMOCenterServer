@@ -236,13 +236,11 @@ void QuokkaServer::UDPWorkThread() {
             std::cout << "UDP OVERLAPPED SEND" << std::endl;
             udpOverLappedManager->returnOvLap(overlappedUDP);
         }
-
         else if (overlappedUDP->taskType == TaskType::NEWSEND) {
             std::cout << "UDP OVERLAPPED SEND" << std::endl;
             delete[] overlappedUDP->wsaBuf.buf;
             delete overlappedUDP;
         }
-
         else if (overlappedUDP->taskType == TaskType::RECV) { // 나중에 필요할때 추가 생성
 
         }
