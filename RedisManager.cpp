@@ -105,12 +105,6 @@ void RedisManager::PushRedisPacket(const uint16_t connObjNum_, const uint32_t si
     procSktQueue.push(tempD);
 }
 
-void RedisManager::SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1_, RAID_END_REQUEST raidEndReqPacket2_) {
-    connUsersManager->FindUser(webServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&raidEndReqPacket1_);
-    connUsersManager->FindUser(webServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&raidEndReqPacket2_);
-}
-
-
 // ============================== PACKET ==============================
 
 //  ---------------------------- SYSTEM  ----------------------------
@@ -126,8 +120,8 @@ void RedisManager::UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char*
     redis->hgetall(userInfokey, std::inserter(userData, userData.begin()));
 
     connUsersManager->FindUser(connObjNum_)->SetPk(pk);
-    inGameUserManager->Set(connObjNum_, (std::string)userConn->userId, pk, std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])));
-    
+    inGameUserManager->Set(connObjNum_, (std::string)userConn->userId, pk, std::stoul(userData["exp"]), static_cast<uint16_t>(std::stoul(userData["level"])), std::stoul(userData["raidScore"]));
+
     USER_CONNECT_RESPONSE_PACKET ucReq;
     ucReq.PacketId = (uint16_t)PACKET_ID::USER_CONNECT_RESPONSE;
     ucReq.PacketLength = sizeof(USER_CONNECT_RESPONSE_PACKET);
@@ -517,8 +511,9 @@ void RedisManager::RaidHit(uint16_t connObjNum_, uint16_t packetSize_, char* pPa
                 raidEndReqPacket.teamScore = room->GetTeamScore(i);
                 connUsersManager->FindUser(room->GetUserObjNum(i))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket);
 
-
-                pipe.zadd("ranking", std::to_string(room->GetScore(i)), inGameUser->GetId()); // 점수 레디스에 동기화
+                if (room->GetScore(i) > room->GetUser(i)->GetScore()) {
+                    pipe.zadd("ranking", inGameUser->GetId(), (double)(room->GetScore(i))); // 점수 레디스에 동기화
+                }
             }
 
             pipe.exec(); // 유저들 랭킹 동기화
@@ -545,12 +540,28 @@ void RedisManager::GetRanking(uint16_t connObjNum_, uint16_t packetSize_, char* 
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
    
     std::vector<std::pair<std::string, double>> scores;
-    redis->zrevrange("user_scores", delEquipReqPacket->startRank, delEquipReqPacket->startRank+99, std::back_inserter(scores));
+    redis->zrevrange("ranking", delEquipReqPacket->startRank, delEquipReqPacket->startRank+ RANKING_USER_COUNT, std::back_inserter(scores));
+
+    char* tempC = new char[MAX_SCORE_SIZE + 1];
+    char* tc = tempC;
+    uint16_t cnt = scores.size();
+
+    std::cout << scores[0].second << std::endl;
+    std::cout << scores[1].second << std::endl;
+
+    for (int i = 0; i < cnt; i++) {
+        RANKING ranking;
+        strncpy_s(ranking.userId, scores[i].first.c_str(), MAX_USER_ID_LEN);
+        ranking.score = scores[i].second;
+        memcpy(tc, (char*)&ranking, sizeof(RANKING));
+        tc += sizeof(RANKING);
+    }
 
     RAID_RANKING_RESPONSE raidRankResPacket;
     raidRankResPacket.PacketId = (uint16_t)PACKET_ID::RAID_RANKING_RESPONSE;
     raidRankResPacket.PacketLength = sizeof(RAID_RANKING_RESPONSE);
-    raidRankResPacket.reqScore = scores;
+    raidRankResPacket.rkCount = cnt;
+    std::memcpy(raidRankResPacket.reqScore, tempC, MAX_SCORE_SIZE + 1);
 
     connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_RANKING_RESPONSE), (char*)&raidRankResPacket);
 }

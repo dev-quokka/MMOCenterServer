@@ -18,7 +18,7 @@ public:
 
 	void Init(uint16_t maxClientCount_);
 	InGameUser* GetInGameUserByObjNum(uint16_t connObjNum_);
-	void Set(uint16_t connObjNum_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_);
+	void Set(uint16_t connObjNum_, std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_, unsigned int raidScore_);
 	void Reset(uint16_t connObjNum_);
 
 private:

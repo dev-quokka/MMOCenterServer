@@ -35,9 +35,6 @@ public:
     void PushRedisPacket(const uint16_t connObjNum_, const uint32_t size_, char* recvData_); // Push Redis Packet
     void Disconnect(uint16_t connObjNum_);
 
-    // Send Data to Web Server for Synchronization With Redis
-    void SyncRaidScoreToRedis(RAID_END_REQUEST raidEndReqPacket1, RAID_END_REQUEST raidEndReqPacket2);
-
 private:
     bool CreateRedisThread(const uint16_t RedisThreadCnt_);
     bool EquipmentEnhance(short currentEnhanceCount_);

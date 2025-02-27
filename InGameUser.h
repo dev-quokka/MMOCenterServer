@@ -13,11 +13,12 @@ public:
 		return userLevel;
 	}
 
-	void Set(std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_) {
+	void Set(std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_, unsigned int raidScore_) {
 		userLevel = userLevel_;
 		userExp = userExp_;
 		userPk = userPk_;
 		userId = userId_;
+		raidScore = raidScore_;
 	}
 
 	void Reset() {
@@ -32,6 +33,10 @@ public:
 
 	std::string GetId() {
 		return userId;
+	}
+
+	unsigned int GetScore() {
+		return raidScore;
 	}
 
 	std::pair<uint16_t, unsigned int> ExpUp(short mobExp_) {
@@ -56,9 +61,10 @@ private:
 	// 4 bytes
 	uint32_t userPk;
 	unsigned int userExp;
-
-	std::vector<short>& expLimit;
+	unsigned int raidScore;
 
 	// 40 bytes
 	std::string userId;
+
+	std::vector<short>& expLimit;
 };

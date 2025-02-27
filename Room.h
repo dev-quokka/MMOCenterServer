@@ -111,7 +111,6 @@ public:
 
 	std::pair<unsigned int, unsigned int> Hit(uint16_t userNum_, unsigned int damage_){ // current mobhp, score
 		if (mobHp <= 0 || finishCheck.load()) {
-			std::cout << "¸÷ ÀÌ¹Ì Á×À½." << std::endl;
 			return {0,0};
 		}
 		

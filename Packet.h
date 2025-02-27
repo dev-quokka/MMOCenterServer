@@ -7,7 +7,11 @@
 #include <vector>
 #include <chrono>
 
-const uint16_t PACKET_ID_SIZE = 57; // Last Packet_ID Num + 1
+const uint16_t RANKING_USER_COUNT = 3; // 몇명씩 유저 랭킹 정보 가져올건지
+
+const int MAX_USER_ID_LEN = 32;
+const int MAX_JWT_TOKEN_LEN = 256;
+const int MAX_SCORE_SIZE = 512;
 
 struct DataPacket {
 	uint32_t dataSize;
@@ -30,11 +34,12 @@ struct PACKET_HEADER
 	uint16_t PacketId;
 };
 
+struct RANKING {
+	uint16_t score = 0;
+	char userId[MAX_USER_ID_LEN + 1] = {};
+};
 
 //  ---------------------------- SYSTEM  ----------------------------
-
-const int MAX_USER_ID_LEN = 32;
-const int MAX_JWT_TOKEN_LEN = 256;
 
 struct USER_CONNECT_REQUEST_PACKET : PACKET_HEADER {
 	char userId[MAX_USER_ID_LEN + 1];
@@ -236,11 +241,12 @@ struct RAID_END_RESPONSE : PACKET_HEADER { // User to Server (If Server Get This
 };
 
 struct RAID_RANKING_REQUEST : PACKET_HEADER {
-	unsigned int startRank; 
+	uint16_t startRank;
 };
 
 struct RAID_RANKING_RESPONSE : PACKET_HEADER {
-	std::vector<std::pair<std::string, double>> reqScore;
+	uint16_t rkCount;
+	char reqScore[MAX_SCORE_SIZE + 1];
 };
 
 enum class PACKET_ID : uint16_t {

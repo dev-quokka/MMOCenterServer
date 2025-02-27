@@ -103,8 +103,10 @@ void MatchingManager::MatchingThread() {
 
                                 endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userObjNum, tempMatching2->userObjNum, tempMatching1->inGameUser, tempMatching2->inGameUser));
                             }
+
                             delete tempMatching1;
                             delete tempMatching2;
+
                         }
                         else { // 현재 레벨에 대기 유저 한명이라 다시 넣기
                             accessor1->second.push(tempMatching1);
@@ -191,9 +193,6 @@ void MatchingManager::TimeCheckThread() {
                 raidEndReqPacket2.userScore = room_->GetScore(1);
 
                 connUsersManager->FindUser(room_->GetUserObjNum(1))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket2);
-
-                // Send Message To Redis Cluster For Syncronize
-                redisManager->SyncRaidScoreToRedis(raidEndReqPacket1, raidEndReqPacket2);
 
                 roomManager->DeleteRoom(room_->GetRoomNum());
                 roomNumQueue.push(room_->GetRoomNum());
