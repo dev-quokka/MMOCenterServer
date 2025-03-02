@@ -51,6 +51,16 @@ public:
 		ruInfos[userNum_]->userAddr = userAddr_;
 	}
 
+	void TimeOver() {
+		finishCheck.store(true);
+		mobHp.store(0);
+		timeOver = true;
+	}
+
+	bool TimeOverCheck() {
+		return timeOver;
+	}
+
 	bool StartCheck() {
 		if (startCheck.fetch_add(1) + 1 == 2) {
 			endTime = std::chrono::steady_clock::now() + std::chrono::minutes(2)+ std::chrono::seconds(8);
@@ -78,9 +88,13 @@ public:
 		if (userNum_ == 0) return ruInfos[0]->inGameUser;
 		else if (userNum_ == 1) return ruInfos[1]->inGameUser;
 	}
+	
+	std::chrono::time_point<std::chrono::steady_clock> SetEndTime() {
+		endTime = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+		return endTime;
+	}
 
 	std::chrono::time_point<std::chrono::steady_clock> GetEndTime() {
-		endTime = std::chrono::steady_clock::now() + std::chrono::minutes(2);
 		return endTime;
 	}
 
@@ -119,9 +133,6 @@ public:
 
 		if ((currentMobHp_ = mobHp.fetch_sub(damage_) - damage_)<=0) { // Hit
 			finishCheck.store(true);
-			std::cout << "LAST hp " << currentMobHp_ << std::endl;
-			std::cout << "LAST da" << damage_ << std::endl;
-			std::cout << "LAST " << currentMobHp_ + damage_<< std::endl;
 			score_ = ruInfos[userNum_]->userScore.fetch_add(currentMobHp_ + damage_) + (currentMobHp_ + damage_);
 			std::cout << "몹 이미 죽음. 나머지 스코어 전송" << std::endl;
 			return { 0, score_ };
@@ -176,7 +187,7 @@ public:
 
 private:
 	// 1 bytes
-	
+	bool timeOver = false;
 	std::atomic<bool> finishCheck = false;
 	std::atomic<uint16_t> startCheck = 0;
 

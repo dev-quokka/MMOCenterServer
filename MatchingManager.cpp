@@ -16,7 +16,7 @@ void MatchingManager::Init(const uint16_t maxClientCount_, RedisManager* redisMa
     redisManager = redisManager_;
       
     CreateMatchThread();
-    TimeCheckThread();
+    CreateTimeCheckThread();
 }
 
 bool MatchingManager::Insert(uint16_t userObjNum_, InGameUser* inGameUser_) {
@@ -125,8 +125,15 @@ void MatchingManager::MatchingThread() {
     }
 }
 
-void MatchingManager::DeleteMob(Room* room_) {
-    {
+void MatchingManager::DeleteMob(Room* room_) { // 몹 직접 죽였을때
+
+    if (room_->TimeOverCheck()) { // 타임아웃 체크되서 이미 endRoomCheckSet에서 삭제 됬을때 (방 삭제만 처리)
+        roomManager->DeleteRoom(room_->GetRoomNum());
+        roomNumQueue.push(room_->GetRoomNum());
+        return;
+    }
+
+    {    // 타임아웃전에 몹을 잡아서 endRoomCheckSet 직접 삭제
         std::lock_guard<std::mutex> guard(mDeleteRoom);
         for (auto iter = endRoomCheckSet.begin(); iter != endRoomCheckSet.end(); iter++) {
             if (*iter == room_) {
@@ -136,28 +143,6 @@ void MatchingManager::DeleteMob(Room* room_) {
             }
         }
     }
-
-    // 다른 Raid 관련 요청 보다 타임 종료는 먼저 처리되야 함으로 바로 유저 Send
-    RAID_END_REQUEST raidEndReqPacket1;
-    RAID_END_REQUEST raidEndReqPacket2;
-    InGameUser* user1 = room_->GetUser(0);
-    InGameUser* user2 = room_->GetUser(1);
-
-    // Send to User1 With User2 Info
-    raidEndReqPacket1.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
-    raidEndReqPacket1.PacketLength = sizeof(RAID_END_REQUEST);
-    raidEndReqPacket1.userScore = room_->GetScore(0);
-    raidEndReqPacket1.teamScore = room_->GetScore(1);
-
-    connUsersManager->FindUser(room_->GetUserObjNum(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
-
-    // Send to User2 with User1 Info
-    raidEndReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
-    raidEndReqPacket2.PacketLength = sizeof(RAID_END_REQUEST);
-    raidEndReqPacket2.teamScore = room_->GetScore(0);
-    raidEndReqPacket2.userScore = room_->GetScore(1);
-
-    connUsersManager->FindUser(room_->GetUserObjNum(1))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket2);
 
     roomManager->DeleteRoom(room_->GetRoomNum());
     roomNumQueue.push(room_->GetRoomNum());
@@ -169,40 +154,18 @@ void MatchingManager::TimeCheckThread() {
     while (timeChekcRun) {
         if (!endRoomCheckSet.empty()) { // Room Exist
             room_ = (*endRoomCheckSet.begin());
-            now = std::chrono::steady_clock::now();
-            if (room_->GetEndTime() <= now) {
-
-                // 다른 Raid 관련 요청 보다 타임 종료는 먼저 처리되야 함으로 바로 유저 Send
-                RAID_END_REQUEST raidEndReqPacket1;
-                RAID_END_REQUEST raidEndReqPacket2;
-                InGameUser* user1 = room_->GetUser(0);
-                InGameUser* user2 = room_->GetUser(1);
-
-                // Send to User1 With User2 Info
-                raidEndReqPacket1.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
-                raidEndReqPacket1.PacketLength = sizeof(RAID_END_REQUEST);
-                raidEndReqPacket1.userScore = room_->GetScore(0);
-                raidEndReqPacket1.teamScore = room_->GetScore(1);
-
-                connUsersManager->FindUser(room_->GetUserObjNum(0))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket1);
-
-                // Send to User2 with User1 Info
-                raidEndReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_END_REQUEST;
-                raidEndReqPacket2.PacketLength = sizeof(RAID_END_REQUEST);
-                raidEndReqPacket2.teamScore = room_->GetScore(0);
-                raidEndReqPacket2.userScore = room_->GetScore(1);
-
-                connUsersManager->FindUser(room_->GetUserObjNum(1))->PushSendMsg(sizeof(RAID_END_REQUEST), (char*)&raidEndReqPacket2);
-
-                roomManager->DeleteRoom(room_->GetRoomNum());
-                roomNumQueue.push(room_->GetRoomNum());
+            if (room_->GetEndTime() <= std::chrono::steady_clock::now()) {
+                std::cout << "타임 아웃. 레이드 종료" << std::endl;
+                room_->TimeOver();
+                endRoomCheckSet.erase(endRoomCheckSet.begin());
             }
             else {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                std::cout << "종료대기" << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
         } 
         else { // Room Not Exist
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
     }
 }

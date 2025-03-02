@@ -25,7 +25,7 @@ void RedisManager::init(const uint16_t RedisThreadCnt_, const uint16_t maxClient
     packetIDTable[(uint16_t)PACKET_ID::ADD_EQUIPMENT_REQUEST] = &RedisManager::AddEquipment;
     packetIDTable[(uint16_t)PACKET_ID::DEL_EQUIPMENT_REQUEST] = &RedisManager::DeleteEquipment;
     packetIDTable[(uint16_t)PACKET_ID::ENH_EQUIPMENT_REQUEST] = &RedisManager::EnhanceEquipment;
-    packetIDTable[(uint16_t)PACKET_ID::MOV_EQUIPMENT_REQUEST] = &RedisManager::MoveItem;
+    packetIDTable[(uint16_t)PACKET_ID::MOV_EQUIPMENT_REQUEST] = &RedisManager::MoveEquipment;
 
     //RAID
     packetIDTable[(uint16_t)PACKET_ID::RAID_MATCHING_REQUEST] = &RedisManager::MatchStart;
@@ -214,19 +214,6 @@ void RedisManager::ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPack
             expUpResPacket.currentExp = userExp.second;
 
             connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(LEVEL_UP_RESPONSE), (char*)&expUpResPacket);
-
-                { // Send User PK, Level, Exp data to the Web Server for Synchronization with MySQL
-                    ConnUser* TempWebServer = connUsersManager->FindUser(webServerObjNum);
-
-                    SYNCRONIZE_LEVEL_REQUEST syncLevelReqPacket;
-                    syncLevelReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LEVEL_REQUEST;
-                    syncLevelReqPacket.PacketLength = sizeof(SYNCRONIZE_LEVEL_REQUEST);
-                    syncLevelReqPacket.level = userExp.first;
-                    syncLevelReqPacket.currentExp = userExp.second;
-                    syncLevelReqPacket.userPk = tempUser->GetPk();
-
-                    TempWebServer->PushSendMsg(sizeof(SYNCRONIZE_LEVEL_REQUEST), (char*)&syncLevelReqPacket);
-                }
         }
         else { // Just Exp Up
             if (redis->hincrby(key, "exp", userExp.second)) { // Exp Up Success
@@ -313,8 +300,8 @@ void RedisManager::MoveItem(uint16_t connObjNum_, uint16_t packetSize_, char* pP
     auto movItemReqPacket = reinterpret_cast<MOV_ITEM_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
-    std::string inventory_slot = itemType[movItemReqPacket->ItemType]+":";
         std::string tag = "{" + std::to_string(tempUser->GetPk()) +"}";
+        std::string inventory_slot = itemType[movItemReqPacket->ItemType] + ":" + tag;
 
         auto pipe = redis->pipeline(tag);
 
@@ -406,16 +393,15 @@ void RedisManager::MoveEquipment(uint16_t connObjNum_, uint16_t packetSize_, cha
     auto movItemReqPacket = reinterpret_cast<MOV_EQUIPMENT_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
-    std::string inventory_slot = itemType[0] + ":";
     std::string tag = "{" + std::to_string(tempUser->GetPk()) + "}";
+    std::string inventory_slot = itemType[0] + ":" + tag;
 
     auto pipe = redis->pipeline(tag);
 
     pipe.hset(inventory_slot, std::to_string(movItemReqPacket->dragItemSlotPos), std::to_string(movItemReqPacket->dragItemCode) + "," + std::to_string(movItemReqPacket->dragItemEnhance))
-        .hset(inventory_slot, std::to_string(movItemReqPacket->targetItemSlotPos), std::to_string(movItemReqPacket->targetItemCode) + "," + std::to_string(movItemReqPacket->dragItemEnhance));
+        .hset(inventory_slot, std::to_string(movItemReqPacket->targetItemSlotPos), std::to_string(movItemReqPacket->targetItemCode) + "," + std::to_string(movItemReqPacket->targetItemEnhance));
 
     pipe.exec();
-
 
     MOV_EQUIPMENT_RESPONSE movItemResPacket;
     movItemResPacket.PacketId = (uint16_t)PACKET_ID::MOV_EQUIPMENT_RESPONSE;
@@ -469,12 +455,12 @@ void RedisManager::RaidReqTeamInfo(uint16_t connObjNum_, uint16_t packetSize_, c
         RAID_START_REQUEST raidStartReqPacket1;
         raidStartReqPacket1.PacketId = (uint16_t)PACKET_ID::RAID_START_REQUEST;
         raidStartReqPacket1.PacketLength = sizeof(RAID_START_REQUEST);
-        raidStartReqPacket1.endTime = tempRoom->GetEndTime();
+        raidStartReqPacket1.endTime = tempRoom->SetEndTime();
 
         RAID_START_REQUEST raidStartReqPacket2;
         raidStartReqPacket2.PacketId = (uint16_t)PACKET_ID::RAID_START_REQUEST;
         raidStartReqPacket2.PacketLength = sizeof(RAID_START_REQUEST);
-        raidStartReqPacket2.endTime = tempRoom->GetEndTime();
+        raidStartReqPacket2.endTime = tempRoom->SetEndTime();
 
         connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_START_REQUEST), (char*)&raidStartReqPacket1);
         connUsersManager->FindUser(tempRoom->GetTeamObjNum(raidTeamInfoReqPacket->myNum))->PushSendMsg(sizeof(RAID_START_REQUEST), (char*)&raidStartReqPacket2);
@@ -517,6 +503,8 @@ void RedisManager::RaidHit(uint16_t connObjNum_, uint16_t packetSize_, char* pPa
             }
 
             pipe.exec(); // 유저들 랭킹 동기화
+
+            matchingManager->DeleteMob(room); // 방 종료 처리
         }
         else { // if get 0, waitting End message
             raidHitResPacket.currentMobHp = 0;
@@ -545,9 +533,6 @@ void RedisManager::GetRanking(uint16_t connObjNum_, uint16_t packetSize_, char* 
     char* tempC = new char[MAX_SCORE_SIZE + 1];
     char* tc = tempC;
     uint16_t cnt = scores.size();
-
-    std::cout << scores[0].second << std::endl;
-    std::cout << scores[1].second << std::endl;
 
     for (int i = 0; i < cnt; i++) {
         RANKING ranking;

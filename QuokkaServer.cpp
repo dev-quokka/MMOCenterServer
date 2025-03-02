@@ -172,6 +172,7 @@ void QuokkaServer::WorkThread() {
         if (!gqSucces || (dwIoSize == 0 && overlappedTCP->taskType != TaskType::ACCEPT)) { // User Disconnect
             std::cout << "socket " << connUser->GetSocket() << " Disconnect" << std::endl;
             
+            redisManager->Disconnect(connObjNum);
             inGameUserManager->Reset(connObjNum);
             connUser->Reset(); // Reset 
             UserCnt.fetch_sub(1); // UserCnt -1
