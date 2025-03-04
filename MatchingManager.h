@@ -44,6 +44,7 @@ public:
 			matchingThread.join();
 		}
 
+		timeChekcRun = false;
 		if (timeCheckThread.joinable()) {
 			timeCheckThread.join();
 		}

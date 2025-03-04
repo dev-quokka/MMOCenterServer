@@ -92,9 +92,9 @@ struct LEVEL_UP_RESPONSE : PACKET_HEADER {
 
 struct ADD_ITEM_REQUEST : PACKET_HEADER {
 	uint16_t itemType; // (Max 3)
-	uint16_t itemSlotPos; // (Max 50)
+	uint16_t itemPosition; // (Max 50)
 	uint16_t itemCount; // (Max 99)
-	short itemCode; // (Max 5000)
+	uint16_t itemCode; // (Max 5000)
 };
 
 struct ADD_ITEM_RESPONSE : PACKET_HEADER {
@@ -103,8 +103,8 @@ struct ADD_ITEM_RESPONSE : PACKET_HEADER {
 
 struct DEL_ITEM_REQUEST : PACKET_HEADER {
 	uint16_t itemType; // (Max 3)
-	uint16_t itemSlotPos; // (Max 50)
-	short itemCode; // (Max 5000)
+	uint16_t itemPosition; // (Max 50)
+	uint16_t itemCode; // (Max 5000)
 };
 
 struct DEL_ITEM_RESPONSE : PACKET_HEADER {
@@ -113,9 +113,9 @@ struct DEL_ITEM_RESPONSE : PACKET_HEADER {
 
 struct MOD_ITEM_REQUEST : PACKET_HEADER {
 	uint16_t itemType; // (Max 3)
-	uint16_t itemSlotPos; // (Max 50)
+	uint16_t itemPosition; // (Max 50)
 	int8_t itemCount; // (Max 99)
-	short itemCode; // (Max 5000)
+	uint16_t itemCode; // (Max 5000)
 };
 
 struct MOD_ITEM_RESPONSE : PACKET_HEADER {
@@ -125,11 +125,11 @@ struct MOD_ITEM_RESPONSE : PACKET_HEADER {
 struct MOV_ITEM_REQUEST : PACKET_HEADER {
 	uint16_t ItemType; // (Max 3)
 
-	uint16_t dragItemSlotPos; // (Max 10)
+	uint16_t dragItemPos; // (Max 10)
 	uint16_t dragItemCode;
 	uint16_t dragItemCount; // (Max 99)
 
-	uint16_t targetItemSlotPos; // (Max 10)
+	uint16_t targetItemPos; // (Max 10)
 	uint16_t targetItemCode;
 	uint16_t targetItemCount; // (Max 99)
 };
@@ -141,10 +141,9 @@ struct MOV_ITEM_RESPONSE : PACKET_HEADER {
 //  ---------------------------- INVENTORY:EQUIPMENT  ----------------------------
 
 struct ADD_EQUIPMENT_REQUEST : PACKET_HEADER {
-	uint16_t itemType; // (Max 3)
-	uint16_t itemSlotPos; // (Max 50)
-	uint16_t currentEnhanceCount; // (Max 20)
-	short itemCode; // (Max 5000)
+	uint16_t itemPosition; // (Max 50)
+	uint16_t Enhancement; // (Max 20)
+	uint16_t itemCode; // (Max 5000)
 };
 
 struct ADD_EQUIPMENT_RESPONSE : PACKET_HEADER {
@@ -152,9 +151,7 @@ struct ADD_EQUIPMENT_RESPONSE : PACKET_HEADER {
 };
 
 struct DEL_EQUIPMENT_REQUEST : PACKET_HEADER {
-	uint16_t itemType; // (Max 3)
-	uint16_t itemSlotPos; // (Max 50)
-	short itemCode; // (Max 5000)
+	uint16_t itemPosition; // (Max 50)
 };
 
 struct DEL_EQUIPMENT_RESPONSE : PACKET_HEADER {
@@ -162,24 +159,22 @@ struct DEL_EQUIPMENT_RESPONSE : PACKET_HEADER {
 };
 
 struct ENH_EQUIPMENT_REQUEST : PACKET_HEADER {
-	uint16_t itemType; // (Max 3)
-	uint16_t itemSlotPos; // (Max 50)
-	uint16_t currentEnhanceCount; // (Max 10)
-	short itemCode; // (Max 5000)
+	uint16_t itemPosition; // (Max 50)
 };
 
 struct ENH_EQUIPMENT_RESPONSE : PACKET_HEADER {
 	bool isSuccess;
+	uint16_t Enhancement = 0;
 };
 
 struct MOV_EQUIPMENT_REQUEST : PACKET_HEADER {
-	uint16_t dragItemSlotPos; // (Max 10)
+	uint16_t dragItemPos; // (Max 10)
 	uint16_t dragItemCode;
-	uint16_t dragItemEnhance;
+	uint16_t dragItemEnhancement;
 
-	uint16_t targetItemSlotPos; // (Max 10)
+	uint16_t targetItemPos; // (Max 10)
 	uint16_t targetItemCode;
-	uint16_t targetItemEnhance;
+	uint16_t targetItemEnhancement;
 };
 
 struct MOV_EQUIPMENT_RESPONSE : PACKET_HEADER {

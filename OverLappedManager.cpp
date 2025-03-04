@@ -21,3 +21,4 @@ void OverLappedManager::returnOvLap(OverlappedTCP* overlappedTCP_){
 	ZeroMemory(overlappedTCP_, sizeof(OverlappedTCP)); // √ ±‚»≠
 	ovLapPool.push(overlappedTCP_);
 }
+

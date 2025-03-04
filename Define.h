@@ -28,7 +28,6 @@ struct OverlappedEx {
 struct OverlappedTCP : OverlappedEx {
 	// 2 bytes
 	uint16_t connObjNum;
-
 	// 16 bytes
 	WSABUF wsaBuf; // TCP Buffer
 };
@@ -36,7 +35,6 @@ struct OverlappedTCP : OverlappedEx {
 struct OverlappedUDP : OverlappedEx {
 	// 4 bytes
 	int addrSize = sizeof(sockaddr_in);
-
 	// 16 bytes
 	WSABUF wsaBuf; // UDP Buffer
 	sockaddr_in userAddr;  // Client Ip && Port Info

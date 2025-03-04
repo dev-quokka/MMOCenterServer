@@ -72,12 +72,12 @@ bool RedisManager::CreateRedisThread(const uint16_t RedisThreadCnt_) {
     return true;
 }
 
-bool RedisManager::EquipmentEnhance(short currentEnhanceCount_) {
-    if (currentEnhanceCount_ < 0 || currentEnhanceCount_ >= enhanceProbabilities.size()) { // Strange Enhance
+bool RedisManager::EquipmentEnhance(uint16_t currentEnhanceCount_) {
+    if (currentEnhanceCount_ < 0 || currentEnhanceCount_ >= enhanceProbabilities.size()) {
         return false;
     }
 
-    std::uniform_int_distribution<int> range(1, 100);
+    std::uniform_int_distribution<int> dist(1, 100);
     return dist(gen) <= enhanceProbabilities[currentEnhanceCount_];
 }
 
@@ -240,16 +240,15 @@ void RedisManager::AddItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPa
     addItemResPacket.PacketId = (uint16_t)PACKET_ID::ADD_ITEM_RESPONSE;
     addItemResPacket.PacketLength = sizeof(ADD_ITEM_RESPONSE);
 
-    std::string inventory_slot = itemType[addItemReqPacket->itemType] + ":";
     std::string tag = "{" + std::to_string(tempUser->GetPk()) + "}";
+    std::string inventory_slot = itemType[addItemReqPacket->itemType] + ":" + tag;
 
-        if (redis->hset(inventory_slot, std::to_string(addItemReqPacket->itemSlotPos), std::to_string(addItemReqPacket->itemCode) +","+std::to_string(addItemReqPacket->itemCount))) { // AddItem Success (ItemCode:slotposition, count)
+        if (redis->hset(inventory_slot, std::to_string(addItemReqPacket->itemPosition), std::to_string(addItemReqPacket->itemCode) +":"+std::to_string(addItemReqPacket->itemCount))) { // AddItem Success (ItemCode:slotposition, count)
             addItemResPacket.isSuccess = true;
         }
         else { // AddItem Fail
             addItemResPacket.isSuccess = false;
         }
-
 
     connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(ADD_ITEM_RESPONSE),(char*)&addItemResPacket);
 }
@@ -265,7 +264,7 @@ void RedisManager::DeleteItem(uint16_t connObjNum_, uint16_t packetSize_, char* 
     std::string inventory_slot = itemType[delItemReqPacket->itemType] + ":";
     std::string tag = "{" + std::to_string(tempUser->GetPk()) + "}";
 
-        if (redis->hdel(inventory_slot, std::to_string(delItemReqPacket->itemSlotPos))) { // DeleteItem Success
+        if (redis->hdel(inventory_slot, std::to_string(delItemReqPacket->itemPosition))) { // DeleteItem Success
             delItemResPacket.isSuccess = true;
         }
         else { // DeleteItem Fail
@@ -286,7 +285,7 @@ void RedisManager::ModifyItem(uint16_t connObjNum_, uint16_t packetSize_, char* 
     std::string inventory_slot = itemType[modItemReqPacket->itemType] + ":";
     std::string tag = "{" + std::to_string(tempUser->GetPk()) + "}";
 
-        if (redis->hset(inventory_slot, itemType[modItemReqPacket->itemType] + std::to_string(modItemReqPacket->itemCode) + std::to_string(modItemReqPacket->itemSlotPos), std::to_string(modItemReqPacket->itemCount))) { // ModifyItem Success
+        if (redis->hset(inventory_slot, itemType[modItemReqPacket->itemType] + std::to_string(modItemReqPacket->itemCode) + std::to_string(modItemReqPacket->itemPosition), std::to_string(modItemReqPacket->itemCount))) { // ModifyItem Success
             modItemResPacket.isSuccess = true;
         }
         else { // ModifyItem Fail
@@ -305,8 +304,8 @@ void RedisManager::MoveItem(uint16_t connObjNum_, uint16_t packetSize_, char* pP
 
         auto pipe = redis->pipeline(tag);
 
-        pipe.hset(inventory_slot, std::to_string(movItemReqPacket->dragItemSlotPos), std::to_string(movItemReqPacket->dragItemCode) + "," + std::to_string(movItemReqPacket->dragItemCount))
-            .hset(inventory_slot, std::to_string(movItemReqPacket->targetItemSlotPos), std::to_string(movItemReqPacket->targetItemCode) + "," + std::to_string(movItemReqPacket->targetItemCount));
+        pipe.hset(inventory_slot, std::to_string(movItemReqPacket->dragItemPos), std::to_string(movItemReqPacket->dragItemCode) + ":" + std::to_string(movItemReqPacket->dragItemCount))
+            .hset(inventory_slot, std::to_string(movItemReqPacket->targetItemPos), std::to_string(movItemReqPacket->targetItemCode) + ":" + std::to_string(movItemReqPacket->targetItemCount));
 
         pipe.exec();
 
@@ -331,9 +330,10 @@ void RedisManager::AddEquipment(uint16_t connObjNum_, uint16_t packetSize_, char
     addEquipResPacket.PacketId = (uint16_t)PACKET_ID::ADD_EQUIPMENT_RESPONSE;
     addEquipResPacket.PacketLength = sizeof(ADD_EQUIPMENT_RESPONSE);
 
-        std::string inventory_slot = "inventory:" + tempUser->GetPk();
+        std::string tag = "{" + std::to_string(tempUser->GetPk()) + "}";
+        std::string inventory_slot = itemType[0] + ":" + tag;
 
-        if (redis->hset(inventory_slot, std::to_string(addEquipReqPacket->itemSlotPos),std::to_string(addEquipReqPacket->itemCode) +"," + std::to_string(addEquipReqPacket->currentEnhanceCount))) { // AddItem Success (ItemCode:slotposition, count)
+        if (redis->hset(inventory_slot, std::to_string(addEquipReqPacket->itemPosition),std::to_string(addEquipReqPacket->itemCode) +":" + std::to_string(addEquipReqPacket->Enhancement))) { // AddItem Success (ItemCode:slotposition, count)
             addEquipResPacket.isSuccess = true;
         }
         else { // AddItem Fail
@@ -353,7 +353,7 @@ void RedisManager::DeleteEquipment(uint16_t connObjNum_, uint16_t packetSize_, c
 
     std::string inventory_slot = "inventory:" + tempUser->GetPk();
 
-        if (redis->hdel(inventory_slot, std::to_string(delEquipReqPacket->itemSlotPos))) { // DeleteItem Success
+        if (redis->hdel(inventory_slot, std::to_string(delEquipReqPacket->itemPosition))) { // DeleteItem Success
             delEquipResPacket.isSuccess = true;
         }
         else { // DeleteItem Fail
@@ -364,29 +364,53 @@ void RedisManager::DeleteEquipment(uint16_t connObjNum_, uint16_t packetSize_, c
 }
 
 void RedisManager::EnhanceEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
-    auto delEquipReqPacket = reinterpret_cast<ENH_EQUIPMENT_REQUEST*>(pPacket_);
+    auto enhEquipReqPacket = reinterpret_cast<ENH_EQUIPMENT_REQUEST*>(pPacket_);
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
-    ENH_EQUIPMENT_RESPONSE delEquipResPacket;
-    delEquipResPacket.PacketId = (uint16_t)PACKET_ID::ENH_EQUIPMENT_RESPONSE;
-    delEquipResPacket.PacketLength = sizeof(ENH_EQUIPMENT_RESPONSE);
+    ENH_EQUIPMENT_RESPONSE enhEquipResPacket;
+    enhEquipResPacket.PacketId = (uint16_t)PACKET_ID::ENH_EQUIPMENT_RESPONSE;
+    enhEquipResPacket.PacketLength = sizeof(ENH_EQUIPMENT_RESPONSE);
 
-    std::string inventory_slot = "inventory:" + tempUser->GetPk();
+    std::string tag = "{" + std::to_string(tempUser->GetPk()) + "}";
+    std::string inventory_slot = itemType[0] + ":" + tag;
 
-        if (1) { // 여기 강화하는 hset or hincryby로 수정
-            if (EquipmentEnhance(delEquipReqPacket->currentEnhanceCount)) { // Enhance Success
-                delEquipResPacket.isSuccess = true;
+    auto tempE = redis->hget(inventory_slot, std::to_string(enhEquipReqPacket->itemPosition));
+
+    if (tempE) {
+        std::string value = *tempE;
+        for (int i = 0; i < value.size(); i++) {
+            if (value[i] == ':') {
+                std::string first = value.substr(0, i);
+                std::string second = value.substr(i + 1);
+
+                // uint16_t로 변환
+                uint16_t f = static_cast<uint16_t>(std::stoi(first));
+                uint16_t s = static_cast<uint16_t>(std::stoi(second));
+
+                std::cout << tempUser->GetId() << " 유저 " << enhanceProbabilities[s] << "% 확률 강화 시도" << std::endl;
+
+                if (EquipmentEnhance(s)) { // Enhance Success
+                    redis->hset(inventory_slot, std::to_string(enhEquipReqPacket->itemPosition), first+":"+std::to_string(s+1)); // 강화 성공
+                    enhEquipResPacket.isSuccess = true;
+                    enhEquipResPacket.Enhancement = s + 1;
+                    std::cout << "강화 성공" << std::endl;
+                }
+                else { // Enhance Success
+                    enhEquipResPacket.isSuccess = false;
+                    std::cout << "강화 실패" << std::endl;
+                }
+
+                connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(ENH_EQUIPMENT_RESPONSE), (char*)&enhEquipResPacket);
+                return;
             }
-            else { // Enhance Success
-                delEquipResPacket.isSuccess = false;
-            }
-
         }
-        else { // DeleteItem Fail
-            delEquipResPacket.isSuccess = false;
-        }
+        enhEquipResPacket.isSuccess = false;
+    }
+    else { // Redis Cluster 해당 포지션에 아이템이 없을때
+        enhEquipResPacket.isSuccess = false;
+    }
 
-    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(DEL_EQUIPMENT_RESPONSE), (char*)&delEquipResPacket);
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(ENH_EQUIPMENT_RESPONSE), (char*)&enhEquipResPacket);
 }
 
 void RedisManager::MoveEquipment(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
@@ -398,8 +422,8 @@ void RedisManager::MoveEquipment(uint16_t connObjNum_, uint16_t packetSize_, cha
 
     auto pipe = redis->pipeline(tag);
 
-    pipe.hset(inventory_slot, std::to_string(movItemReqPacket->dragItemSlotPos), std::to_string(movItemReqPacket->dragItemCode) + "," + std::to_string(movItemReqPacket->dragItemEnhance))
-        .hset(inventory_slot, std::to_string(movItemReqPacket->targetItemSlotPos), std::to_string(movItemReqPacket->targetItemCode) + "," + std::to_string(movItemReqPacket->targetItemEnhance));
+    pipe.hset(inventory_slot, std::to_string(movItemReqPacket->dragItemPos), std::to_string(movItemReqPacket->dragItemCode) + ":" + std::to_string(movItemReqPacket->dragItemEnhancement))
+        .hset(inventory_slot, std::to_string(movItemReqPacket->targetItemPos), std::to_string(movItemReqPacket->targetItemCode) + ":" + std::to_string(movItemReqPacket->targetItemEnhancement));
 
     pipe.exec();
 

@@ -12,7 +12,9 @@
 
 class ConnUser {
 public:
-	ConnUser(uint32_t bufferSize_, uint16_t connObjNum_, HANDLE sIOCPHandle_, OverLappedManager* overLappedManager_) : connObjNum(connObjNum_), sIOCPHandle(sIOCPHandle_), overLappedManager(overLappedManager_){
+
+	ConnUser(uint32_t bufferSize_, uint16_t connObjNum_, HANDLE sIOCPHandle_, OverLappedManager* overLappedManager_) 
+		: connObjNum(connObjNum_), sIOCPHandle(sIOCPHandle_), overLappedManager(overLappedManager_){
 		userSkt = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
 		if (userSkt == INVALID_SOCKET) {
@@ -28,7 +30,6 @@ public:
 
 		circularBuffer = std::make_unique<CircularBuffer>(bufferSize_);
 	}
-
 	~ConnUser() {
 		struct linger stLinger = { 0, 0 };	// SO_DONTLINGER·Î ¼³Á¤
 
@@ -190,6 +191,7 @@ public :
 	}
 
 private:
+
 	void ProcSend() {
 		OverlappedTCP* overlappedTCP;
 
@@ -228,7 +230,7 @@ private:
 	char acceptBuf[64] = { 0 };
 
 	// 120 bytes
-	std::unique_ptr<CircularBuffer> circularBuffer; // Make Circular Recv Buffer
+	std::unique_ptr<CircularBuffer> circularBuffer;
 
 	// 136 bytes 
 	boost::lockfree::queue<OverlappedTCP*> sendQueue{10};

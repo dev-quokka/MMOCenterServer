@@ -80,6 +80,7 @@ bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
 }
 
 bool QuokkaServer::StartWork() {
+
     bool check = CreateWorkThread();
     if (!check) {
         std::cout << "WorkThread 생성 실패" << std::endl;
@@ -91,6 +92,12 @@ bool QuokkaServer::StartWork() {
         std::cout << "CreateAccepterThread 생성 실패" << std::endl;
         return false;
     } 
+
+    check = CreateUDPWorkThread();
+    if (!check) {
+        std::cout << "CreateAccepterThread 생성 실패" << std::endl;
+        return false;
+    }
 
     connUsersManager = new ConnUsersManager(maxClientCount);
     inGameUserManager = new InGameUserManager;
@@ -115,6 +122,7 @@ bool QuokkaServer::StartWork() {
     inGameUserManager->Init(maxClientCount);
     matchingManager->Init(maxClientCount, redisManager, inGameUserManager, roomManager, connUsersManager);
     redisManager->SetManager(connUsersManager, inGameUserManager, roomManager, matchingManager);
+
     return true;
 }
 
@@ -161,7 +169,7 @@ void QuokkaServer::WorkThread() {
         );
 
         if (gqSucces && dwIoSize == 0 && lpOverlapped == NULL) { // Server End Request
-            ServerEnd();
+            WorkRun = false;
             continue;
         }
 
@@ -229,16 +237,18 @@ void QuokkaServer::UDPWorkThread() {
             INFINITE
         );
 
-        auto overlappedUDP = (OverlappedUDP*)lpOverlapped;
+        if (gqSucces && dwIoSize == 0 && lpOverlapped == NULL) { // Server End Request
+            udpWorkRun = false;
+            continue;
+        }
 
-        std::cout << "UDP OVERLAPPED SEND REQ" << std::endl;
+        auto overlappedUDP = (OverlappedUDP*)lpOverlapped;
+        std::cout << "드러오긴함?" << std::endl;
 
         if (overlappedUDP->taskType == TaskType::SEND) {
-            std::cout << "UDP OVERLAPPED SEND" << std::endl;
             udpOverLappedManager->returnOvLap(overlappedUDP);
         }
         else if (overlappedUDP->taskType == TaskType::NEWSEND) {
-            std::cout << "UDP OVERLAPPED SEND" << std::endl;
             delete[] overlappedUDP->wsaBuf.buf;
             delete overlappedUDP;
         }
@@ -273,9 +283,15 @@ void QuokkaServer::AccepterThread() {
 }
 
 void QuokkaServer::ServerEnd() {
+
     WorkRun = false;
     udpWorkRun = false;
     AccepterRun = false;
+
+
+    for (int i = 0; i < workThreads.size(); i++) {
+        PostQueuedCompletionStatus(sIOCPHandle, 0, 0, nullptr);
+    }
 
     for (int i = 0; i < workThreads.size(); i++) { // Work 쓰레드 종료
         if (workThreads[i].joinable()) {
@@ -289,16 +305,13 @@ void QuokkaServer::ServerEnd() {
         }
     }
 
+    PostQueuedCompletionStatus(udpHandle, 0, 0, nullptr);
+
     if (udpWorkThread.joinable()) {
         udpWorkThread.join();
     }
 
     ConnUser* connUser;
-
-    while (AcceptQueue.pop(connUser)) { // 요청 대기큐 유저 객체 삭제
-        closesocket(connUser->GetSocket());
-        delete connUser;
-    }
 
     while (WaittingQueue.pop(connUser)) { // 접속 대기큐 유저 객체 삭제
         closesocket(connUser->GetSocket());
@@ -317,7 +330,8 @@ void QuokkaServer::ServerEnd() {
     closesocket(udpSkt);
     WSACleanup();
 
-    std::cout << "종료 10초 대기" << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(10)); // 10초 대기
+    std::cout << "종료 5초 대기" << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(5)); // 5초 대기
     std::cout << "종료" << std::endl;
 }
+

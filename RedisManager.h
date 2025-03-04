@@ -37,7 +37,7 @@ public:
 
 private:
     bool CreateRedisThread(const uint16_t RedisThreadCnt_);
-    bool EquipmentEnhance(short currentEnhanceCount_);
+    bool EquipmentEnhance(uint16_t currentEnhanceCount_);
 
     void RedisRun(const uint16_t RedisThreadCnt_);
     void RedisThread();
@@ -81,6 +81,11 @@ private:
     std::unique_ptr<sw::redis::RedisCluster> redis;
     std::uniform_int_distribution<int> dist;
 
+    ConnUsersManager* connUsersManager;
+    InGameUserManager* inGameUserManager;
+    RoomManager* roomManager;
+    MatchingManager* matchingManager;
+
     // 16 bytes
     std::thread redisThread;
 
@@ -89,28 +94,19 @@ private:
     std::unordered_map<uint16_t, RECV_PACKET_FUNCTION> packetIDTable;
     std::vector<std::thread> redisThreads;
 
-    std::vector<short> enhanceProbabilities = {100,90,80,70,60,50,40,30,20,10};
+    std::vector<uint16_t> enhanceProbabilities = {100,90,80,70,60,50,40,30,20,10};
     std::vector<unsigned int> mobExp = { 0,1,2,3,4,5,6,7,8,9,10 };
     std::vector<std::string> itemType = {"equipment", "consumables", "materials" };
 
-    ConnUsersManager* connUsersManager;
-
-    // 64 bytes
-    InGameUserManager* inGameUserManager;
-
     // 80 bytes
     std::mutex redisMu;
-    RoomManager* roomManager;
-
-    // 136 bytes 
-    boost::lockfree::queue<DataPacket> procSktQueue{1024}; // 나중에 병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환
+    // 136 bytes (병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환)
+    boost::lockfree::queue<DataPacket> procSktQueue{1024};
 
     // 242 bytes
     sw::redis::ConnectionOptions connection_options;
 
-    // 936 bytes
-    MatchingManager* matchingManager;
-
     // 5000 bytes
     thread_local static std::mt19937 gen;
 };
+

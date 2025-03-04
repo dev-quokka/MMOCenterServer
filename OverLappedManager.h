@@ -23,3 +23,4 @@ public:
 private:
 	boost::lockfree::queue<OverlappedTCP*> ovLapPool{ OVERLAPPED_TCP_QUEUE_SIZE };
 };
+

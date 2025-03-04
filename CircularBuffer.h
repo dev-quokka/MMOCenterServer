@@ -29,3 +29,4 @@ private:
     // 80 bytes
     std::mutex bufferMutex;
 };
+
