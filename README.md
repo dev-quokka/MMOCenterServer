@@ -27,5 +27,16 @@
 
 <br>
 
+- #### Raid Start
+![Raid Start drawio](https://github.com/user-attachments/assets/b41e5788-7fdb-4717-8dc4-9c7ed08c0243)
+
+<br>
+
+- #### Raid End (Time Out)
+
+
+<br>
+
 - #### User Logout or Disconnect
 ![User Logout drawio](https://github.com/user-attachments/assets/805f11d2-250a-4d60-8874-fad43366fc27)
+
