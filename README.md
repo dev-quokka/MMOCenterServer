@@ -28,11 +28,15 @@
     - Session Server에서 생성된 JWT 토큰 검증을 통해 접속 요청 유저를 이중 확인하여 보안성 강화
     - 경험치 증가, 레벨업 알고리즘 구현
     - 레벨별 요구 경험치량 설정
+    
+<br> 
 
 ### ㅇSession Server (MySQL, Redis Cluster) - User Authentication & Connection Game Server For Syncronization
    - JWT 토큰을 활용한 유저 인증 보안 강화
    - 유저의 게임 시작 요청시, MySQL에서 유저 정보 및 인벤토리 데이터를 Redis Cluster로 load 
    - 유저 로그아웃시, Redis Cluster에 업데이트된 데이터를 MySQL에 동기화 (Batch Update)
+
+<br> 
 
 ### ㅇClient
    - 게임 시작시 Session Server에서 JWT 토큰을 발급 받아 Game Server에 인증 요청
