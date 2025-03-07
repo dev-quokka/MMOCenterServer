@@ -81,7 +81,7 @@
 ![접속, 접속종료](https://github.com/user-attachments/assets/e9d78268-0fb4-40b1-970f-538dd39c6fc3)
 
 1. 게임 서버가 시작되면 세션 서버와 연결합니다.
-2. 세션 서버를 통해 게임 시작을 요청하면, MySQL에서 유저 정보와 인벤토리 데이터를 가져와서 Redis Cluster에 load합니다.
+2. 세션 서버로 유저가 게임 시작을 요청하면, MySQL에서 유저 정보와 인벤토리 데이터를 가져와서 Redis Cluster에 load합니다.
 3. 모든 데이터를 Redis Cluster에 정상적으로 load 한 후, JWT 토큰을 생성합니다.
 4. 생성된 JWT 토큰을 Redis Cluster에 저장하고, 유저에게도 전송합니다.
 5. 유저는 받은 JWT 토큰을 포함하여 게임 서버에 접속 요청을 전송합니다.
