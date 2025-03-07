@@ -34,11 +34,13 @@
 <br>
 
 - #### Raid End (Time Out)
+![Raid Time End](https://github.com/user-attachments/assets/f6fdd216-52fe-40bd-b2b4-600e57a04169)
 
 
 <br>
 
 - #### Raid End (Mob HP 0)
+![Raid mob dead drawio](https://github.com/user-attachments/assets/75b87074-1368-4c1e-9e1f-5430e699937f)
 
 
 <br>
