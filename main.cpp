@@ -13,7 +13,8 @@ int main() {
 
     server.StartWork();
 
-    std::cout << "If You Want Exit, Write quokka" << std::endl;
+    std::cout << "=== MMO GAME SERVER START ===" << std::endl;
+    std::cout << "=== If You Want Exit, Write quokka ===" << std::endl;
     std::string k = "";
 
     while (1) {

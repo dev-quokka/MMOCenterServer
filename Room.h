@@ -155,14 +155,15 @@ public:
 				overlappedUDP->taskType = TaskType::NEWSEND;
 
 				DWORD dwSendBytes = 0;
-				int result = WSASendTo(*udpSkt, &overlappedUDP->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&ruInfos[i]->userAddr, sizeof(ruInfos[i]->userAddr), (LPWSAOVERLAPPED)overlappedUDP, NULL);
+				int result = WSASendTo(*udpSkt, &overlappedUDP->wsaBuf, 1, &dwSendBytes, 0, 
+				(SOCKADDR*)&ruInfos[i]->userAddr, sizeof(ruInfos[i]->userAddr), (LPWSAOVERLAPPED)overlappedUDP, NULL);
 
-				std::cout << "여분 없는 스코어 전송" << std::endl;
 				std::cout <<"현재 몹 HP : " << mobHp << std::endl;
 				if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
 					std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
 				}
 			}
+
 			else {
 				overlappedUDP->wsaBuf.len = sizeof(currentMobHp_);
 				overlappedUDP->wsaBuf.buf = new char[sizeof(currentMobHp_)];
@@ -172,9 +173,9 @@ public:
 				overlappedUDP->taskType = TaskType::SEND;
 
 				DWORD dwSendBytes = 0;
-				int result = WSASendTo(*udpSkt, &overlappedUDP->wsaBuf, 1, &dwSendBytes, 0, (SOCKADDR*)&ruInfos[i]->userAddr, sizeof(ruInfos[i]->userAddr), (LPWSAOVERLAPPED)overlappedUDP, NULL);
+				int result = WSASendTo(*udpSkt, &overlappedUDP->wsaBuf, 1, &dwSendBytes, 0, 
+				(SOCKADDR*)&ruInfos[i]->userAddr, sizeof(ruInfos[i]->userAddr), (LPWSAOVERLAPPED)overlappedUDP, NULL);
 
-				std::cout << "스코어 전송" << std::endl;
 				std::cout << "현재 몹 HP : " << mobHp << std::endl;
 				if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
 					std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;

@@ -243,7 +243,6 @@ void QuokkaServer::UDPWorkThread() {
         }
 
         auto overlappedUDP = (OverlappedUDP*)lpOverlapped;
-        std::cout << "드러오긴함?" << std::endl;
 
         if (overlappedUDP->taskType == TaskType::SEND) {
             udpOverLappedManager->returnOvLap(overlappedUDP);

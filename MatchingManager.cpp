@@ -2,8 +2,7 @@
 
 void MatchingManager::Init(const uint16_t maxClientCount_, RedisManager* redisManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_, ConnUsersManager* connUsersManager_) {
     for (int i = 1; i <= USER_MAX_LEVEL/3 + 1; i++ ) { // Max i = MaxLevel/3 + 1 (Level Check Set)
-        std::priority_queue<MatchingRoom*> k;
-        matchingMap.emplace(i, std::priority_queue<MatchingRoom*>());
+        matchingMap.emplace(i, std::set<MatchingRoom*, MatchingRoomComp>());
     }
 
     for (int i = 1; i <= maxClientCount_; i++) { // Room Number Set
@@ -15,18 +14,18 @@ void MatchingManager::Init(const uint16_t maxClientCount_, RedisManager* redisMa
     connUsersManager = connUsersManager_;
     redisManager = redisManager_;
       
-    CreateMatchThread(); // 문제
+    CreateMatchThread();
     CreateTimeCheckThread();
 }
 
 bool MatchingManager::Insert(uint16_t userObjNum_, InGameUser* inGameUser_) {
     MatchingRoom* tempRoom = new MatchingRoom(userObjNum_, inGameUser_);
 
-    tbb::concurrent_hash_map<uint16_t, std::priority_queue<MatchingRoom*>>::accessor accessor;
+    tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>>::accessor accessor;
     uint16_t groupNum = inGameUser_->GetLevel() / 3 + 1;
 
     if (matchingMap.find(accessor, groupNum)) { // Insert Success
-        accessor->second.push(tempRoom);
+        accessor->second.insert(tempRoom);
         std::cout << "Insert Group " << groupNum << std::endl;
         return true;
     }
@@ -59,29 +58,32 @@ void MatchingManager::MatchingThread() {
         if (tempRoomNum == 0) { // 룸넘 한번 뽑아서 새로 뽑아야함
             if (roomNumQueue.pop(tempRoomNum)) { // Exist Room Num
                 for (int i = cnt; i <= 6; i++) {
-                    tbb::concurrent_hash_map<uint16_t, std::priority_queue<MatchingRoom*>>::accessor accessor1;
+                    tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>>::accessor accessor1;
                     if (matchingMap.find(accessor1, i)) { // i번째 레벨 그룹 넘버 체크
 
                         if (!accessor1->second.empty()) { // 유저 한명이라도 있음
-                            tempMatching1 = accessor1->second.top();
+                            tempMatching1 = *accessor1->second.begin();
 
-                            if (tempMatching1->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching1->userObjNum)->GetObjNum()))->GetId()) { // 현재 접속중인 유저의 아이디와 비교해서 다르면 이미 나간 유저임으로 다음으로 넘어가기
-                                accessor1->second.pop();
+                            if (tempMatching1->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching1->userObjNum)
+                                ->GetObjNum()))->GetId()) { // 현재 접속중인 유저의 아이디와 비교해서 다르면 이미 나간 유저임으로 다음으로 넘어가기
+                                accessor1->second.erase(accessor1->second.begin());
                                 delete tempMatching1;
                                 continue;
                             }
-                            accessor1->second.pop();
+
+                            accessor1->second.erase(accessor1->second.begin());
 
                             if (!accessor1->second.empty()) { // 두번째 대기 유저가 있음
-                                tempMatching2 = accessor1->second.top();
+                                tempMatching2 = *accessor1->second.begin();
 
-                                if (tempMatching2->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching2->userObjNum)->GetObjNum()))->GetId()) { // 이미 나간 유저면 다음으로 넘어가기
-                                    accessor1->second.pop();
+                                if (tempMatching2->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching2->userObjNum)->GetObjNum()))
+                                    ->GetId()) { // 이미 나간 유저면 다음으로 넘어가기
+                                    accessor1->second.erase(accessor1->second.begin());
                                     delete tempMatching2;
                                     continue;
                                 }
 
-                                accessor1->second.pop();
+                                accessor1->second.erase(accessor1->second.begin());
 
                                 { // 두명 유저 방 만들어서 넣어주기
                                     RAID_READY_REQUEST rReadyResPacket1;
@@ -107,19 +109,20 @@ void MatchingManager::MatchingThread() {
                                     connUsersManager->FindUser(tempMatching1->userObjNum)->PushSendMsg(sizeof(RAID_READY_REQUEST), (char*)&rReadyResPacket1);
                                     connUsersManager->FindUser(tempMatching2->userObjNum)->PushSendMsg(sizeof(RAID_READY_REQUEST), (char*)&rReadyResPacket2);
 
-                                    endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userObjNum, tempMatching2->userObjNum, tempMatching1->inGameUser, tempMatching2->inGameUser));
+                                    endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userObjNum, 
+                                        tempMatching2->userObjNum, tempMatching1->inGameUser, tempMatching2->inGameUser));
                                 }
 
                                 delete tempMatching1;
                                 delete tempMatching2;
 
-                                if (cnt == 6) cnt = 1;
+                                if (cnt == 6) cnt = 1; // 방금 매칭한 다음 번호 그룹부터 매칭을 위해 cnt 체크
                                 else cnt++;
                                 tempRoomNum = 0;
                                 break;
                             }
                             else { // 현재 레벨에 대기 유저 한명이라 다시 넣기
-                                accessor1->second.push(tempMatching1);
+                                accessor1->second.insert(tempMatching1);
                             }
                         }
                     }
@@ -132,29 +135,29 @@ void MatchingManager::MatchingThread() {
         }
         else {
             for (int i = 1; i <= 6; i++) {
-                tbb::concurrent_hash_map<uint16_t, std::priority_queue<MatchingRoom*>>::accessor accessor1;
+                tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>>::accessor accessor1;
                 if (matchingMap.find(accessor1, i)) { // i번째 레벨 그룹 넘버 체크
 
                     if (!accessor1->second.empty()) { // 유저 한명이라도 있음
-                        tempMatching1 = accessor1->second.top();
+                        tempMatching1 = *accessor1->second.begin();
 
                         if (tempMatching1->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching1->userObjNum)->GetObjNum()))->GetId()) { // 현재 접속중인 유저의 아이디와 비교해서 다르면 이미 나간 유저임으로 다음으로 넘어가기
-                            accessor1->second.pop();
+                            accessor1->second.erase(accessor1->second.begin());
                             delete tempMatching1;
                             continue;
                         }
-                        accessor1->second.pop();
+                        accessor1->second.erase(accessor1->second.begin());
 
                         if (!accessor1->second.empty()) { // 두번째 대기 유저가 있음
-                            tempMatching2 = accessor1->second.top();
+                            tempMatching2 = *accessor1->second.begin();
 
                             if (tempMatching2->inGameUser->GetId() != inGameUserManager->GetInGameUserByObjNum((connUsersManager->FindUser(tempMatching2->userObjNum)->GetObjNum()))->GetId()) { // 이미 나간 유저면 다음으로 넘어가기
-                                accessor1->second.pop();
+                                accessor1->second.erase(accessor1->second.begin());
                                 delete tempMatching2;
                                 continue;
                             }
 
-                            accessor1->second.pop();
+                            accessor1->second.erase(accessor1->second.begin());
 
                             { // 두명 유저 방 만들어서 넣어주기
                                 RAID_READY_REQUEST rReadyResPacket1;
@@ -192,7 +195,7 @@ void MatchingManager::MatchingThread() {
                             break;
                         }
                         else { // 현재 레벨에 대기 유저 한명이라 다시 넣기
-                            accessor1->second.push(tempMatching1);
+                            accessor1->second.insert(tempMatching1);
                         }
                     }
                 }

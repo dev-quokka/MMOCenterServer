@@ -25,15 +25,21 @@ class RedisManager;
 
 struct EndTimeComp {
 	bool operator()(Room* r1, Room* r2) const {
-		return r1->GetEndTime() < r2->GetEndTime();
+		return r1->GetEndTime() > r2->GetEndTime();
 	}
 };
 
 struct MatchingRoom {
-	// uint16_t LoofCnt = 0;
 	uint16_t userObjNum;
 	InGameUser* inGameUser;
-	MatchingRoom(uint16_t userObjNum_, InGameUser* inGameUser_) :userObjNum(userObjNum_), inGameUser(inGameUser_) {}
+	std::chrono::time_point<std::chrono::steady_clock> insertTime = std::chrono::steady_clock::now();
+	MatchingRoom(uint16_t userObjNum_, InGameUser* inGameUser_) : userObjNum(userObjNum_), inGameUser(inGameUser_) {}
+};
+
+struct MatchingRoomComp {
+	bool operator()(MatchingRoom* r1, MatchingRoom* r2) const {
+		return r1->insertTime > r2->insertTime;
+	}
 };
 
 class MatchingManager {
@@ -49,15 +55,17 @@ public:
 			timeCheckThread.join();
 		}
 
-		for (int i = 0; i < USER_MAX_LEVEL; i++) {
-			tbb::concurrent_hash_map<uint16_t, std::priority_queue<MatchingRoom*>>::accessor accessor;
+		for (int i = 1; i <= USER_MAX_LEVEL / 3 + 1; i++) {
+			tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>>::accessor accessor;
 
 			if (matchingMap.find(accessor, i)) {
-				std::priority_queue<MatchingRoom*> temp = accessor->second;
-				while (!temp.empty()) {
-					delete temp.top();
-					temp.pop();
+				std::set<MatchingRoom*, MatchingRoomComp> temp = accessor->second;
+
+				for (auto tRoom : temp) {
+					delete tRoom;
 				}
+				
+				temp.clear();
 			}
 		}
 	}
@@ -76,7 +84,11 @@ private:
 	bool timeChekcRun;
 
 	// 8 bytes
-	SOCKET udpSocket; // 1 Socket Of 300 Users 
+	SOCKET udpSocket;
+	InGameUserManager* inGameUserManager;
+	RoomManager* roomManager;
+	RedisManager* redisManager;
+	ConnUsersManager* connUsersManager;
 
 	// 16 bytes
 	std::thread matchingThread;
@@ -84,23 +96,10 @@ private:
 
 	// 24 bytes
 	std::set<Room*, EndTimeComp> endRoomCheckSet;
-
-	// 64 bytes
-	InGameUserManager* inGameUserManager;
-
 	// 80 bytes
 	std::mutex mDeleteRoom;
-
 	// 136 bytes
 	boost::lockfree::queue<uint16_t> roomNumQueue{10}; // MaxClient set
-
 	// 576 bytes
-	RoomManager* roomManager;
-	tbb::concurrent_hash_map<uint16_t, std::priority_queue<MatchingRoom*>> matchingMap; // {Level/3 + 1 (0~2 = 1, 3~5 = 2 ...), UserSkt}
-
-	// 606 bytes
-	ConnUsersManager* connUsersManager;
-
-	// 776 bytes
-	RedisManager* redisManager;
+	tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>> matchingMap; // {Level/3 + 1 (0~2 = 1, 3~5 = 2 ...), UserSkt}
 };

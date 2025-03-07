@@ -7,7 +7,7 @@
 
 class InGameUser {
 public:
-	InGameUser(std::vector<short> &expLimit_) : expLimit(expLimit_) {}
+	InGameUser(std::vector<uint16_t> &expLimit_) : expLimit(expLimit_) {}
 
 	uint16_t GetLevel() {
 		return userLevel;
@@ -66,5 +66,5 @@ private:
 	// 40 bytes
 	std::string userId;
 
-	std::vector<short>& expLimit;
+	std::vector<uint16_t>& expLimit;
 };

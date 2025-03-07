@@ -23,5 +23,6 @@ public:
 
 private:
 	std::vector<InGameUser*> inGmaeUsers;
-	std::vector<short> expLimit = { 0,1,2,4,6,10,16,23,31,40,51, 60, 71, 80, 91, 100};
+
+	std::vector<uint16_t> expLimit = { 0,1,2,4,6,10,16,23,31,40,51, 60, 71, 80, 91, 100};
 };

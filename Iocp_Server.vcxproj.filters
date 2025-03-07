@@ -16,9 +16,6 @@
     <Filter Include="헤더 파일\Network">
       <UniqueIdentifier>{f8f33a88-553e-4e39-872a-2af71689ceee}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일\Redis">
-      <UniqueIdentifier>{4f70c36f-c0c1-4b0d-9a89-57339c5fe71c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="헤더 파일\InGameConnUsers">
       <UniqueIdentifier>{a4fea4b7-ee8a-4142-92a1-93257acbf2ad}</UniqueIdentifier>
     </Filter>
@@ -34,6 +31,9 @@
     <Filter Include="헤더 파일\Network\UserNetworkManager\CircularRecvBuf">
       <UniqueIdentifier>{2ab19ce5-49a1-4e8f-947c-94cbab24f74a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="헤더 파일\Network\Redis">
+      <UniqueIdentifier>{4f70c36f-c0c1-4b0d-9a89-57339c5fe71c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -43,7 +43,7 @@
       <Filter>헤더 파일\Network</Filter>
     </ClCompile>
     <ClCompile Include="RedisManager.cpp">
-      <Filter>헤더 파일\Redis</Filter>
+      <Filter>헤더 파일\Network\Redis</Filter>
     </ClCompile>
     <ClCompile Include="CircularBuffer.cpp">
       <Filter>헤더 파일\Network\UserNetworkManager\CircularRecvBuf</Filter>
@@ -75,13 +75,13 @@
       <Filter>헤더 파일\Network</Filter>
     </ClInclude>
     <ClInclude Include="RedisManager.h">
-      <Filter>헤더 파일\Redis</Filter>
+      <Filter>헤더 파일\Network\Redis</Filter>
     </ClInclude>
     <ClInclude Include="CircularBuffer.h">
       <Filter>헤더 파일\Network\UserNetworkManager\CircularRecvBuf</Filter>
     </ClInclude>
     <ClInclude Include="Packet.h">
-      <Filter>헤더 파일\Redis</Filter>
+      <Filter>헤더 파일\Network\Redis</Filter>
     </ClInclude>
     <ClInclude Include="MatchingManager.h">
       <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>

@@ -31,14 +31,7 @@ public:
 		circularBuffer = std::make_unique<CircularBuffer>(bufferSize_);
 	}
 	~ConnUser() {
-		struct linger stLinger = { 0, 0 };	// SO_DONTLINGER로 설정
-
-		stLinger.l_onoff = 0;
-
 		shutdown(userSkt, SD_BOTH);
-
-		setsockopt(userSkt, SOL_SOCKET, SO_LINGER, (char*)&stLinger, sizeof(stLinger));
-
 		closesocket(userSkt);
 	}
 
@@ -126,18 +119,25 @@ public :
 	}
 
 	bool ConnUserRecv() {
-
 		OverlappedTCP* tempOvLap = (overLappedManager->getOvLap());
 
-		if (tempOvLap == nullptr) return false;
+		if (tempOvLap == nullptr) { // 오버랩 풀에 여분 없으면 새로 오버랩 생성
+			OverlappedTCP* overlappedTCP = new OverlappedTCP;
+			ZeroMemory(overlappedTCP, sizeof(OverlappedTCP));
+			overlappedTCP->wsaBuf.len = MAX_RECV_SIZE;
+			overlappedTCP->wsaBuf.buf = new char[MAX_RECV_SIZE];
+			overlappedTCP->connObjNum = connObjNum;
+			overlappedTCP->taskType = TaskType::NEWSEND;
+		}
+		else {
+			tempOvLap->wsaBuf.len = MAX_RECV_SIZE;
+			tempOvLap->wsaBuf.buf = new char[MAX_RECV_SIZE];
+			tempOvLap->connObjNum = connObjNum;
+			tempOvLap->taskType = TaskType::RECV;
+		}
 
 		DWORD dwFlag = 0;
 		DWORD dwRecvBytes = 0;
-
-		tempOvLap->wsaBuf.len = MAX_RECV_SIZE;
-		tempOvLap->wsaBuf.buf = new char[MAX_RECV_SIZE];
-		tempOvLap->connObjNum = connObjNum;
-		tempOvLap->taskType = TaskType::RECV;
 
 		int tempR = WSARecv(userSkt,&(tempOvLap->wsaBuf),1,&dwRecvBytes, &dwFlag,(LPWSAOVERLAPPED)tempOvLap,NULL);
 
@@ -238,23 +238,3 @@ private:
 	char recvBuf[1024] = { 0 };
 	char readData[1024] = {0};
 };
-
-
-// -- WSASend Fail --
-
-//boost::lockfree::queue<OverlappedTCP*> sendQueue;
-
-//if (sCheck == SOCKET_ERROR && (WSAGetLastError() != ERROR_IO_PENDING))
-//{
-//	std::cout << userSkt << " WSASend Fail : " << WSAGetLastError() << std::endl;
-//	sendOverlapped->retryCnt++;
-
-//	if (sendOverlapped->retryCnt == MAX_RETRY_COUNT) {
-//		delete[] sendOverlapped->wsaBuf.buf;
-//		delete sendOverlapped;
-//		return;
-//	}
-
-//	sendQueue.push(sendOverlapped); // If Wsasend Fail, Try Wsasend Again
-//	return;
-//}

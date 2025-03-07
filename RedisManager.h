@@ -47,7 +47,7 @@ private:
     void Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Normal Disconnect (Set Short Time TTL)
     void UserDisConnect(uint16_t connObjNum_); // Abnormal Disconnect (Set Long Time TTL)
     void ServerEnd(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
-    void ImWebRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Web Server Socket Check
+    void ImSessionRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Session Server Socket Check
 
     // USER STATUS
     void ExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
@@ -77,7 +77,7 @@ private:
     bool redisRun = false;
 
     // 8 bytes
-    uint16_t webServerObjNum = 0;
+    uint16_t sessionServerObjNum = 0;
     std::unique_ptr<sw::redis::RedisCluster> redis;
     std::uniform_int_distribution<int> dist;
 
@@ -91,15 +91,14 @@ private:
 
     // 32 bytes
     typedef void(RedisManager::*RECV_PACKET_FUNCTION)(uint16_t, uint16_t, char*);
-    std::unordered_map<uint16_t, RECV_PACKET_FUNCTION> packetIDTable;
     std::vector<std::thread> redisThreads;
-
     std::vector<uint16_t> enhanceProbabilities = {100,90,80,70,60,50,40,30,20,10};
     std::vector<unsigned int> mobExp = { 0,1,2,3,4,5,6,7,8,9,10 };
     std::vector<std::string> itemType = {"equipment", "consumables", "materials" };
 
     // 80 bytes
-    std::mutex redisMu;
+    std::unordered_map<uint16_t, RECV_PACKET_FUNCTION> packetIDTable;
+
     // 136 bytes (병목현상 발생하면 lock_guard,mutex 사용 또는 lockfree::queue의 크기를 늘리는 방법으로 전환)
     boost::lockfree::queue<DataPacket> procSktQueue{1024};
 
