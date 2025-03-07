@@ -23,5 +23,4 @@
 <br>  
 
 - #### Game Server Connect
-![Game Server Connect D](https://github.com/user-attachments/assets/e1d088d9-3f03-4e7f-b4cc-5ca91121233d)
-
+![Game Server Connect](https://github.com/user-attachments/assets/d1735db4-20b9-4c91-81a5-ad23290d21b7)
