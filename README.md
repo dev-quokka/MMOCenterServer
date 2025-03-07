@@ -1,7 +1,4 @@
 # IOCP & Redis Cluster를 활용한 MMO 게임 서버 프로젝트
-
-<br>  
-
 ## [소개]
 
 ### ㅇGame Server (Redis Cluster) 
