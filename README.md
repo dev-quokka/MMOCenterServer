@@ -77,29 +77,48 @@
 <br>
 
 ## [Test Output]
-<br>
-
 - #### User Connect & Logout & Syncronization
 ![접속, 접속종료](https://github.com/user-attachments/assets/e9d78268-0fb4-40b1-970f-538dd39c6fc3)
+
+1. 게임 서버가 시작되면 세션 서버와 연결합니다.
+2. 세션 서버로 유저가 게임 시작 요청시, 유저 정보와 인벤토리 정보를 MySQL에서 가져와서 Redis Cluster에 load합니다.
+3. 모든 데이터를 Redis Cluster에 정상적으로 load 하면 JWT 토큰을 생성합니다.
+4. JWT 토큰을 Redis Cluster에 올려두고, 유저에게도 JWT 토큰을 전송합니다.
+5. 유저는 JWT 토큰을 받으면 서버에 JWT 토큰과 함께 접속 요청을 전송합니다.
+6. 게임 서버는 Redis Cluster에서 접속 요청한 유저의 토큰과 비교하여 같으면 접속을 허가 합니다.
+7. 유저 로그아웃시 게임서버는 Session Server에 유저pk와 함께 로그아웃 신호를 보냅니다.
+8. Session Server는 받은 pk로 Redis Cluster에 업데이트 된 데이터를 MySQL로 동기화 합니다.
 
 <br>
 
 - #### Raid Start & Raid End & Ranking Update (Mob Hp 0)
 ![레이드 몹 잡고 랭킹 확인](https://github.com/user-attachments/assets/94eafd7f-08e5-416b-9731-b4465a948b1d)
 
+1. 레이드 몹 HP가 0이되면 레이드가 종료되며, 내 점수와 유저 점수를 서버로 부터 반환 받아 확인이 가능합니다.
+2. 레이드 몹 HP가 0이되는 시점에 초과된 데미지가 들어오면 남은 몹 HP만큼만 점수 획득이 가능합니다.
+3. 획득한 점수를 기존 최고 점수와 비교하여, 더 높을 경우 랭킹을 업데이트 합니다.
+
 <br>
 
 - #### Raid Start & Raid End (Time Out)
 ![타임아웃되면 0점마무리](https://github.com/user-attachments/assets/92dce42d-1204-4fd6-9ccc-69ecd7b07bfb)
+
+1. 제한시간이 종료되면 레이드가 종료됩니다.
+2. 레이드 동안에 획득한 점수만 서버에 기록되며, 레이드 종료시 내 점수와 유저 점수를 반환 받아 확인이 가능합니다.
 
 <br>
 
 - #### Raid Group Check by Level (Time Out)
 ![레이드 그룹 체크](https://github.com/user-attachments/assets/f74b7422-cac0-431a-b95a-740e1b5d1dd4)
 
+- 다른 레벨의 그룹이면 매칭이 불가능합니다.
+
 <br>
 
 - #### Equipment Enhancement
 ![장비강화](https://github.com/user-attachments/assets/3dc8088e-f5b7-47d5-bef0-d6fe364b13a1)
+
+- 현재 강화 수치에 따라 확률을 차등 적용하여, 강화 성공 또는 실패를 반환합니다.
+
 
 
