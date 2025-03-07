@@ -60,7 +60,7 @@
 <br>
 
 - #### Raid Start & Raid End & Ranking Update (Mob Hp 0)
-![몬스 터잡은 후 랭킹 ](https://github.com/user-attachments/assets/be084eab-bbfc-49f6-aabc-2c39dc3860d7)
+![레이드 몹 잡고 랭킹 확인](https://github.com/user-attachments/assets/94eafd7f-08e5-416b-9731-b4465a948b1d)
 
 <br>
 
