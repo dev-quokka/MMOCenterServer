@@ -38,7 +38,7 @@
 
 <br>
 
-- #### Raid End (Mob Dead)
+- #### Raid End (Mob HP 0)
 
 
 <br>
