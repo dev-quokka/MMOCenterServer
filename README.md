@@ -18,7 +18,7 @@
 
 <br>  
 
-## [흐름도]
+## [Flow Chart]
 
 <br>  
 
@@ -28,11 +28,17 @@
 <br>
 
 - #### Raid Start
-![Raid Start drawio](https://github.com/user-attachments/assets/b41e5788-7fdb-4717-8dc4-9c7ed08c0243)
+![Raid Start](https://github.com/user-attachments/assets/84e2a6fe-c2d8-41ce-b8d1-7230ce568090)
+
 
 <br>
 
 - #### Raid End (Time Out)
+
+
+<br>
+
+- #### Raid End (Mob Dead)
 
 
 <br>
