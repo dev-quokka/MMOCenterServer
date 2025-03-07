@@ -4,9 +4,9 @@
 
 ## [소개]
 
-<br>  
-ㅇGame Server (Redis Cluster) 
-  1. 네트워크 최적화
+### ㅇGame Server (Redis Cluster) 
+
+  #### 1. 네트워크 최적화
     - Circular Buffer를 활용하여 메모리 사용 최적화
     - 동적 할당 최소화를 위한 설계 적용
     - 대량 데이터 송수신 시 vector 대신 char*형 활용으로 성능 최적화
@@ -14,27 +14,27 @@
     - Redis 통신 시 try-catch 문을 적용으로 예외 처리 강화
     - MySQL 동기화가 필요한 데이터는 Session Server를 통해 처리하여 부하 분산
 
-  2. 인벤토리 (장비, 소비, 재료)
+  #### 2. 인벤토리 (장비, 소비, 재료)
     - 아이템 획득, 삭제, 슬롯 이동, 장비 강화 시스템 구현
     - 난수 생성 엔진을 활용한 장비 강화 성공 확률 차등 적용
 
-  3. 레이드
+  #### 3. 레이드
     - 레벨 그룹별 레이드 매칭 시스템 구현 
     - 실시간 레이드 전투 시스템 구현 (제한 시간 초과 또는 몬스터 HP 0시 종료) 
     - UDP 기반 IOCP 통신을 활용한 실시간 몬스터 HP 동기화
     - 레이드 랭킹 시스템 구현
 
-  4. 유저 시스템
+  #### 4. 유저 시스템
     - Session Server에서 생성된 JWT 토큰 검증을 통해 접속 요청 유저를 이중 확인하여 보안성 강화
     - 경험치 증가, 레벨업 알고리즘 구현
     - 레벨별 요구 경험치량 설정
 
-ㅇSession Server (MySQL, Redis Cluster) - User Authentication & Connection Game Server For Syncronization
+### ㅇSession Server (MySQL, Redis Cluster) - User Authentication & Connection Game Server For Syncronization
    - JWT 토큰을 활용한 유저 인증 보안 강화
    - 유저의 게임 시작 요청시, MySQL에서 유저 정보 및 인벤토리 데이터를 Redis Cluster로 load 
    - 유저 로그아웃시, Redis Cluster에 업데이트된 데이터를 MySQL에 동기화 (Batch Update)
 
-ㅇClient
+### ㅇClient
    - 게임 시작시 Session Server에서 JWT 토큰을 발급 받아 Game Server에 인증 요청
    - 보안 강화를 위해 클라이언트에서 연산 처리를 하지 않도록 설계
 
@@ -42,8 +42,6 @@
 <br>  
 
 ## [Flow Chart]
-
-<br>  
 
 - #### User Connect
 ![Game Server Connect](https://github.com/user-attachments/assets/95b759f4-6a82-4131-9753-174e3fb480ee)
