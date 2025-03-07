@@ -6,7 +6,8 @@
 
 <br>  
 
-프로젝트의 주요 코드 설명은 
+프로젝트의 주요 코드 설명은 [MMO 게임 서버 프로젝트 소개서.pdf](https://github.com/user-attachments/files/19126263/MMO.pdf)
+
 
 
 <br>
