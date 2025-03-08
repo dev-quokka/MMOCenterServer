@@ -108,7 +108,7 @@
 
 <br>
 
-- #### Raid Group Check by Level (Time Out)
+- #### Raid Group Check by Level
 ![레이드 그룹 체크](https://github.com/user-attachments/assets/f74b7422-cac0-431a-b95a-740e1b5d1dd4)
 
 - 다른 레벨의 그룹이면 매칭이 불가능합니다.
