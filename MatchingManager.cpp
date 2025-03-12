@@ -34,6 +34,27 @@ bool MatchingManager::Insert(uint16_t userObjNum_, InGameUser* inGameUser_) {
     return false;
 }
 
+bool MatchingManager::CancelMatching(uint16_t userObjNum_, InGameUser* inGameUser_) {
+    tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>>::accessor accessor;
+    uint16_t groupNum = inGameUser_->GetLevel() / 3 + 1;
+    matchingMap.find(accessor, groupNum);
+    auto tempM = accessor->second;
+
+    {
+        std::lock_guard<std::mutex> guard(mDeleteMatch);
+        for (auto iter = tempM.begin(); iter != tempM.end(); iter++) {
+            if ((*iter)->userObjNum == userObjNum_) { // 매칭 취소한 유저 찾기
+                delete* iter;
+                tempM.erase(iter);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
 bool MatchingManager::CreateMatchThread() {
 	matchRun = true;
     matchingThread = std::thread([this]() {MatchingThread(); });
