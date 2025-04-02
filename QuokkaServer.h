@@ -37,11 +37,9 @@ public:
 
 private:
     bool CreateWorkThread();
-    bool CreateUDPWorkThread();
     bool CreateAccepterThread();
 
     void WorkThread(); // IOCP Complete Event Thread
-    void UDPWorkThread();
     void AccepterThread(); // Accept req Thread
 
     // 1 bytes
@@ -61,7 +59,6 @@ private:
     SOCKET serverSkt = INVALID_SOCKET;
     HANDLE sIOCPHandle = INVALID_HANDLE_VALUE;
     SOCKET udpSkt = INVALID_SOCKET;
-    HANDLE udpHandle = INVALID_HANDLE_VALUE;
  
     OverLappedManager* overLappedManager;
     UdpOverLappedManager* udpOverLappedManager;

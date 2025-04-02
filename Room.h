@@ -129,7 +129,7 @@ public:
 		}
 		
 		unsigned int score_;
-		int currentMobHp_;
+		unsigned int currentMobHp_;
 
 		if ((currentMobHp_ = mobHp.fetch_sub(damage_) - damage_)<=0) { // Hit
 			finishCheck.store(true);
@@ -142,45 +142,11 @@ public:
 		
 		for (int i = 0; i < ruInfos.size(); i++) { // 나머지 유저들에게도 바뀐 몹 hp값 보내주기
 
-			OverlappedUDP* overlappedUDP = udpOverLappedManager->getOvLap();
+			memcpy(mobHpBuf, &currentMobHp_, sizeof(currentMobHp_));
 
-			if (overlappedUDP == nullptr) { // 오버랩 풀에 여분 없으면 새로 오버랩 생성
-				OverlappedUDP* overlappedUDP = new OverlappedUDP;
-				ZeroMemory(overlappedUDP, sizeof(OverlappedUDP));
-				overlappedUDP->wsaBuf.len = sizeof(currentMobHp_);
-				overlappedUDP->wsaBuf.buf = new char[sizeof(currentMobHp_)];
-				CopyMemory(overlappedUDP->wsaBuf.buf, &currentMobHp_, sizeof(currentMobHp_));
-				overlappedUDP->addrSize = sizeof(ruInfos[i]->userAddr);
-				overlappedUDP->userAddr = ruInfos[i]->userAddr;
-				overlappedUDP->taskType = TaskType::NEWSEND;
+			sendto(*udpSkt, mobHpBuf, sizeof(mobHpBuf),0, (sockaddr*)&ruInfos[i]->userAddr, sizeof(ruInfos[i]->userAddr));
 
-				DWORD dwSendBytes = 0;
-				int result = WSASendTo(*udpSkt, &overlappedUDP->wsaBuf, 1, &dwSendBytes, 0, 
-				(SOCKADDR*)&ruInfos[i]->userAddr, sizeof(ruInfos[i]->userAddr), (LPWSAOVERLAPPED)overlappedUDP, NULL);
-
-				std::cout <<"현재 몹 HP : " << mobHp << std::endl;
-				if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-					std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
-				}
-			}
-
-			else {
-				overlappedUDP->wsaBuf.len = sizeof(currentMobHp_);
-				overlappedUDP->wsaBuf.buf = new char[sizeof(currentMobHp_)];
-				CopyMemory(overlappedUDP->wsaBuf.buf, &currentMobHp_, sizeof(currentMobHp_));
-				overlappedUDP->addrSize = sizeof(ruInfos[i]->userAddr);
-				overlappedUDP->userAddr = ruInfos[i]->userAddr;
-				overlappedUDP->taskType = TaskType::SEND;
-
-				DWORD dwSendBytes = 0;
-				int result = WSASendTo(*udpSkt, &overlappedUDP->wsaBuf, 1, &dwSendBytes, 0, 
-				(SOCKADDR*)&ruInfos[i]->userAddr, sizeof(ruInfos[i]->userAddr), (LPWSAOVERLAPPED)overlappedUDP, NULL);
-
-				std::cout << "현재 몹 HP : " << mobHp << std::endl;
-				if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-					std::cerr << "WSASendTo Fail : " << WSAGetLastError() << std::endl;
-				}
-			}
+			std::cout << "현재 몹 HP : " << mobHp << std::endl;
 		}
 
 		return { currentMobHp_, score_ };
@@ -197,6 +163,7 @@ private:
 
 	// 4 bytes
 	std::atomic<int> mobHp;
+	char mobHpBuf[sizeof(unsigned int)];
 
 	// 8 bytes
 	SOCKET* udpSkt;

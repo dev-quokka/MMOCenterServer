@@ -52,27 +52,10 @@ bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
     udpOverLappedManager = new UdpOverLappedManager;
     udpOverLappedManager->init();
 
-    udpSkt = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, NULL, NULL, WSA_FLAG_OVERLAPPED);
+    udpSkt = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
     if (udpSkt == INVALID_SOCKET) {
         std::cout << "Server Socket 생성 실패" << std::endl;
-        return false;
-    }
-
-    sockaddr_in udpAddr = {0};
-    udpAddr.sin_family = AF_INET;
-    udpAddr.sin_port = htons(UDP_PORT);
-    udpAddr.sin_addr.s_addr = INADDR_ANY;
-
-    if (bind(udpSkt, (SOCKADDR*)&udpAddr, sizeof(udpAddr)) == SOCKET_ERROR) {
-        std::cout << "UDP SOCKET BIND FAIL" << std::endl;
-        closesocket(udpSkt);
-    }
-
-    udpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
-
-    auto result = CreateIoCompletionPort((HANDLE)udpSkt, udpHandle, (ULONG_PTR)udpSkt, 0);
-    if (result == nullptr) {
-        std::cout << "iocp UDP 핸들 바인드 실패" << std::endl;
         return false;
     }
 
@@ -92,12 +75,6 @@ bool QuokkaServer::StartWork() {
         std::cout << "CreateAccepterThread 생성 실패" << std::endl;
         return false;
     } 
-
-    check = CreateUDPWorkThread();
-    if (!check) {
-        std::cout << "CreateAccepterThread 생성 실패" << std::endl;
-        return false;
-    }
 
     connUsersManager = new ConnUsersManager(maxClientCount);
     inGameUserManager = new InGameUserManager;
@@ -133,13 +110,6 @@ bool QuokkaServer::CreateWorkThread() {
         workThreads.emplace_back([this]() { WorkThread(); });
     }
     std::cout << "WorkThread Start" << std::endl;
-    return true;
-}
-
-bool QuokkaServer::CreateUDPWorkThread() {
-    udpWorkRun = true;
-    udpWorkThread = std::thread([this]() {UDPWorkThread(); });
-    std::cout << "UDPWorkThread 시작" << std::endl;
     return true;
 }
 
@@ -222,41 +192,6 @@ void QuokkaServer::WorkThread() {
     }
 }
 
-void QuokkaServer::UDPWorkThread() {
-    LPOVERLAPPED lpOverlapped = NULL;
-    DWORD dwIoSize = 0;
-    ULONG_PTR completionKey;
-    bool gqSucces = TRUE;
-
-    while (udpWorkRun) {
-        gqSucces = GetQueuedCompletionStatus(
-            udpHandle,
-            &dwIoSize,
-            &completionKey,
-            &lpOverlapped,
-            INFINITE
-        );
-
-        if (gqSucces && dwIoSize == 0 && lpOverlapped == NULL) { // Server End Request
-            udpWorkRun = false;
-            continue;
-        }
-
-        auto overlappedUDP = (OverlappedUDP*)lpOverlapped;
-
-        if (overlappedUDP->taskType == TaskType::SEND) {
-            udpOverLappedManager->returnOvLap(overlappedUDP);
-        }
-        else if (overlappedUDP->taskType == TaskType::NEWSEND) {
-            delete[] overlappedUDP->wsaBuf.buf;
-            delete overlappedUDP;
-        }
-        else if (overlappedUDP->taskType == TaskType::RECV) { // 나중에 필요할때 추가 생성
-
-        }
-    }
-}
-
 void QuokkaServer::AccepterThread() {
     ConnUser* connUser;
 
@@ -297,17 +232,10 @@ void QuokkaServer::ServerEnd() {
             workThreads[i].join();
         }
     }
-
     for (int i = 0; i < acceptThreads.size(); i++) { // Accept 쓰레드 종료
         if (acceptThreads[i].joinable()) { 
             acceptThreads[i].join();
         }
-    }
-
-    PostQueuedCompletionStatus(udpHandle, 0, 0, nullptr);
-
-    if (udpWorkThread.joinable()) {
-        udpWorkThread.join();
     }
 
     ConnUser* connUser;
@@ -322,9 +250,7 @@ void QuokkaServer::ServerEnd() {
     delete inGameUserManager;
     delete roomManager;
     delete matchingManager;
-
     CloseHandle(sIOCPHandle); 
-    CloseHandle(udpHandle);
     closesocket(serverSkt);
     closesocket(udpSkt);
     WSACleanup();

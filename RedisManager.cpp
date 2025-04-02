@@ -154,7 +154,7 @@ void RedisManager::Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPac
         syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
-        connUsersManager->FindUser(sessionServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+        connUsersManager->FindUser(GatewayServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
         std::cout << "유저 로그아웃 싱크로 메시지 전송" << std::endl;
     }
 }
@@ -167,7 +167,7 @@ void RedisManager::UserDisConnect(uint16_t connObjNum_) { // Abnormal Disconnect
         syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
-        connUsersManager->FindUser(sessionServerObjNum)->
+        connUsersManager->FindUser(GatewayServerObjNum)->
             PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
         std::cout << "유저 디스커넥트 싱크로 메시지 전송" << std::endl;
     }
@@ -193,7 +193,7 @@ void RedisManager::ImSessionRequest(uint16_t connObjNum_, uint16_t packetSize_, 
 
         if (pk) {
             connUsersManager->FindUser(connObjNum_)->SetPk(static_cast<uint32_t>(std::stoul(*pk)));
-            sessionServerObjNum = connObjNum_;
+            GatewayServerObjNum = connObjNum_;
             imSessionResPacket.isSuccess = true;
             connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(IM_SESSION_RESPONSE), (char*)&imSessionResPacket);
             std::cout << "Session Server Connect Success : " << connObjNum_ << std::endl;
@@ -642,7 +642,7 @@ void RedisManager::RaidHit(uint16_t connObjNum_, uint16_t packetSize_, char* pPa
     }
 
     if (hit.second != 0) { // Score이 0이 아니면 웹 서버에 동기화 메시지 전송 
-        connUsersManager->FindUser(sessionServerObjNum)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
+        connUsersManager->FindUser(GatewayServerObjNum)->PushSendMsg(sizeof(RAID_HIT_RESPONSE), (char*)&raidHitResPacket);
     }
 }
 

@@ -20,6 +20,7 @@
 
 constexpr int UDP_PORT = 50000;
 constexpr uint16_t USER_MAX_LEVEL = 15;
+constexpr uint16_t MAX_ROOM = 10;
 
 class RedisManager;
 
@@ -55,6 +56,11 @@ public:
 			timeCheckThread.join();
 		}
 
+		tickRateRun1 = false;
+		if (tickRateThread1.joinable()) {
+			tickRateThread1.join();
+		}
+
 		for (int i = 1; i <= USER_MAX_LEVEL / 3 + 1; i++) {
 			tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>>::accessor accessor;
 
@@ -77,10 +83,19 @@ public:
 	void TimeCheckThread();
 	void DeleteMob(Room* room_);
 
+	// Tick Rate Test 1 (vector) 방이 적을때는 2번보다 성능 좋을것으로 예상
+	//bool CreateTickRateThread1();
+	//void TickRateThread1();
+
+	// Tick Rate Test 2 (lockfree_queue) 안전하지만 성능 저하 예상 (지속적인 pop, push)
+	//bool CreateTickRateThread2();
+	//void TickRateThread2();
+
 private:
 	// 1 bytes
-	bool matchRun;
-	bool timeChekcRun;
+	std::atomic<bool> matchRun;
+	std::atomic<bool> timeChekcRun;
+	std::atomic<bool> tickRateRun1;
 
 	// 8 bytes
 	SOCKET udpSocket;
@@ -92,12 +107,15 @@ private:
 	// 16 bytes
 	std::thread matchingThread;
 	std::thread timeCheckThread;
+	std::thread tickRateThread1;
 
 	// 24 bytes
 	std::set<Room*, EndTimeComp> endRoomCheckSet;
+	
 	// 80 bytes
 	std::mutex mDeleteRoom;
 	std::mutex mDeleteMatch;
+
 	// 136 bytes
 	boost::lockfree::queue<uint16_t> roomNumQueue{10}; // MaxClient set
 	// 576 bytes

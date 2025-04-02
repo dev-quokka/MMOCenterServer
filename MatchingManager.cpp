@@ -5,7 +5,7 @@ void MatchingManager::Init(const uint16_t maxClientCount_, RedisManager* redisMa
         matchingMap.emplace(i, std::set<MatchingRoom*, MatchingRoomComp>());
     }
 
-    for (int i = 1; i <= maxClientCount_; i++) { // Room Number Set
+    for (int i = 1; i <= MAX_ROOM; i++) { // Room Number Set
         roomNumQueue.push(i);
     }
 
@@ -53,7 +53,6 @@ bool MatchingManager::CancelMatching(uint16_t userObjNum_, InGameUser* inGameUse
 
     return false;
 }
-
 
 bool MatchingManager::CreateMatchThread() {
 	matchRun = true;
@@ -131,7 +130,7 @@ void MatchingManager::MatchingThread() {
                                     connUsersManager->FindUser(tempMatching2->userObjNum)->PushSendMsg(sizeof(RAID_READY_REQUEST), (char*)&rReadyResPacket2);
 
                                     endRoomCheckSet.insert(roomManager->MakeRoom(tempRoomNum, 2, 30, tempMatching1->userObjNum, 
-                                        tempMatching2->userObjNum, tempMatching1->inGameUser, tempMatching2->inGameUser));
+                                    tempMatching2->userObjNum, tempMatching1->inGameUser, tempMatching2->inGameUser));
                                 }
 
                                 delete tempMatching1;
@@ -148,13 +147,12 @@ void MatchingManager::MatchingThread() {
                         }
                     }
                 }
-
             }
             else { // Not Exist Room Num
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
         }
-        else {
+		else { // 뽑아둔 룸넘 있음
             for (int i = 1; i <= 6; i++) {
                 tbb::concurrent_hash_map<uint16_t, std::set<MatchingRoom*, MatchingRoomComp>>::accessor accessor1;
                 if (matchingMap.find(accessor1, i)) { // i번째 레벨 그룹 넘버 체크

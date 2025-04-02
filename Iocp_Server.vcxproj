@@ -109,13 +109,13 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\82104\jsoncpp-master\include;C:\Users\82104\boost_1_87_0;C:\Users\82104\hiredis\Build\hiredis_install\include;C:\Users\82104\oneapi-tbb-2022.0.0\include;C:\Users\82104\json-develop\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\82104\jsoncpp-master\include;C:\Users\82104\boost_1_87_0;C:\Users\82104\hiredis\Build\hiredis_install\include;C:\Users\82104\oneapi-tbb-2022.0.0\include;C:\Users\82104\json-develop\include;C:\Users\82104\OpenSSL-Win64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\82104\oneapi-tbb-2022.0.0\lib\intel64\vc14;C:\Users\82104\boost_1_87_0;C:\Users\82104\hiredis\Build\hiredis_install\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>C:\Users\82104\hiredis\Build\hiredis_install\lib\redis++.lib;C:\Users\82104\hiredis\Build\hiredis_install\lib\hiredisd.lib;C:\Users\82104\hiredis\Build\hiredis_install\lib\redis++_static.lib;C:\Program Files\MySQL\MySQL Server 8.0\lib\libmysql.lib;C:\Users\82104\oneapi-tbb-2022.0.0\lib\intel64\vc14\tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\82104\OpenSSL-Win64\lib;C:\Users\82104\oneapi-tbb-2022.0.0\lib\intel64\vc14;C:\Users\82104\boost_1_87_0;C:\Users\82104\hiredis\Build\hiredis_install\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>C:\Users\82104\hiredis\Build\hiredis_install\lib\redis++.lib;C:\Users\82104\hiredis\Build\hiredis_install\lib\hiredisd.lib;C:\Users\82104\hiredis\Build\hiredis_install\lib\redis++_static.lib;C:\Program Files\MySQL\MySQL Server 8.0\lib\libmysql.lib;C:\Users\82104\oneapi-tbb-2022.0.0\lib\intel64\vc14\tbb.lib;C:\Users\82104\OpenSSL-Win64\lib\VC\x64\MD\libcrypto.lib;C:\Users\82104\OpenSSL-Win64\lib\VC\x64\MD\libssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
