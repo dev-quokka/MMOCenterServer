@@ -27,6 +27,10 @@ public:
 		userExp = 0;
 	}
 
+	bool CheckMatching() {
+		return raidMatching.load();
+	}
+
 	uint32_t GetPk() {
 		return userPk;
 	}
@@ -55,16 +59,20 @@ public:
 	}
 
 private:
-	// 1 bytes
-	uint16_t userLevel;
+	// 40 bytes
+	std::string userId;
+
+	// 32 bytes
+	std::vector<uint16_t>& expLimit;
 
 	// 4 bytes
 	uint32_t userPk;
 	unsigned int userExp;
 	unsigned int raidScore;
 
-	// 40 bytes
-	std::string userId;
+	// 2 bytes
+	uint16_t userLevel;
 
-	std::vector<uint16_t>& expLimit;
+	// 1 bytes
+	std::atomic<bool> raidMatching = false;
 };

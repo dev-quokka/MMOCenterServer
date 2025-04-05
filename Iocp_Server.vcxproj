@@ -109,7 +109,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\82104\jsoncpp-master\include;C:\Users\82104\boost_1_87_0;C:\Users\82104\hiredis\Build\hiredis_install\include;C:\Users\82104\oneapi-tbb-2022.0.0\include;C:\Users\82104\json-develop\include;C:\Users\82104\OpenSSL-Win64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\82104\jwt-cpp-master\include;C:\Users\82104\jsoncpp-master\include;C:\Users\82104\boost_1_87_0;C:\Users\82104\hiredis\Build\hiredis_install\include;C:\Users\82104\oneapi-tbb-2022.0.0\include;C:\Users\82104\json-develop\include;C:\Users\82104\OpenSSL-Win64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -1,5 +1,13 @@
 #include "QuokkaServer.h"
 
+void QuokkaServer::SetServerAddressMap() {
+    ServerAddressMap[ServerType::GatewayServer] = { "127.0.0.1", 9091 };
+    ServerAddressMap[ServerType::MatchingServer] = { "127.0.0.1", 9092 };
+    ServerAddressMap[ServerType::ChannelServer01] = { "127.0.0.1", 9201 };
+    ServerAddressMap[ServerType::ChannelServer02] = { "127.0.0.1", 9202 };
+    ServerAddressMap[ServerType::RaidGameServer01] = { "127.0.0.1", 9501 };
+}
+
 bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
     WSADATA wsadata;
     int check = 0;
@@ -58,6 +66,8 @@ bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
         std::cout << "Server Socket 생성 실패" << std::endl;
         return false;
     }
+
+    SetServerAddressMap(); // 서버 주소 설정
 
     return true;
 }
