@@ -205,7 +205,6 @@ private:
 				(LPWSAOVERLAPPED)overlappedTCP,
 				NULL);
 		}
-
 	}
 
 	// 1 bytes
