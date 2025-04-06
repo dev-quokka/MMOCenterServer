@@ -88,8 +88,6 @@ bool QuokkaServer::StartWork() {
 
     connUsersManager = new ConnUsersManager(maxClientCount);
     inGameUserManager = new InGameUserManager;
-    roomManager = new RoomManager(&udpSkt, udpOverLappedManager);
-    matchingManager = new MatchingManager;
     redisManager = new RedisManager;
 
     for (int i = 0; i < maxClientCount; i++) { // Make ConnUsers Queue
@@ -107,8 +105,7 @@ bool QuokkaServer::StartWork() {
 
     redisManager->init(MaxThreadCnt, maxClientCount, sIOCPHandle);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
     inGameUserManager->Init(maxClientCount);
-    matchingManager->Init(maxClientCount, redisManager, inGameUserManager, roomManager, connUsersManager);
-    redisManager->SetManager(connUsersManager, inGameUserManager, roomManager, matchingManager);
+    redisManager->SetManager(connUsersManager, inGameUserManager);
 
     return true;
 }
@@ -258,8 +255,6 @@ void QuokkaServer::ServerEnd() {
     delete redisManager;
     delete connUsersManager;
     delete inGameUserManager;
-    delete roomManager;
-    delete matchingManager;
     CloseHandle(sIOCPHandle); 
     closesocket(serverSkt);
     closesocket(udpSkt);

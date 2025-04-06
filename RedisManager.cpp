@@ -11,6 +11,7 @@ void RedisManager::init(const uint16_t RedisThreadCnt_, const uint16_t maxClient
     packetIDTable[(uint16_t)PACKET_ID::USER_CONNECT_REQUEST] = &RedisManager::UserConnect;
     packetIDTable[(uint16_t)PACKET_ID::USER_LOGOUT_REQUEST] = &RedisManager::Logout;
     packetIDTable[(uint16_t)PACKET_ID::IM_SESSION_REQUEST] = &RedisManager::ImSessionRequest;
+    packetIDTable[(uint16_t)PACKET_ID::MOVE_SERVER_REQUEST] = &RedisManager::MoveServer;
 
     // USER STATUS
     packetIDTable[(UINT16)PACKET_ID::EXP_UP_REQUEST] = &RedisManager::ExpUp;
@@ -29,8 +30,6 @@ void RedisManager::init(const uint16_t RedisThreadCnt_, const uint16_t maxClient
 
     //RAID
     packetIDTable[(uint16_t)PACKET_ID::RAID_MATCHING_REQUEST] = &RedisManager::MatchStart;
-    packetIDTable[(uint16_t)PACKET_ID::RAID_TEAMINFO_REQUEST] = &RedisManager::RaidReqTeamInfo;
-    packetIDTable[(uint16_t)PACKET_ID::RAID_HIT_REQUEST] = &RedisManager::RaidHit;
     packetIDTable[(uint16_t)PACKET_ID::RAID_RANKING_REQUEST] = &RedisManager::GetRanking;
 
     RedisRun(RedisThreadCnt_);
@@ -43,10 +42,11 @@ void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis S
         connection_options.socket_timeout = std::chrono::seconds(10);
         connection_options.keep_alive = true;
 
-        redis = std::make_unique<sw::redis::RedisCluster>(connection_options);
+        redis = std::make_shared<sw::redis::RedisCluster>(connection_options);
         std::cout << "Redis Cluster Connect Success !" << std::endl;
 
         CreateRedisThread(RedisThreadCnt_);
+		channelManager = new ChannelManager(redis);
     }
     catch (const  sw::redis::Error& err) {
         std::cout << "Redis Connect Error : " << err.what() << std::endl;
@@ -57,11 +57,9 @@ void RedisManager::Disconnect(uint16_t connObjNum_) {
     UserDisConnect(connObjNum_);
 }
 
-void RedisManager::SetManager(ConnUsersManager* connUsersManager_, InGameUserManager* inGameUserManager_, RoomManager* roomManager_, MatchingManager* matchingManager_) {
+void RedisManager::SetManager(ConnUsersManager* connUsersManager_, InGameUserManager* inGameUserManager_) {
     connUsersManager = connUsersManager_;
     inGameUserManager = inGameUserManager_;
-    roomManager = roomManager_; 
-    matchingManager = matchingManager_;
 }
 
 bool RedisManager::CreateRedisThread(const uint16_t RedisThreadCnt_) {

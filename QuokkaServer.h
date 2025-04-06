@@ -7,8 +7,6 @@
 #include "UdpOverLappedManager.h"
 #include "ConnUsersManager.h"
 #include "InGameUserManager.h"
-#include "RoomManager.h"
-#include "MatchingManager.h"
 #include "RedisManager.h"
 
 #include <winsock2.h>
@@ -65,8 +63,6 @@ private:
     UdpOverLappedManager* udpOverLappedManager;
     ConnUsersManager* connUsersManager;
     InGameUserManager* inGameUserManager;
-    RoomManager* roomManager;
-    MatchingManager* matchingManager;
     RedisManager* redisManager;
 
     std::thread udpWorkThread;

@@ -54,7 +54,7 @@
     <ClCompile Include="ConnUsersManager.cpp">
       <Filter>헤더 파일\Network\UserNetworkManager</Filter>
     </ClCompile>
-    <ClCompile Include="RoomManager.cpp">
+    <ClCompile Include="ChannelManager.cpp">
       <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
     </ClCompile>
     <ClCompile Include="IngameUserManager.cpp">
@@ -92,7 +92,7 @@
     <ClInclude Include="Room.h">
       <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
     </ClInclude>
-    <ClInclude Include="RoomManager.h">
+    <ClInclude Include="ChannelManager.h">
       <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
     </ClInclude>
     <ClInclude Include="InGameUserManager.h">
