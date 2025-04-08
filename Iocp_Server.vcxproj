@@ -143,7 +143,7 @@
     <ClCompile Include="ConnUsersManager.cpp" />
     <ClCompile Include="IngameUserManager.cpp" />
     <ClCompile Include="OverLappedManager.cpp" />
-    <ClCompile Include="ChannelManager.cpp" />
+    <ClCompile Include="ChannelServersManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="QuokkaServer.cpp" />
     <ClCompile Include="RedisManager.cpp" />
@@ -156,7 +156,7 @@
     <ClInclude Include="InGameUserManager.h" />
     <ClInclude Include="OverLappedManager.h" />
     <ClInclude Include="Room.h" />
-    <ClInclude Include="ChannelManager.h" />
+    <ClInclude Include="ChannelServersManager.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="QuokkaServer.h" />
     <ClInclude Include="RedisManager.h" />
