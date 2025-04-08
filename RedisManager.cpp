@@ -10,7 +10,8 @@ void RedisManager::init(const uint16_t RedisThreadCnt_, const uint16_t maxClient
     //SYSTEM
     packetIDTable[(uint16_t)PACKET_ID::USER_CONNECT_REQUEST] = &RedisManager::UserConnect;
     packetIDTable[(uint16_t)PACKET_ID::USER_LOGOUT_REQUEST] = &RedisManager::Logout;
-    packetIDTable[(uint16_t)PACKET_ID::IM_SESSION_REQUEST] = &RedisManager::ImSessionRequest;
+    packetIDTable[(uint16_t)SESSION_ID::IM_SESSION_REQUEST] = &RedisManager::ImSessionRequest;
+    packetIDTable[(uint16_t)PACKET_ID::SERVER_USER_COUNTS_REQUEST] = &RedisManager::SendServerUserCounts;
     packetIDTable[(uint16_t)PACKET_ID::MOVE_SERVER_REQUEST] = &RedisManager::MoveServer;
 
     // USER STATUS
@@ -42,11 +43,11 @@ void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis S
         connection_options.socket_timeout = std::chrono::seconds(10);
         connection_options.keep_alive = true;
 
-        redis = std::make_shared<sw::redis::RedisCluster>(connection_options);
+        redis = std::make_unique<sw::redis::RedisCluster>(connection_options);
         std::cout << "Redis Cluster Connect Success !" << std::endl;
 
         CreateRedisThread(RedisThreadCnt_);
-		channelManager = new ChannelManager(redis);
+		channelManager = new ChannelManager;
     }
     catch (const  sw::redis::Error& err) {
         std::cout << "Redis Connect Error : " << err.what() << std::endl;
@@ -150,7 +151,7 @@ void RedisManager::Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPac
 
     {  // Send User PK to the Session Server for Synchronization with MySQL
         SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
-        syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
+        syncLogoutReqPacket.PacketId = (uint16_t)SESSION_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
         connUsersManager->FindUser(GatewayServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
@@ -163,7 +164,7 @@ void RedisManager::UserDisConnect(uint16_t connObjNum_) { // Abnormal Disconnect
 
     {  // Send User PK to the Session Server for Synchronization with MySQL
         SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
-        syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
+        syncLogoutReqPacket.PacketId = (uint16_t)SESSION_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
         connUsersManager->FindUser(GatewayServerObjNum)->
@@ -172,17 +173,12 @@ void RedisManager::UserDisConnect(uint16_t connObjNum_) { // Abnormal Disconnect
     }
 }
 
-void RedisManager::ServerEnd(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
-    // Process Remain Packet
-
-}
-
 void RedisManager::ImSessionRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<IM_SESSION_REQUEST*>(pPacket_);
     std::cout << "Session Server Connect Request :" << connObjNum_ << std::endl;
 
     IM_SESSION_RESPONSE imSessionResPacket;
-    imSessionResPacket.PacketId = (uint16_t)PACKET_ID::IM_SESSION_RESPONSE;
+    imSessionResPacket.PacketId = (uint16_t)SESSION_ID::IM_SESSION_RESPONSE;
     imSessionResPacket.PacketLength = sizeof(IM_SESSION_RESPONSE);
 
     std::string str(userConn->Token);
@@ -211,21 +207,52 @@ void RedisManager::ImSessionRequest(uint16_t connObjNum_, uint16_t packetSize_, 
     }
 }
 
-void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) { // 채널 서버 이동 요청
+void RedisManager::SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+	SERVER_USER_COUNTS_RESPONSE serverUserCountsResPacket;
+    serverUserCountsResPacket.PacketId = (uint16_t)PACKET_ID::SERVER_USER_COUNTS_RESPONSE;
+    serverUserCountsResPacket.PacketLength = sizeof(SERVER_USER_COUNTS_RESPONSE);
+    std::vector<std::atomic<uint16_t>> tempV = channelManager->getChannelVector();
+
+    char* tempC = new char[MAX_SERVER_USERS + 1];
+    char* tc = tempC;
+    uint16_t cnt = tempV.size();
+
+    for (int i = 1; i <= cnt; i++) {
+		uint16_t userCount = tempV[i].load();
+        memcpy(tc, (char*)&userCount, sizeof(uint16_t));
+        tc += sizeof(uint16_t);
+    }
+
+    serverUserCountsResPacket.serverCount = cnt;
+    std::memcpy(serverUserCountsResPacket.serverUserCnt, tempC, MAX_SERVER_USERS + 1);
+
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_RANKING_RESPONSE), (char*)&serverUserCountsResPacket);
+
+    delete[] tempC;
+}
+
+void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto MoveCHReqPacket = reinterpret_cast<MOVE_SERVER_REQUEST*>(pPacket_);
     MOVE_SERVER_RESPONSE moveCHResPacket;
+    std::string tag;
 
-    if (MoveCHReqPacket->channelName == "CH_01") {
+    if (MoveCHReqPacket->channelName == "CH_11") {
         moveCHResPacket.PacketId = (uint16_t)PACKET_ID::MOVE_SERVER_RESPONSE;
         moveCHResPacket.PacketLength = sizeof(MOVE_SERVER_RESPONSE);
-		moveCHResPacket.ip = ServerAddressMap[ServerType::ChannelServer01].ip;
-		moveCHResPacket.port = ServerAddressMap[ServerType::ChannelServer01].port;
+		moveCHResPacket.ip = ServerAddressMap[ServerType::ChannelServer11].ip;
+		moveCHResPacket.port = ServerAddressMap[ServerType::ChannelServer11].port;
+
+        tag = "{" + std::to_string(static_cast<uint16_t>(ServerType::ChannelServer11)) + "}";
+        channelManager->EnterChannelServer(static_cast<uint16_t>(ChannelType::CH_11)); // 인원수 미리 한명 증가 (실패시 감소 처리)
 	}
-	else if (MoveCHReqPacket->channelName == "CH_02") {
+	else if (MoveCHReqPacket->channelName == "CH_21") {
         moveCHResPacket.PacketId = (uint16_t)PACKET_ID::MOVE_SERVER_RESPONSE;
         moveCHResPacket.PacketLength = sizeof(MOVE_SERVER_RESPONSE);
-        moveCHResPacket.ip = ServerAddressMap[ServerType::ChannelServer02].ip;
-        moveCHResPacket.port = ServerAddressMap[ServerType::ChannelServer02].port;
+        moveCHResPacket.ip = ServerAddressMap[ServerType::ChannelServer21].ip;
+        moveCHResPacket.port = ServerAddressMap[ServerType::ChannelServer21].port;
+
+        tag = "{" + std::to_string(static_cast<uint16_t>(ServerType::ChannelServer21)) + "}";
+        channelManager->EnterChannelServer(static_cast<uint16_t>(ChannelType::CH_21));
 	}
 
     // 채널 이동간 보안을 위한 JWT Token 생성
@@ -237,7 +264,6 @@ void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* 
             std::chrono::seconds{ 300 })
         .sign(jwt::algorithm::hs256{ JWT_SECRET });
 
-    std::string tag = "{" + std::to_string(static_cast<uint16_t>(ServerType::ChannelServer01)) + "}";
     std::string key = "jwtcheck:" + tag;
 
     auto pipe = redis->pipeline(tag);

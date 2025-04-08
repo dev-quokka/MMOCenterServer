@@ -4,7 +4,6 @@
 #include "ConnUser.h"
 
 #include "OverLappedManager.h"
-#include "UdpOverLappedManager.h"
 #include "ConnUsersManager.h"
 #include "InGameUserManager.h"
 #include "RedisManager.h"
@@ -60,7 +59,6 @@ private:
     SOCKET udpSkt = INVALID_SOCKET;
  
     OverLappedManager* overLappedManager;
-    UdpOverLappedManager* udpOverLappedManager;
     ConnUsersManager* connUsersManager;
     InGameUserManager* inGameUserManager;
     RedisManager* redisManager;
