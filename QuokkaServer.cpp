@@ -3,8 +3,8 @@
 void QuokkaServer::SetServerAddressMap() {
     ServerAddressMap[ServerType::GatewayServer] = { "127.0.0.1", 9091 };
     ServerAddressMap[ServerType::MatchingServer] = { "127.0.0.1", 9092 };
-    ServerAddressMap[ServerType::ChannelServer01] = { "127.0.0.1", 9201 };
-    ServerAddressMap[ServerType::ChannelServer02] = { "127.0.0.1", 9202 };
+    ServerAddressMap[ServerType::ChannelServer11] = { "127.0.0.1", 9211 };
+    ServerAddressMap[ServerType::ChannelServer21] = { "127.0.0.1", 9221 };
     ServerAddressMap[ServerType::RaidGameServer01] = { "127.0.0.1", 9501 };
 }
 
@@ -56,16 +56,6 @@ bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
 
     overLappedManager = new OverLappedManager;
     overLappedManager->init();
-
-    udpOverLappedManager = new UdpOverLappedManager;
-    udpOverLappedManager->init();
-
-    udpSkt = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-    if (udpSkt == INVALID_SOCKET) {
-        std::cout << "Server Socket 생성 실패" << std::endl;
-        return false;
-    }
 
     SetServerAddressMap(); // 서버 주소 설정
 
@@ -224,11 +214,8 @@ void QuokkaServer::AccepterThread() {
 }
 
 void QuokkaServer::ServerEnd() {
-
     WorkRun = false;
-    udpWorkRun = false;
     AccepterRun = false;
-
 
     for (int i = 0; i < workThreads.size(); i++) {
         PostQueuedCompletionStatus(sIOCPHandle, 0, 0, nullptr);
@@ -257,7 +244,6 @@ void QuokkaServer::ServerEnd() {
     delete inGameUserManager;
     CloseHandle(sIOCPHandle); 
     closesocket(serverSkt);
-    closesocket(udpSkt);
     WSACleanup();
 
     std::cout << "종료 5초 대기" << std::endl;

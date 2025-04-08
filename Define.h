@@ -83,11 +83,3 @@ struct OverlappedTCP : OverlappedEx {
 	WSABUF wsaBuf; // TCP Buffer
 };
 
-struct OverlappedUDP : OverlappedEx {
-	// 4 bytes
-	int addrSize = sizeof(sockaddr_in);
-	// 16 bytes
-	WSABUF wsaBuf; // UDP Buffer
-	sockaddr_in userAddr;  // Client Ip && Port Info
-};
-

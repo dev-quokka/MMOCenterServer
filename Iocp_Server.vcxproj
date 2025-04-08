@@ -142,7 +142,6 @@
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="ConnUsersManager.cpp" />
     <ClCompile Include="IngameUserManager.cpp" />
-    <ClCompile Include="MatchingManager.cpp" />
     <ClCompile Include="OverLappedManager.cpp" />
     <ClCompile Include="ChannelManager.cpp" />
     <ClCompile Include="main.cpp" />
@@ -157,7 +156,6 @@
     <ClInclude Include="InGameUserManager.h" />
     <ClInclude Include="OverLappedManager.h" />
     <ClInclude Include="Room.h" />
-    <ClInclude Include="MatchingManager.h" />
     <ClInclude Include="ChannelManager.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="QuokkaServer.h" />
