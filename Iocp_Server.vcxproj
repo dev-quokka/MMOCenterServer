@@ -155,7 +155,6 @@
     <ClInclude Include="InGameUser.h" />
     <ClInclude Include="InGameUserManager.h" />
     <ClInclude Include="OverLappedManager.h" />
-    <ClInclude Include="Room.h" />
     <ClInclude Include="ChannelServersManager.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="QuokkaServer.h" />

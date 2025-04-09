@@ -3,8 +3,8 @@
 void QuokkaServer::SetServerAddressMap() {
     ServerAddressMap[ServerType::GatewayServer] = { "127.0.0.1", 9091 };
     ServerAddressMap[ServerType::MatchingServer] = { "127.0.0.1", 9092 };
-    ServerAddressMap[ServerType::ChannelServer11] = { "127.0.0.1", 9211 };
-    ServerAddressMap[ServerType::ChannelServer21] = { "127.0.0.1", 9221 };
+    ServerAddressMap[ServerType::ChannelServer01] = { "127.0.0.1", 9211 };
+    ServerAddressMap[ServerType::ChannelServer02] = { "127.0.0.1", 9221 };
     ServerAddressMap[ServerType::RaidGameServer01] = { "127.0.0.1", 9501 };
 }
 
@@ -93,7 +93,7 @@ bool QuokkaServer::StartWork() {
         WaittingQueue.push(connUser); // Push ConnUser
     }
 
-    redisManager->init(MaxThreadCnt, maxClientCount, sIOCPHandle);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
+    redisManager->init(MaxThreadCnt);// Run MySQL && Run Redis Threads (The number of Clsuter Master Nodes + 1)
     inGameUserManager->Init(maxClientCount);
     redisManager->SetManager(connUsersManager, inGameUserManager);
 

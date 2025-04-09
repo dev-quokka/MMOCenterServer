@@ -80,9 +80,6 @@
     <ClInclude Include="ConnUsersManager.h">
       <Filter>헤더 파일\Network\UserNetworkManager</Filter>
     </ClInclude>
-    <ClInclude Include="Room.h">
-      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
-    </ClInclude>
     <ClInclude Include="ChannelServersManager.h">
       <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
     </ClInclude>
