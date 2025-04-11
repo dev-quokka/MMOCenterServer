@@ -1,13 +1,5 @@
 #include "QuokkaServer.h"
 
-void QuokkaServer::SetServerAddressMap() {
-    ServerAddressMap[ServerType::GatewayServer] = { "127.0.0.1", 9091 };
-    ServerAddressMap[ServerType::MatchingServer] = { "127.0.0.1", 9092 };
-    ServerAddressMap[ServerType::ChannelServer01] = { "127.0.0.1", 9211 };
-    ServerAddressMap[ServerType::ChannelServer02] = { "127.0.0.1", 9221 };
-    ServerAddressMap[ServerType::RaidGameServer01] = { "127.0.0.1", 9501 };
-}
-
 bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
     WSADATA wsadata;
     int check = 0;
@@ -57,8 +49,6 @@ bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
     overLappedManager = new OverLappedManager;
     overLappedManager->init();
 
-    SetServerAddressMap(); // 서버 주소 설정
-
     return true;
 }
 
@@ -102,7 +92,7 @@ bool QuokkaServer::StartWork() {
 
 bool QuokkaServer::CreateWorkThread() {
     WorkRun = true;
-    auto threadCnt = MaxThreadCnt; // core
+    auto threadCnt = MaxThreadCnt;
     for (int i = 0; i < threadCnt; i++) {
         workThreads.emplace_back([this]() { WorkThread(); });
     }

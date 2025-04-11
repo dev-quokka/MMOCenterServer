@@ -8,12 +8,10 @@
 #include <string>
 #include <unordered_map>
 
-const uint32_t MAX_RECV_SIZE = 1024; // Set Max RECV Buf
+const uint32_t MAX_RECV_SIZE = 1024; // Set Max Recv Buf
 const uint32_t MAX_CIRCLE_SIZE = 8096;
 
 const short MAX_RETRY_COUNT = 3;
-
-std::string JWT_SECRET = "Cute_Quokka";
 
 // ---------------------------- MYSQL  ----------------------------
 // 유저의 현재 접속 중인와 서버, 채널 번호
@@ -25,7 +23,7 @@ std::string JWT_SECRET = "Cute_Quokka";
 
 //  ---------------------------- SERVER INFO  ----------------------------
 
-enum class ServerType : uint16_t{ // 중앙 서버만 사용하는 번호
+enum class ServerType : uint16_t { // 중앙 서버만 사용하는 번호
 	// Channel Server (11~)
 	ChannelServer01 = 1,
 	ChannelServer02 = 2,
@@ -47,9 +45,6 @@ struct ServerAddress {
 	std::string ip;
 	uint16_t port;
 };
-
-std::unordered_map<ServerType, ServerAddress> ServerAddressMap;
-
 
 //  ---------------------------- SYSTEM  ----------------------------
 

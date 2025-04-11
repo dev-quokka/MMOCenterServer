@@ -4,18 +4,36 @@ thread_local std::mt19937 RedisManager::gen(std::random_device{}());
 
 void RedisManager::init(const uint16_t RedisThreadCnt_) {
 
+    ServerAddressMap[ServerType::GatewayServer] = { "127.0.0.1", 9091 };
+    ServerAddressMap[ServerType::MatchingServer] = { "127.0.0.1", 9131 };
+    ServerAddressMap[ServerType::ChannelServer01] = { "127.0.0.1", 9211 };
+    ServerAddressMap[ServerType::ChannelServer02] = { "127.0.0.1", 9221 };
+    ServerAddressMap[ServerType::RaidGameServer01] = { "127.0.0.1", 9501 };
+
     // ---------- SET PACKET PROCESS ---------- 
     packetIDTable = std::unordered_map<uint16_t, RECV_PACKET_FUNCTION>();
 
-    //SYSTEM
+    // SYSTEM
     packetIDTable[(uint16_t)PACKET_ID::USER_CONNECT_REQUEST] = &RedisManager::UserConnect;
     packetIDTable[(uint16_t)PACKET_ID::USER_LOGOUT_REQUEST] = &RedisManager::Logout;
-    packetIDTable[(uint16_t)SESSION_ID::IM_SESSION_REQUEST] = &RedisManager::ImSessionRequest;
     packetIDTable[(uint16_t)PACKET_ID::SERVER_USER_COUNTS_REQUEST] = &RedisManager::SendServerUserCounts;
     packetIDTable[(uint16_t)PACKET_ID::MOVE_SERVER_REQUEST] = &RedisManager::MoveServer;
+    
+    // SESSION
+    packetIDTable[(uint16_t)PACKET_ID::IM_SESSION_REQUEST] = &RedisManager::ImSessionRequest;
 
-    //RAID
+    // CHANNEL
+    packetIDTable[(uint16_t)PACKET_ID::IM_CHANNEL_REQUEST] = &RedisManager::ImChannelRequest;
+    packetIDTable[(uint16_t)PACKET_ID::USER_DISCONNECT_AT_CHANNEL_REQUEST] = &RedisManager::ChannelDisConnect;
+
+    // MATCHING
+    packetIDTable[(uint16_t)PACKET_ID::IM_MATCHING_REQUEST] = &RedisManager::ImMatchingRequest;
+
+    // RAID
     packetIDTable[(uint16_t)PACKET_ID::RAID_MATCHING_REQUEST] = &RedisManager::MatchStart;
+    packetIDTable[(uint16_t)PACKET_ID::MATCHING_RESPONSE_FROM_MATCHING_SERVER] = &RedisManager::MatchStartResponse;
+    packetIDTable[(uint16_t)PACKET_ID::MATCHING_CANCEL_REQUEST] = &RedisManager::MatchingCancel;
+    packetIDTable[(uint16_t)PACKET_ID::MATCHING_CANCEL_RESPONSE_FROM_MATCHING_SERVER] = &RedisManager::MatchingCancelResponse;
     packetIDTable[(uint16_t)PACKET_ID::RAID_RANKING_REQUEST] = &RedisManager::GetRanking;
 
     channelServerObjNums.resize(3, 0); // 생성한 서버 수 + 1
@@ -23,6 +41,7 @@ void RedisManager::init(const uint16_t RedisThreadCnt_) {
 
     RedisRun(RedisThreadCnt_);
     channelServersManager = new ChannelServersManager;
+    channelServersManager->init();
 }
 
 void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis Server
@@ -104,7 +123,6 @@ void RedisManager::UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char*
     USER_CONNECT_RESPONSE_PACKET ucReq;
     ucReq.PacketId = (uint16_t)PACKET_ID::USER_CONNECT_RESPONSE;
     ucReq.PacketLength = sizeof(USER_CONNECT_RESPONSE_PACKET);
-
     try {
         auto pk = static_cast<uint32_t>(std::stoul(*redis->hget(key, (std::string)userConn->userToken)));
         if (pk) {
@@ -139,7 +157,7 @@ void RedisManager::Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPac
 
     {  // Send User PK to the Session Server for Synchronization with MySQL
         SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
-        syncLogoutReqPacket.PacketId = (uint16_t)SESSION_ID::SYNCRONIZE_LOGOUT_REQUEST;
+        syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
         connUsersManager->FindUser(GatewayServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
@@ -152,21 +170,20 @@ void RedisManager::UserDisConnect(uint16_t connObjNum_) { // Abnormal Disconnect
 
     {  // Send User PK to the Session Server for Synchronization with MySQL
         SYNCRONIZE_LOGOUT_REQUEST syncLogoutReqPacket;
-        syncLogoutReqPacket.PacketId = (uint16_t)SESSION_ID::SYNCRONIZE_LOGOUT_REQUEST;
+        syncLogoutReqPacket.PacketId = (uint16_t)PACKET_ID::SYNCRONIZE_LOGOUT_REQUEST;
         syncLogoutReqPacket.PacketLength = sizeof(SYNCRONIZE_LOGOUT_REQUEST);
         syncLogoutReqPacket.userPk = tempUser->GetPk();
-        connUsersManager->FindUser(GatewayServerObjNum)->
-            PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
+        connUsersManager->FindUser(GatewayServerObjNum)->PushSendMsg(sizeof(SYNCRONIZE_LOGOUT_REQUEST), (char*)&syncLogoutReqPacket);
         std::cout << "유저 디스커넥트 싱크로 메시지 전송" << std::endl;
     }
 }
 
 void RedisManager::ImSessionRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto userConn = reinterpret_cast<IM_SESSION_REQUEST*>(pPacket_);
-    std::cout << "Session Server Connect Request :" << connObjNum_ << std::endl;
+    std::cout << "Session Server Connect Request : " << connObjNum_ << std::endl;
 
     IM_SESSION_RESPONSE imSessionResPacket;
-    imSessionResPacket.PacketId = (uint16_t)SESSION_ID::IM_SESSION_RESPONSE;
+    imSessionResPacket.PacketId = (uint16_t)PACKET_ID::IM_SESSION_RESPONSE;
     imSessionResPacket.PacketLength = sizeof(IM_SESSION_RESPONSE);
 
     std::string str(userConn->Token);
@@ -196,29 +213,46 @@ void RedisManager::ImSessionRequest(uint16_t connObjNum_, uint16_t packetSize_, 
 }
 
 void RedisManager::ImChannelRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
-    auto MoveCHReqPacket = reinterpret_cast<IM_CHANNEL_REQUEST*>(pPacket_);
-    channelServerObjNums[MoveCHReqPacket->channelServerNum] = connObjNum_; // 채널 서버 고유번호 설정
+    auto imChReqPacket = reinterpret_cast<IM_CHANNEL_REQUEST*>(pPacket_);
+    channelServerObjNums[imChReqPacket->channelServerNum] = connObjNum_; // 채널 서버 고유번호 설정
+    std::cout << "Channel Server" << imChReqPacket->channelServerNum <<" Connect Request : " << connObjNum_ << std::endl;
 
     IM_CHANNEL_RESPONSE imChRes;
-    imChRes.PacketId = (uint16_t)CHANNEL_ID::IM_CHANNEL_RESPONSE;
+    imChRes.PacketId = (uint16_t)PACKET_ID::IM_CHANNEL_RESPONSE;
     imChRes.PacketLength = sizeof(IM_CHANNEL_RESPONSE);
     imChRes.isSuccess = true;
 
     connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_RANKING_RESPONSE), (char*)&imChRes);
+    std::cout << "Channel Server" << imChReqPacket->channelServerNum << " Connect Success : " << connObjNum_ << std::endl;
+}
+
+void RedisManager::ImMatchingRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    auto imMatchingReqPacket = reinterpret_cast<IM_MATCHING_REQUEST*>(pPacket_);
+    MatchingServerObjNum = connObjNum_;
+
+    std::cout << "Channel Server Connect Request : " << connObjNum_ << std::endl;
+
+    IM_MATCHING_RESPONSE imMRes;
+    imMRes.PacketId = (uint16_t)PACKET_ID::IM_MATCHING_RESPONSE;
+    imMRes.PacketLength = sizeof(IM_MATCHING_RESPONSE);
+    imMRes.isSuccess = true;
+
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(IM_MATCHING_RESPONSE), (char*)&imMRes);
+    std::cout << "Channel Server Connect Success : " << connObjNum_ << std::endl;
 }
 
 void RedisManager::SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
 	SERVER_USER_COUNTS_RESPONSE serverUserCountsResPacket;
     serverUserCountsResPacket.PacketId = (uint16_t)PACKET_ID::SERVER_USER_COUNTS_RESPONSE;
     serverUserCountsResPacket.PacketLength = sizeof(SERVER_USER_COUNTS_RESPONSE);
-    std::vector<std::atomic<uint16_t>> tempV = channelServersManager->GetChannels();
+    auto tempV = channelServersManager->GetServerCounts();
 
     char* tempC = new char[MAX_SERVER_USERS + 1];
     char* tc = tempC;
     uint16_t cnt = tempV.size();
 
-    for (int i = 1; i <= cnt; i++) {
-		uint16_t userCount = tempV[i].load();
+    for (int i = 1; i < cnt; i++) {
+		uint16_t userCount = tempV[i];
         memcpy(tc, (char*)&userCount, sizeof(uint16_t));
         tc += sizeof(uint16_t);
     }
@@ -231,28 +265,40 @@ void RedisManager::SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSiz
     delete[] tempC;
 }
 
+void RedisManager::ChannelDisConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    auto MoveCHReqPacket = reinterpret_cast<USER_DISCONNECT_AT_CHANNEL_REQUEST*>(pPacket_);
+    channelServersManager->LeaveChannelServer(MoveCHReqPacket->channelServerNum);
+}
+
 void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto MoveCHReqPacket = reinterpret_cast<MOVE_SERVER_REQUEST*>(pPacket_);
     MOVE_SERVER_RESPONSE moveCHResPacket;
     std::string tag;
 
-    if (MoveCHReqPacket->channelName == "CH_11") {
+    if (MoveCHReqPacket->serverNum == 1) {
         moveCHResPacket.PacketId = (uint16_t)PACKET_ID::MOVE_SERVER_RESPONSE;
         moveCHResPacket.PacketLength = sizeof(MOVE_SERVER_RESPONSE);
-		moveCHResPacket.ip = ServerAddressMap[ServerType::ChannelServer01].ip;
 		moveCHResPacket.port = ServerAddressMap[ServerType::ChannelServer01].port;
-
+        strncpy_s(moveCHResPacket.ip, ServerAddressMap[ServerType::ChannelServer01].ip.c_str(), 256);
         tag = "{" + std::to_string(static_cast<uint16_t>(ServerType::ChannelServer01)) + "}";
-        channelServersManager->EnterChannelServer(static_cast<uint16_t>(ChannelServerType::CH_01)); // 인원수 미리 한명 증가 (실패시 감소 처리)
+
+        if (!channelServersManager->EnterChannelServer(static_cast<uint16_t>(ChannelServerType::CH_01))) {// 인원수 미리 한명 증가 (실패시 감소 처리)
+            moveCHResPacket.port = 0;
+            connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MOVE_SERVER_RESPONSE), (char*)&moveCHResPacket);
+        };
+
 	}
-	else if (MoveCHReqPacket->channelName == "CH_21") {
+	else if (MoveCHReqPacket->serverNum == 2) {
         moveCHResPacket.PacketId = (uint16_t)PACKET_ID::MOVE_SERVER_RESPONSE;
         moveCHResPacket.PacketLength = sizeof(MOVE_SERVER_RESPONSE);
-        moveCHResPacket.ip = ServerAddressMap[ServerType::ChannelServer02].ip;
         moveCHResPacket.port = ServerAddressMap[ServerType::ChannelServer02].port;
-
+        strncpy_s(moveCHResPacket.ip, ServerAddressMap[ServerType::ChannelServer02].ip.c_str(), 256);
         tag = "{" + std::to_string(static_cast<uint16_t>(ServerType::ChannelServer02)) + "}";
-        channelServersManager->EnterChannelServer(static_cast<uint16_t>(ChannelServerType::CH_02));
+
+        if (!channelServersManager->EnterChannelServer(static_cast<uint16_t>(ChannelServerType::CH_02))) {// 인원수 미리 한명 증가 (실패시 감소 처리)
+            moveCHResPacket.port = 0;
+            connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MOVE_SERVER_RESPONSE), (char*)&moveCHResPacket);
+        };
 	}
 
     // 채널 이동간 보안을 위한 JWT Token 생성
@@ -273,7 +319,7 @@ void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* 
 
     pipe.exec();
 
-	moveCHResPacket.token = token;
+    strncpy_s(moveCHResPacket.serverToken, token.c_str(), 256);
     connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(MOVE_SERVER_RESPONSE), (char*)&moveCHResPacket); // 유저에게 이동할 채널 정보와 JWT Token 전달
 }
 
@@ -284,26 +330,64 @@ void RedisManager::MatchStart(uint16_t connObjNum_, uint16_t packetSize_, char* 
     InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
 
     MATCHING_REQUEST_TO_MATCHING_SERVER matchReqPacket;
-    matchReqPacket.PacketId = (uint16_t)MATCHING_ID::MATCHING_REQUEST_TO_MATCHING_SERVER;
+    matchReqPacket.PacketId = (uint16_t)PACKET_ID::MATCHING_REQUEST_TO_MATCHING_SERVER;
     matchReqPacket.PacketLength = sizeof(MATCHING_REQUEST_TO_MATCHING_SERVER);
-	matchReqPacket.userObjNum = connObjNum_;
+    matchReqPacket.userPk = tempUser->GetPk();
+	matchReqPacket.userCenterObjNum = connObjNum_;
     matchReqPacket.userGroupNum = tempUser->GetLevel()/3 + 1; // 설정해둔 그룹 번호 만들어서 전달
 
     connUsersManager->FindUser(MatchingServerObjNum)->PushSendMsg(sizeof(MATCHING_REQUEST_TO_MATCHING_SERVER), (char*)&matchReqPacket);
 }
 
+void RedisManager::MatchStartResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    auto matchSuccessReqPacket = reinterpret_cast<MATCHING_RESPONSE_FROM_MATCHING_SERVER*>(pPacket_);
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(matchSuccessReqPacket->userCenterObjNum);
+
+    if (matchSuccessReqPacket->isSuccess) {
+        std::cout << tempUser->GetId() << " " << tempUser->GetLevel() / 3 + 1 << " 그룹 Insert Success" << std::endl;
+    }
+
+    RAID_MATCHING_RESPONSE matchResPacket;
+    matchResPacket.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
+    matchResPacket.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
+    matchResPacket.insertSuccess = matchSuccessReqPacket->isSuccess;
+
+    connUsersManager->FindUser(matchSuccessReqPacket->userCenterObjNum)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&matchResPacket);
+    std::cout << tempUser->GetId() << " " << tempUser->GetLevel() / 3 + 1 << " 그룹 Insert Fail" << std::endl;
+}
+
+void RedisManager::MatchingCancel(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
+
+    MATCHING_CANCEL_REQUEST_TO_MATCHING_SERVER matchCancelReqPacket;
+    matchCancelReqPacket.PacketId = (uint16_t)PACKET_ID::MATCHING_CANCEL_REQUEST_TO_MATCHING_SERVER;
+    matchCancelReqPacket.PacketLength = sizeof(MATCHING_CANCEL_REQUEST_TO_MATCHING_SERVER);
+    matchCancelReqPacket.userCenterObjNum = connObjNum_;
+    matchCancelReqPacket.userGroupNum = tempUser->GetLevel() / 3 + 1;
+
+    connUsersManager->FindUser(MatchingServerObjNum)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&matchCancelReqPacket);
+}
+
+void RedisManager::MatchingCancelResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    auto matchCancelResPacket = reinterpret_cast<MATCHING_RESPONSE_FROM_MATCHING_SERVER*>(pPacket_);
+    InGameUser* tempUser = inGameUserManager->GetInGameUserByObjNum(matchCancelResPacket->userCenterObjNum);
+
+    MATCHING_CANCEL_RESPONSE matchCanResPacket;
+    matchCanResPacket.PacketId = (uint16_t)PACKET_ID::MATCHING_CANCEL_RESPONSE;
+    matchCanResPacket.PacketLength = sizeof(MATCHING_CANCEL_RESPONSE);
+    matchCanResPacket.isSuccess = matchCancelResPacket->isSuccess;
+
+    connUsersManager->FindUser(matchCancelResPacket->userCenterObjNum)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&matchCanResPacket);
+    std::cout << tempUser->GetId() << " Matching Cancel Success" << std::endl;
+}
+
 void RedisManager::MatchFail(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
-    auto matchResPacket = reinterpret_cast<MATCHING_RESPONSE_FROM_MATCHING_SERVER*>(pPacket_);
 
-	RAID_MATCHING_RESPONSE matchResToUserPacket;
-    matchResToUserPacket.PacketId = (uint16_t)PACKET_ID::RAID_MATCHING_RESPONSE;
-    matchResToUserPacket.PacketLength = sizeof(RAID_MATCHING_RESPONSE);
-	matchResToUserPacket.insertSuccess = matchResPacket->isSuccess;
-
-    connUsersManager->FindUser(matchResPacket->userObjNum)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&matchResToUserPacket);
 }
 
 void RedisManager::MatchSuccess(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    return;
+    
     auto matchSuccessReqPacket = reinterpret_cast<MATCHING_SUCCESS_RESPONSE_TO_CENTER_SERVER*>(pPacket_);
 
 	uint16_t tempRoomNum = matchSuccessReqPacket->roomNum;
@@ -313,8 +397,8 @@ void RedisManager::MatchSuccess(uint16_t connObjNum_, uint16_t packetSize_, char
 	raidReadyReqPacket.PacketLength = sizeof(RAID_READY_REQUEST);
     raidReadyReqPacket.roomNum = tempRoomNum;
     raidReadyReqPacket.udpPort = 50001; // 나중에 게임 서버가 늘어나면 해당 서버로 부터 udp 포트 직접 받기
-    raidReadyReqPacket.ip = ServerAddressMap[ServerType::RaidGameServer01].ip;
     raidReadyReqPacket.port = ServerAddressMap[ServerType::RaidGameServer01].port;
+    strncpy_s(raidReadyReqPacket.ip, ServerAddressMap[ServerType::RaidGameServer01].ip.c_str(), 256);
 
     { // 매칭된 유저들에게 선택된 게임 서버의 ip, port와 채널 이동 간 보안을 위한 JWT Token 생성 (유저가 많아지면 vector 이용 고려)
         std::string token1 = jwt::create()

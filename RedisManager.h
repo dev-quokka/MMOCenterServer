@@ -1,4 +1,5 @@
 #pragma once
+#define NOMINMAX
 
 #include <jwt-cpp/jwt.h>
 #include <winsock2.h>
@@ -44,12 +45,19 @@ private:
     void UserDisConnect(uint16_t connObjNum_); // Abnormal Disconnect (Set Long Time TTL)
     void ImSessionRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Session Server Socket Check
     void ImChannelRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Channel Server Socket Check
+    void ImMatchingRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Matching Server Socket Check
     void SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 서버당 유저 수 요청 (유저가 서버 이동 화면으로 오면 전송)
     void MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 채널 서버 이동 요청
 
+    //CHANNEL
+    void ChannelDisConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+
     // RAID
-    void MatchStart(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 매치 대기열 삽입
-    void MatchFail(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 레이드 매칭 실패시 전달 받는 패킷
+    void MatchStart(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 유저의 매칭 요청
+    void MatchStartResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 매칭 서버에서 유저 매칭 insert 성공 여부 응답
+    void MatchingCancel(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 유저의 매칭 취소 요청
+    void MatchingCancelResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 매칭 서버에서 유저 매칭 취소 여부 응답
+    void MatchFail(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // 레이드 매칭 실패 (매칭 성공되는 시점에 유저 로그아웃 or 매칭 취소 요청)
 	void MatchSuccess(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Center Server to Matching Server
 	void MatchStartFail(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); // Matching Server to Center Server
     void GetRanking(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
@@ -67,6 +75,10 @@ private:
 
     // 80 bytes
     std::unordered_map<uint16_t, RECV_PACKET_FUNCTION> packetIDTable;
+    std::unordered_map<ServerType, ServerAddress> ServerAddressMap;
+
+    // 40 bytes
+    std::string JWT_SECRET = "Cute_Quokka";
 
     // 32 bytes
     std::vector<uint16_t> channelServerObjNums;
