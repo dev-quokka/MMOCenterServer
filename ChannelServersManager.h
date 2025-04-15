@@ -5,8 +5,8 @@
 #include <iostream>
 #include <thread>
 
-#include "Define.h"
 #include "ChannelServer.h"
+
 class ChannelServersManager{
 public:
 	bool init();

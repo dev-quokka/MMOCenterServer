@@ -98,5 +98,11 @@
     <ClInclude Include="ChannelServer.h">
       <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
     </ClInclude>
+    <ClInclude Include="ServerChannelEnum.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="UserStateEnum.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

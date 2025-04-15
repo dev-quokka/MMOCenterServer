@@ -2,23 +2,23 @@
 
 void OverLappedManager::init() {
 	for (int i = 0; i < OVERLAPPED_TCP_QUEUE_SIZE; i++) {
-		OverlappedTCP* overlappedTCP = new OverlappedTCP; // 생성
-		ZeroMemory(overlappedTCP, sizeof(OverlappedTCP)); // 초기화
-		ovLapPool.push(overlappedTCP);
+		OverlappedEx* overlappedEx = new OverlappedEx;
+		ZeroMemory(overlappedEx, sizeof(OverlappedEx));
+		ovLapPool.push(overlappedEx);
 	}
 }
 
-OverlappedTCP* OverLappedManager::getOvLap() {
-	OverlappedTCP* overlappedTCP_;
-	if (ovLapPool.pop(overlappedTCP_)) {
-		return overlappedTCP_;
+OverlappedEx* OverLappedManager::getOvLap() {
+	OverlappedEx* overlappedEx;
+	if (ovLapPool.pop(overlappedEx)) {
+		return overlappedEx;
 	}
 	else return nullptr;
 }
 
-void OverLappedManager::returnOvLap(OverlappedTCP* overlappedTCP_){
-	delete[] overlappedTCP_->wsaBuf.buf;
-	ZeroMemory(overlappedTCP_, sizeof(OverlappedTCP)); // 초기화
-	ovLapPool.push(overlappedTCP_);
+void OverLappedManager::returnOvLap(OverlappedEx* overlappedEx_) {
+	delete[] overlappedEx_->wsaBuf.buf;
+	ZeroMemory(overlappedEx_, sizeof(OverlappedEx));
+	ovLapPool.push(overlappedEx_);
 }
 

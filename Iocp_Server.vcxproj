@@ -161,6 +161,8 @@
     <ClInclude Include="QuokkaServer.h" />
     <ClInclude Include="RedisManager.h" />
     <ClInclude Include="CircularBuffer.h" />
+    <ClInclude Include="ServerChannelEnum.h" />
+    <ClInclude Include="UserStateEnum.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
