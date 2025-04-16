@@ -38,7 +38,7 @@ struct PACKET_HEADER
 
 struct RANKING {
 	uint16_t score = 0;
-	char userId[MAX_USER_ID_LEN + 1] = {};
+	char userId[MAX_USER_ID_LEN + 1];
 };
 
 //  ---------------------------- SYSTEM  ----------------------------
@@ -92,9 +92,13 @@ struct RAID_READY_REQUEST : PACKET_HEADER {
 	uint16_t roomNum;
 };
 
-struct RAID_END_REQUEST_TO_GAME_SERVER : PACKET_HEADER {
-	uint16_t gameServerNum;
-	uint16_t roomNum;
+struct RAID_RANKING_REQUEST : PACKET_HEADER {
+	uint16_t startRank;
+};
+
+struct RAID_RANKING_RESPONSE : PACKET_HEADER {
+	uint16_t rkCount;
+	char reqScore[MAX_SCORE_SIZE + 1];
 };
 
 
@@ -205,15 +209,11 @@ struct RAID_END_REQUEST_TO_CENTER_SERVER : PACKET_HEADER {
 	uint16_t roomNum;
 };
 
-struct RAID_RANKING_REQUEST : PACKET_HEADER {
-	uint16_t startRank;
+struct SYNC_HIGHSCORE_REQUEST : PACKET_HEADER {
+	char userId[MAX_USER_ID_LEN + 1];
+	unsigned int userScore;
+	uint16_t userPk;
 };
-
-struct RAID_RANKING_RESPONSE : PACKET_HEADER {
-	uint16_t rkCount;
-	char reqScore[MAX_SCORE_SIZE + 1];
-};
-
 
 enum class PACKET_ID : uint16_t {
 
@@ -325,6 +325,5 @@ enum class PACKET_ID : uint16_t {
 
 	MATCHING_RESPONSE_FROM_GAME_SERVER = 8012,
 
-	RAID_END_REQUEST_TO_CENTER_SERVER = 8102,
-
+	SYNC_HIGHSCORE_REQUEST = 8091,
 };

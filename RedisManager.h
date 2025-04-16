@@ -11,6 +11,7 @@
 #include <sw/redis++/redis++.h>
 
 #include "Packet.h"
+#include "UserSyncData.h"
 #include "InGameUser.h"
 #include "ServerChannelEnum.h"
 #include "InGameUserManager.h"
@@ -25,7 +26,6 @@ class RedisManager {
 public:
     ~RedisManager() {
         redisRun = false;
-
         for (int i = 0; i < redisThreads.size(); i++) { // Shutdown Redis Threads
             if (redisThreads[i].joinable()) {
                 redisThreads[i].join();
@@ -43,6 +43,12 @@ private:
     void RedisRun(const uint16_t RedisThreadCnt_);
     void RedisThread();
 
+    // SYNCRONIZATION
+    USERINFO GetUpdatedUserInfo(uint16_t userPk_);
+    std::vector<EQUIPMENT> GetUpdatedEquipment(uint16_t userPk_);
+    std::vector<CONSUMABLES> GetUpdatedConsumables(uint16_t userPk_);
+    std::vector<MATERIALS> GetUpdatedMaterials(uint16_t userPk_);
+
     // SYSTEM
     void UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
@@ -53,21 +59,20 @@ private:
     void GameServerConnectRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void GetRanking(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
-    // CHANNEL
+    // CHANNEL SERVER
     void ChannelDisConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
-    // MATCHING
+    // MATCHING SERVER
     void MatchStart(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void MatchStartResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void MatchingCancel(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void MatchingCancelResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 	void CheckMatchSuccess(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
-	void MatchStartFail(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     
-    // RAID
-    void RaidEnd(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
-    void GetRanking(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    // RAID SERVER
+    void SyncUserRaidScore(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
     typedef void(RedisManager::* RECV_PACKET_FUNCTION)(uint16_t, uint16_t, char*);
 
