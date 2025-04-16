@@ -142,6 +142,7 @@
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="ConnUsersManager.cpp" />
     <ClCompile Include="IngameUserManager.cpp" />
+    <ClCompile Include="MySQLManager.cpp" />
     <ClCompile Include="OverLappedManager.cpp" />
     <ClCompile Include="ChannelServersManager.cpp" />
     <ClCompile Include="main.cpp" />
@@ -155,6 +156,8 @@
     <ClInclude Include="Define.h" />
     <ClInclude Include="InGameUser.h" />
     <ClInclude Include="InGameUserManager.h" />
+    <ClInclude Include="UserSyncData.h" />
+    <ClInclude Include="MySQLManager.h" />
     <ClInclude Include="OverLappedManager.h" />
     <ClInclude Include="ChannelServersManager.h" />
     <ClInclude Include="Packet.h" />

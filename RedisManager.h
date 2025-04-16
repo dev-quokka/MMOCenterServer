@@ -16,6 +16,7 @@
 #include "InGameUserManager.h"
 #include "ChannelServersManager.h"
 #include "ConnUsersManager.h"
+#include "MySQLManager.h"
 
 const std::string JWT_SECRET = "Cute_Quokka";
 constexpr int MAX_CENTER_PACKET_SIZE = 256;
@@ -46,10 +47,10 @@ private:
     void UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void Logout(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void UserDisConnect(uint16_t connObjNum_);
-    void ImSessionRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); 
-    void ImChannelRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
-    void ImMatchingRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
-    void ImGameRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void LoginServerConnectRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_); 
+    void ChannelServerConnectRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void MatchingServerConnectRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void GameServerConnectRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
@@ -86,9 +87,10 @@ private:
     std::vector<std::thread> redisThreads;
     
     // 16 bytes
-    std::unique_ptr<sw::redis::RedisCluster> redis;
+    std::shared_ptr<sw::redis::RedisCluster> redis;
     std::thread redisThread;
 
+    MySQLManager* mySQLManager;
     ConnUsersManager* connUsersManager;
     InGameUserManager* inGameUserManager;
     ChannelServersManager* channelServersManager;
