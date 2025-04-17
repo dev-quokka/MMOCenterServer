@@ -9,10 +9,17 @@
 
 class ChannelServersManager{
 public:
+	// =================== INITIALIZATION  ===================
 	bool init();
-	bool EnterChannelServer(uint16_t channelNum_); // 유저 해당 서버 입장
-	void LeaveChannelServer(uint16_t channelNum_); // 유저 해당 서버 퇴장 or 해당 서버 입장 실패 응답
-	std::vector<uint16_t> GetServerCounts(); // 채널 인원 수를 반환하는 함수
+
+
+	// ======== CHANNEL SERVER USER COUNT MANAGEMENT ========
+	bool EnterChannelServer(uint16_t channelNum_);
+	void LeaveChannelServer(uint16_t channelNum_);
+
+
+	// ================ CHANNEL SERVER STATUS ================
+	std::vector<uint16_t> GetServerCounts() const;
 
 private:
 	std::vector<ChannelServer*> servers;

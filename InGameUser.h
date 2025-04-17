@@ -4,45 +4,55 @@
 #include <vector>  
 #include <string>
 #include <iostream>
+
 #include "UserStateEnum.h"
 
 class InGameUser {
 public:
-	uint16_t GetLevel() {
-		return userLevel;
-	}
+	// ======================= INITIALIZATION =======================
 
-	void Set(std::string userId_, uint32_t userPk_, unsigned int userExp_, uint16_t userLevel_, unsigned int raidScore_) {
+	void Set(uint32_t userPk_, uint16_t userLevel_, unsigned int userExp_,unsigned int raidScore_, std::string userId_) {
+		userPk = userPk_;
 		userLevel = userLevel_;
 		userExp = userExp_;
-		userPk = userPk_;
-		userId = userId_;
 		raidScore = raidScore_;
+		userId = userId_;
 	}
 
 	void Reset() {
-		userId = "";
-		userLevel = 0;
 		userPk = 0;
+		userLevel = 0;
 		userExp = 0;
 		raidScore = 0;
-		userState.store(1);
+		userId = "";
+		userState.store(static_cast<uint16_t>(UserState::online));
 	}
 
-	bool CheckMatching() {
-		return userState == static_cast<uint16_t>(UserState::raidMatching);
+
+	// ======================= IDENTIFICATION =======================
+
+	void SetUserState(UserState userState_) {
+		userState.store(static_cast<uint16_t>(userState_));
 	}
 
-	uint32_t GetPk() {
+	uint16_t GetLevel() const {
+		return userLevel;
+	}
+
+	uint32_t GetPk() const {
 		return userPk;
 	}
 
-	std::string GetId() {
-		return userId;
+	uint32_t GetUserGroupNum() const {
+		return userLevel/3 + 1;
 	}
 
 	unsigned int GetScore() {
 		return raidScore;
+	}
+
+	std::string GetId() {
+		return userId;
 	}
 
 private:
