@@ -1,6 +1,6 @@
 #include "QuokkaServer.h"
 
-// ====================== INITIALIZATION =======================
+// ========================== INITIALIZATION ===========================
 
 bool QuokkaServer::init(const uint16_t MaxThreadCnt_, int port_) {
     WSADATA wsadata;
@@ -124,7 +124,7 @@ void QuokkaServer::ServerEnd() {
 }
 
 
-// ===================== THREAD MANAGEMENT =====================
+// ========================= THREAD MANAGEMENT =========================
 
 bool QuokkaServer::CreateWorkThread() {
     WorkRun = true;
@@ -211,15 +211,15 @@ void QuokkaServer::WorkThread() {
             connUser->ConnUserRecv(); // Wsarecv Again
             overLappedManager->returnOvLap(overlappedEx);
         }
+        else if (overlappedEx->taskType == TaskType::SEND) {
+            overLappedManager->returnOvLap(overlappedEx);
+            connUser->SendComplete();
+        }
         else if (overlappedEx->taskType == TaskType::NEWRECV) {
             redisManager->PushRedisPacket(connObjNum, dwIoSize, overlappedEx->wsaBuf.buf); // Proccess In Redismanager
             connUser->ConnUserRecv(); // Wsarecv Again
             delete[] overlappedEx->wsaBuf.buf;
             delete overlappedEx;
-        }
-        else if (overlappedEx->taskType == TaskType::SEND) {
-            overLappedManager->returnOvLap(overlappedEx);
-            connUser->SendComplete();
         }
         else if (overlappedEx->taskType == TaskType::NEWSEND) {
             delete[] overlappedEx->wsaBuf.buf;
@@ -238,19 +238,8 @@ void QuokkaServer::AccepterThread() {
                 AcceptQueue.push(connUser);
             }
         }
-        else { // AcceptQueue empty, check waittingQueue
+        else { // AcceptQueue empty
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-            //while (AccepterRun) {
-            //    if (WaittingQueue.pop(connUser)) { // WaittingQueue not empty
-            //        WaittingQueue.push(connUser);
-            //    }
-            //    else { // WaittingQueue empty
-            //        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            //        break;
-            //    }
-            //}
-
         }
     }
 }

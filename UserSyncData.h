@@ -1,8 +1,9 @@
 #pragma once
 #include <cstdint>
 
-const uint16_t MAX_INVEN_SIZE = 512;
-const uint16_t INVENTORY_SIZE = 11; // Inventory start from 1 (index 0 is not used)
+constexpr uint16_t INVENTORY_SIZE = 11; // Inventory start from 1 (index 0 is not used)
+constexpr uint16_t MAX_USER_ID_LEN = 32;
+constexpr uint16_t MAX_INVEN_SIZE = 512;
 
 struct USERINFO {
 	std::string userId;
@@ -27,4 +28,9 @@ struct MATERIALS {
 	uint16_t itemCode = 0;
 	uint16_t position = 0;
 	uint16_t count = 0;
+};
+
+struct RANKING {
+	uint16_t score = 0;
+	char userId[MAX_USER_ID_LEN + 1];
 };

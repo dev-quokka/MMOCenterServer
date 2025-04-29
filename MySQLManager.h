@@ -28,7 +28,8 @@ public:
 	bool SyncEquipment(uint16_t userPk_, std::vector<EQUIPMENT> userEquip_);
 	bool SyncConsumables(uint16_t userPk_, std::vector<CONSUMABLES> userConsum_);
 	bool SyncMaterials(uint16_t userPk_, std::vector<MATERIALS> userMat_);
-	bool SyncUserRaidScore(uint16_t userPk_, unsigned int userScore_, std::string userId_);
+	bool MySQLSyncEqipmentEnhace(uint16_t userPk_, uint16_t itemPosition, uint16_t enhancement);
+	bool MySQLSyncUserRaidScore(uint16_t userPk_, unsigned int userScore_, std::string userId_);
 
 private:
 	MYSQL Conn;

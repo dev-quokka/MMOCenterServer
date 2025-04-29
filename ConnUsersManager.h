@@ -1,7 +1,4 @@
 #pragma once
-
-#include <winsock2.h>
-#include <iostream>
 #include <vector>
 
 #include "ConnUser.h"
@@ -15,9 +12,7 @@ public:
         }
     }
 
-
     // ================== CONNECTION USER MANAGEMENT ==================
-
     void InsertUser(uint16_t connObjNum, ConnUser* connUser);
     ConnUser* FindUser(uint16_t connObjNum);
 

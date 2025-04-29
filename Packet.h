@@ -2,18 +2,15 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include <winsock2.h>
-#include <cstdint>
 #include <string>
-#include <vector>
 #include <chrono>
 
+#include "UserSyncData.h"
+
 constexpr uint16_t MAX_IP_LEN = 32;
-constexpr uint16_t MAX_USER_ID_LEN = 32;
 constexpr uint16_t MAX_SERVER_USERS = 128;
 constexpr uint16_t MAX_JWT_TOKEN_LEN = 256;
 constexpr uint16_t MAX_SCORE_SIZE = 512;
-
-constexpr uint16_t RANKING_USER_COUNT = 3; // Number of users to display per ranking page
 
 struct DataPacket {
 	uint32_t dataSize;
@@ -34,11 +31,6 @@ struct PACKET_HEADER
 {
 	uint16_t PacketLength;
 	uint16_t PacketId;
-};
-
-struct RANKING {
-	uint16_t score = 0;
-	char userId[MAX_USER_ID_LEN + 1];
 };
 
 
@@ -133,6 +125,12 @@ struct USER_DISCONNECT_AT_CHANNEL_REQUEST : PACKET_HEADER {
 	uint16_t channelServerNum;
 };
 
+struct SYNC_EQUIPMENT_ENHANCE_REQUEST : PACKET_HEADER {
+	uint16_t itemPosition;
+	uint16_t enhancement;
+	uint16_t userPk;
+};
+
 
 // ======================= MATCHING SERVER =======================
 
@@ -204,6 +202,7 @@ struct RAID_MATCHING_RESPONSE : PACKET_HEADER {
 struct MATCHING_RESPONSE_FROM_GAME_SERVER : PACKET_HEADER {
 	uint16_t userCenterObjNum;
 	uint16_t userRaidServerObjNum;
+	uint16_t serverNum;
 	uint16_t roomNum;
 };
 
@@ -217,6 +216,7 @@ struct SYNC_HIGHSCORE_REQUEST : PACKET_HEADER {
 	unsigned int userScore;
 	uint16_t userPk;
 };
+
 
 enum class PACKET_ID : uint16_t {
 
@@ -242,9 +242,6 @@ enum class PACKET_ID : uint16_t {
 	RAID_READY_FAIL = 50,
 
 	RAID_END_REQUEST_TO_GAME_SERVER = 52,
-
-	RAID_RANKING_REQUEST = 55, 
-	RAID_RANKING_RESPONSE = 56,
 
 
 	// ======================= LOGIN SERVER (801~ ) =======================
@@ -282,31 +279,7 @@ enum class PACKET_ID : uint16_t {
 	MOVE_CENTER_SERVER_REQUEST = 1504,
 	MOVE_CENTER_SERVER_RESPONSE = 1505,
 
-	// USER STATUS (1521~)
-	EXP_UP_REQUEST = 1521,
-	EXP_UP_RESPONSE = 1522,
-	LEVEL_UP_REQUEST = 1523,
-	LEVEL_UP_RESPONSE = 1524,
-
-	// INVENTORY (1525~)
-	ADD_ITEM_REQUEST = 1525,
-	ADD_ITEM_RESPONSE = 1526,
-	DEL_ITEM_REQUEST = 1527,
-	DEL_ITEM_RESPONSE = 1528,
-	MOD_ITEM_REQUEST = 1529,
-	MOD_ITEM_RESPONSE = 1530,
-	MOV_ITEM_REQUEST = 1531,
-	MOV_ITEM_RESPONSE = 1532,
-
-	// INVENTORY::EQUIPMENT 
-	ADD_EQUIPMENT_REQUEST = 1533,
-	ADD_EQUIPMENT_RESPONSE = 1534,
-	DEL_EQUIPMENT_REQUEST = 1535,
-	DEL_EQUIPMENT_RESPONSE = 1536,
-	ENH_EQUIPMENT_REQUEST = 1537,
-	ENH_EQUIPMENT_RESPONSE = 1538,
-	MOV_EQUIPMENT_REQUEST = 1539,
-	MOV_EQUIPMENT_RESPONSE = 1540,
+	SYNC_EQUIPMENT_ENHANCE_REQUEST = 1541,
 
 
 	// ======================= MATCHING SERVER (5001~ ) =======================
