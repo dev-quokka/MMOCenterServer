@@ -21,10 +21,22 @@ bool MySQLManager::init() {
 
 bool MySQLManager::LogoutSync(uint16_t userPk_, USERINFO userInfo_, std::vector<EQUIPMENT> userEquip_, 
     std::vector<CONSUMABLES> userConsum_, std::vector<MATERIALS> userMat_) {
-    SyncUserInfo(userPk_, userInfo_);
-    SyncEquipment(userPk_, userEquip_);
-    SyncConsumables(userPk_, userConsum_);
-    SyncMaterials(userPk_, userMat_);
+    mysql_autocommit(ConnPtr, false); // Transaction start
+
+    if (!SyncUserInfo(userPk_, userInfo_) ||
+        !SyncEquipment(userPk_, userEquip_) ||
+        !SyncConsumables(userPk_, userConsum_) ||
+        !SyncMaterials(userPk_, userMat_)) {
+
+        mysql_rollback(ConnPtr); // Roll back
+        std::cerr << "LogoutSync: Transaction Rolled Back" << std::endl;
+        mysql_autocommit(ConnPtr, true); // Restore auto-commit mode
+        return false;
+    }
+
+    mysql_commit(ConnPtr);
+    mysql_autocommit(ConnPtr, true);
+    std::cout << "LogoutSync: Transaction Committed Successfully" << std::endl;
     return true;
 }
 
@@ -41,12 +53,12 @@ bool MySQLManager::SyncUserInfo(uint16_t userPk_, USERINFO userInfo_) {
 
         MysqlResult = mysql_query(ConnPtr, Query);
         if (MysqlResult != 0) {
-            std::cerr << "MySQL UPDATE Error: " << mysql_error(ConnPtr) << std::endl;
+            std::cerr << "(SyncUserInfo) MySQL UPDATE Error : " << mysql_error(ConnPtr) << std::endl;
             return false;
         }
     }
-    catch (...) { // MySQL or Unknown Error
-        std::cerr << "Failed to Sync userPk : " << userPk_ << " UserInfo Data (MySQL or Unknown Error)" << std::endl;
+    catch (const std::exception& e) {
+        std::cerr << "(SyncUserInfo) Failed to Sync userPk : " << userPk_ << " UserInfo Data" << std::endl;
         return false;
     }
 
@@ -83,12 +95,12 @@ bool MySQLManager::SyncEquipment(uint16_t userPk_, std::vector<EQUIPMENT> userEq
 
         query_s << item_code_case.str() << enhancement_case.str() << where.str();
         if (mysql_query(ConnPtr, query_s.str().c_str()) != 0) {
-            std::cerr << "MySQL Batch UPDATE Error: " << mysql_error(ConnPtr) << std::endl;
+            std::cerr << "(SyncEquipment) MySQL Batch UPDATE Error : " << mysql_error(ConnPtr) << std::endl;
             return false;
         }
     }
-    catch (...) { // MySQL or Unknown Error
-        std::cerr << "Failed to Sync userPk : " << userPk_ << " Equipments (MySQL or Unknown Error)" << std::endl;
+    catch (const std::exception& e) {
+        std::cerr << "(SyncEquipment) Failed to Sync userPk : " << userPk_ << " Equipments" << std::endl;
         return false;
     }
 
@@ -124,12 +136,12 @@ bool MySQLManager::SyncConsumables(uint16_t userPk_, std::vector<CONSUMABLES> us
 
         query_s << item_code_case.str() << count_case.str() << where.str();
         if (mysql_query(ConnPtr, query_s.str().c_str()) != 0) {
-            std::cerr << "CONSUMABLE UPDATE Error: " << mysql_error(ConnPtr) << std::endl;
+            std::cerr << "(SyncConsumables) CONSUMABLE UPDATE Error : " << mysql_error(ConnPtr) << std::endl;
             return false;
         }
     }
-    catch (...) { // MySQL or Unknown Error
-        std::cerr << "Failed to Sync userPk : " << userPk_ << " Consumables (MySQL or Unknown Error)" << std::endl;
+    catch (const std::exception& e) {
+        std::cerr << "(SyncConsumables) Failed to Sync userPk : " << userPk_ << " Consumables (MySQL or Unknown Error)" << std::endl;
         return false;
     }
 
@@ -165,12 +177,12 @@ bool MySQLManager::SyncMaterials(uint16_t userPk_, std::vector<MATERIALS> userMa
 
         query_s << item_code_case.str() << count_case.str() << where.str();
         if (mysql_query(ConnPtr, query_s.str().c_str()) != 0) {
-            std::cerr << "MATERIALS UPDATE Error: " << mysql_error(ConnPtr) << std::endl;
+            std::cerr << "(SyncMaterials) MATERIALS UPDATE Error : " << mysql_error(ConnPtr) << std::endl;
             return false;
         }
     }
-    catch (...) { // MySQL or Unknown Error
-        std::cerr << "Failed to Sync userPk : " << userPk_ << " Materials (MySQL or Unknown Error)" << std::endl;
+    catch (const std::exception& e) {
+        std::cerr << "(SyncMaterials) Failed to Sync userPk : " << userPk_ << " Materials (MySQL or Unknown Error)" << std::endl;
         return false;
     }
 
@@ -178,13 +190,13 @@ bool MySQLManager::SyncMaterials(uint16_t userPk_, std::vector<MATERIALS> userMa
     return true;
 }
 
-bool MySQLManager::MySQLSyncEqipmentEnhace(uint16_t userPk_, uint16_t itemPosition, uint16_t enhancement) {
+bool MySQLManager::MySQLSyncEqipmentEnhace(uint16_t userPk_, uint16_t itemPosition_, uint16_t enhancement_) {
     try {
         MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
 
         std::string query = "UPDATE Equipment SET position = ?, enhance = ? WHERE user_pk = ?;";
         if (mysql_stmt_prepare(stmt, query.c_str(), query.length()) != 0) {
-            std::cerr << "Equipment Enhance Sync Prepare Error: " << mysql_stmt_error(stmt) << std::endl;
+            std::cerr << "(MySQLSyncEquipmentEnhance) Equipment Enhance Sync Prepare Error : " << mysql_stmt_error(stmt) << std::endl;
             return false;
         }
 
@@ -192,29 +204,30 @@ bool MySQLManager::MySQLSyncEqipmentEnhace(uint16_t userPk_, uint16_t itemPositi
         memset(bind, 0, sizeof(bind));
 
         bind[0].buffer_type = MYSQL_TYPE_LONG;
-        bind[0].buffer = &itemPosition;
+        bind[0].buffer = &itemPosition_;
 
         bind[1].buffer_type = MYSQL_TYPE_LONG;
-        bind[1].buffer = &enhancement;
+        bind[1].buffer = &enhancement_;
 
         bind[2].buffer_type = MYSQL_TYPE_LONG;
         bind[2].buffer = &userPk_;
 
         if (mysql_stmt_bind_param(stmt, bind) != 0) {
-            std::cerr << "Equipment Enhance Sync Bind Error: " << mysql_stmt_error(stmt) << std::endl;
+            std::cerr << "(MySQLSyncEquipmentEnhance) Equipment Enhance Sync Bind Error : " << mysql_stmt_error(stmt) << std::endl;
             return false;
         }
 
         if (mysql_stmt_execute(stmt) != 0) {
-            std::cerr << "Equipment Enhance Sync Execute Error: " << mysql_stmt_error(stmt) << std::endl;
+            std::cerr << "(MySQLSyncEquipmentEnhance) Equipment Enhance Sync Execute Error : " << mysql_stmt_error(stmt) << std::endl;
             return false;
         }
 
         mysql_stmt_close(stmt);
         return true;
     }
-    catch (...) {
-        std::cerr << "Equipment Enhance Sync Error" << std::endl;
+    catch (const std::exception& e) {
+        std::cerr << "(MySQLSyncEquipmentEnhance) Failed to sync equipment enhancement. userPk : " << userPk_ 
+            << ", position : " << itemPosition_ << ", enhancement : " << enhancement_ << std::endl;
         return false;
     }
 }
@@ -225,7 +238,7 @@ bool MySQLManager::MySQLSyncUserRaidScore(uint16_t userPk_, unsigned int userSco
 
         std::string query = "UPDATE Ranking SET score = ? WHERE id = ?;";
         if (mysql_stmt_prepare(stmt, query.c_str(), query.length()) != 0) {
-            std::cerr << "Raid Score Sync Prepare Error: " << mysql_stmt_error(stmt) << std::endl;
+            std::cerr << "(MySQLSyncUserRaidScore) Raid Score Sync Prepare Error : " << mysql_stmt_error(stmt) << std::endl;
             return false;
         }
 
@@ -243,20 +256,21 @@ bool MySQLManager::MySQLSyncUserRaidScore(uint16_t userPk_, unsigned int userSco
         bind[1].length = &idLength;
 
         if (mysql_stmt_bind_param(stmt, bind) != 0) {
-            std::cerr << "Raid Score Sync Bind Error: " << mysql_stmt_error(stmt) << std::endl;
+            std::cerr << "(MySQLSyncUserRaidScore) Raid Score Sync Bind Error : " << mysql_stmt_error(stmt) << std::endl;
             return false;
         }
 
         if (mysql_stmt_execute(stmt) != 0) {
-            std::cerr << "Raid Score Sync Execute Error: " << mysql_stmt_error(stmt) << std::endl;
+            std::cerr << "(MySQLSyncUserRaidScore) Raid Score Sync Execute Error : " << mysql_stmt_error(stmt) << std::endl;
             return false;
         }
 
         mysql_stmt_close(stmt);
         return true;
     }
-    catch (...) {
-        std::cerr << "Raid Score Sync Error" << std::endl;
+    catch (const std::exception& e) {
+        std::cerr << "(MySQLSyncUserRaidScore) Failed to sync raid score. userId : " << userId_
+            << ", score : " << userScore_ << std::endl;
         return false;
     }
 }
