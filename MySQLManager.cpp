@@ -23,21 +23,28 @@ bool MySQLManager::LogoutSync(uint16_t userPk_, USERINFO userInfo_, std::vector<
     std::vector<CONSUMABLES> userConsum_, std::vector<MATERIALS> userMat_) {
     mysql_autocommit(ConnPtr, false); // Transaction start
 
-    if (!SyncUserInfo(userPk_, userInfo_) ||
-        !SyncEquipment(userPk_, userEquip_) ||
-        !SyncConsumables(userPk_, userConsum_) ||
-        !SyncMaterials(userPk_, userMat_)) {
-
-        mysql_rollback(ConnPtr); // Roll back
-        std::cerr << "LogoutSync: Transaction Rolled Back" << std::endl;
-        mysql_autocommit(ConnPtr, true); // Restore auto-commit mode
-        return false;
+    for (int i = 0; i < 3; i++) { // // Retry up to 3 times on failure
+        if (!SyncUserInfo(userPk_, userInfo_)) { std::cout << "SyncUserInfo failed" << '\n'; }
+        else if (!SyncEquipment(userPk_, userEquip_)) { std::cout << "SyncEquipment failed" << '\n'; }
+        else if (!SyncConsumables(userPk_, userConsum_)) { std::cout << "SyncConsumables failed" << '\n'; }
+        else if (!SyncMaterials(userPk_, userMat_)) { std::cout << "SyncMaterials failed" << '\n'; }
+        else {
+            if (mysql_commit(ConnPtr) == 0) { // If commit is successful, exit
+                mysql_autocommit(ConnPtr, true);
+                return true;
+            }
+            else { // If commit fails, rollback
+                std::cerr << "mysql_commit failed" << '\n';
+                mysql_rollback(ConnPtr);
+            }
+        }
+        mysql_rollback(ConnPtr);
+        std::cerr << "userPk : " << userPk_ << " LogoutSync attempt : " << i + 1 << '\n';
     }
 
-    mysql_commit(ConnPtr);
     mysql_autocommit(ConnPtr, true);
-    std::cout << "LogoutSync: Transaction Committed Successfully" << std::endl;
-    return true;
+    std::cerr << "(LogoutSync Failed) userPk : " << userPk_ << '\n';
+    return false;
 }
 
 bool MySQLManager::SyncUserInfo(uint16_t userPk_, USERINFO userInfo_) {
