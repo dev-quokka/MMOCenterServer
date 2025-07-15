@@ -16,6 +16,247 @@ bool MySQLManager::init() {
     return true;
 }
 
+std::unordered_map<uint16_t, EquipmentItemData> MySQLManager::GetEquipmentItemData() {
+    std::string query_s = "SELECT item_code, itemName, attackPower FROM EquipmentData";
+
+    std::unordered_map<uint16_t, EquipmentItemData> tempEM;
+
+    const char* Query = query_s.c_str();
+
+    if (mysql_query(ConnPtr, Query) != 0) {
+        std::cerr << "[GetEquipmentItemData] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        return tempEM;
+    }
+
+    try {
+        Result = mysql_store_result(ConnPtr);
+        if (Result == nullptr) {
+            std::cerr << "[GetEquipmentItemData] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            return tempEM;
+        }
+
+        while ((Row = mysql_fetch_row(Result)) != NULL) {
+            if (!Row[0] || !Row[1] || !Row[2]) continue;
+
+            EquipmentItemData equipmentData;
+            equipmentData.itemCode = (uint16_t)std::stoi(Row[0]);
+            equipmentData.itemName = Row[1];
+            equipmentData.attackPower = (uint16_t)std::stoi(Row[2]);
+
+            tempEM[equipmentData.itemCode] = equipmentData;
+        }
+
+        mysql_free_result(Result);
+        return tempEM;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[GetEquipmentItemData] Exception Error : " << e.what() << std::endl;
+        tempEM.clear();
+        return tempEM;
+    }
+}
+
+std::unordered_map<uint16_t, ConsumableItemData> MySQLManager::GetConsumableItemData() {
+    std::string query_s = "SELECT item_code, itemName FROM ConsumableData";
+
+    std::unordered_map<uint16_t, ConsumableItemData> tempCM;
+
+    const char* Query = query_s.c_str();
+
+    if (mysql_query(ConnPtr, Query) != 0) {
+        std::cerr << "[ConsumableItemData] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        return tempCM;
+    }
+
+    try {
+        Result = mysql_store_result(ConnPtr);
+        if (Result == nullptr) {
+            std::cerr << "[ConsumableItemData] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            return tempCM;
+        }
+
+        while ((Row = mysql_fetch_row(Result)) != NULL) {
+            if (!Row[0] || !Row[1]) continue;
+
+            ConsumableItemData consumableData;
+            consumableData.itemCode = (uint16_t)std::stoi(Row[0]);
+            consumableData.itemName = Row[1];
+
+            tempCM[consumableData.itemCode] = consumableData;
+        }
+
+        mysql_free_result(Result);
+        return tempCM;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[ConsumableItemData] Exception Error : " << e.what() << std::endl;
+        tempCM.clear();
+        return tempCM;
+    }
+}
+
+std::unordered_map<uint16_t, MaterialItemData> MySQLManager::GetMaterialItemData() {
+    std::string query_s = "SELECT item_code, itemName FROM MaterialData";
+
+    std::unordered_map<uint16_t, MaterialItemData> tempMM;
+
+    const char* Query = query_s.c_str();
+
+    if (mysql_query(ConnPtr, Query) != 0) {
+        std::cerr << "[MaterialItemData] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        return tempMM;
+    }
+
+    try {
+        Result = mysql_store_result(ConnPtr);
+        if (Result == nullptr) {
+            std::cerr << "[MaterialItemData] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            return tempMM;
+        }
+
+        while ((Row = mysql_fetch_row(Result)) != NULL) {
+            if (!Row[0] || !Row[1]) continue;
+
+            MaterialItemData materialData;
+            materialData.itemCode = (uint16_t)std::stoi(Row[0]);
+            materialData.itemName = Row[1];
+
+            tempMM[materialData.itemCode] = materialData;
+        }
+
+        mysql_free_result(Result);
+        return tempMM;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[MaterialItemData] Exception Error : " << e.what() << std::endl;
+        tempMM.clear();
+        return tempMM;
+    }
+}
+
+std::unordered_map<uint16_t, ShopEquipmentItem> MySQLManager::GetShopEquipmentItem() {
+    std::string query_s = "SELECT item_code, itemPrice, days, currencyType FROM ShopEquipmentData";
+
+    std::unordered_map<uint16_t, ShopEquipmentItem> tempSEM;
+
+    const char* Query = query_s.c_str();
+
+    if (mysql_query(ConnPtr, Query) != 0) {
+        std::cerr << "[ShopEquipmentItem] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        return tempSEM;
+    }
+
+    try {
+        Result = mysql_store_result(ConnPtr);
+        if (Result == nullptr) {
+            std::cerr << "[ShopEquipmentItem] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            return tempSEM;
+        }
+
+        while ((Row = mysql_fetch_row(Result)) != NULL) {
+            if (!Row[0] || !Row[1] || !Row[2] || !Row[3]) continue;
+
+            ShopEquipmentItem shopEquipmentData;
+            shopEquipmentData.itemCode = (uint16_t)std::stoi(Row[0]);
+            shopEquipmentData.itemPrice = static_cast<uint32_t>(std::stoul(Row[1]));
+            shopEquipmentData.days = (uint16_t)std::stoi(Row[2]);
+            shopEquipmentData.currencyType = static_cast<CurrencyType>(std::stoi(Row[3]));
+
+            tempSEM[shopEquipmentData.itemCode] = shopEquipmentData;
+        }
+
+        mysql_free_result(Result);
+        return tempSEM;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[ShopEquipmentItem] Exception Error : " << e.what() << std::endl;
+        tempSEM.clear();
+        return tempSEM;
+    }
+}
+
+std::unordered_map<uint16_t, ShopConsumableItem> MySQLManager::GetShopConsumableItem() {
+    std::string query_s = "SELECT item_code, itemPrice, days, currencyType FROM ShopConsumableData";
+
+    std::unordered_map<uint16_t, ShopConsumableItem> tempSCM;
+
+    const char* Query = query_s.c_str();
+
+    if (mysql_query(ConnPtr, Query) != 0) {
+        std::cerr << "[ShopConsumableItem] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        return tempSCM;
+    }
+
+    try {
+        Result = mysql_store_result(ConnPtr);
+        if (Result == nullptr) {
+            std::cerr << "[ShopConsumableItem] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            return tempSCM;
+        }
+
+        while ((Row = mysql_fetch_row(Result)) != NULL) {
+            if (!Row[0] || !Row[1] || !Row[2] || !Row[3]) continue;
+
+            ShopConsumableItem ShopConsumableData;
+            ShopConsumableData.itemCode = (uint16_t)std::stoi(Row[0]);
+            ShopConsumableData.itemPrice = static_cast<uint32_t>(std::stoul(Row[1]));
+            ShopConsumableData.days = (uint16_t)std::stoi(Row[2]);
+            ShopConsumableData.currencyType = static_cast<CurrencyType>(std::stoi(Row[3]));
+
+            tempSCM[ShopConsumableData.itemCode] = ShopConsumableData;
+        }
+
+        mysql_free_result(Result);
+        return tempSCM;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[ShopConsumableItem] Exception Error : " << e.what() << std::endl;
+        tempSCM.clear();
+        return tempSCM;
+    }
+}
+
+std::unordered_map<uint16_t, ShopMaterialItem> MySQLManager::GetShopMaterialItem() {
+    std::string query_s = "SELECT item_code, itemPrice, days, currencyType FROM ShopMaterialData";
+
+    std::unordered_map<uint16_t, ShopMaterialItem> tempSMM;
+
+    const char* Query = query_s.c_str();
+
+    if (mysql_query(ConnPtr, Query) != 0) {
+        std::cerr << "[ShopMaterialItem] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        return tempSMM;
+    }
+
+    try {
+        Result = mysql_store_result(ConnPtr);
+        if (Result == nullptr) {
+            std::cerr << "[ShopMaterialItem] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            return tempSMM;
+        }
+
+        while ((Row = mysql_fetch_row(Result)) != NULL) {
+            if (!Row[0] || !Row[1] || !Row[2] || !Row[3]) continue;
+
+            ShopMaterialItem ShopMaterialData;
+            ShopMaterialData.itemCode = (uint16_t)std::stoi(Row[0]);
+            ShopMaterialData.itemPrice = static_cast<uint32_t>(std::stoul(Row[1]));
+            ShopMaterialData.days = (uint16_t)std::stoi(Row[2]);
+            ShopMaterialData.currencyType = static_cast<CurrencyType>(std::stoi(Row[3]));
+
+            tempSMM[ShopMaterialData.itemCode] = ShopMaterialData;
+        }
+
+        mysql_free_result(Result);
+        return tempSMM;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[ShopMaterialItem] Exception Error : " << e.what() << std::endl;
+        tempSMM.clear();
+        return tempSMM;
+    }
+}
+
 
 // ======================= SYNCRONIZATION =======================
 
@@ -286,7 +527,7 @@ bool MySQLManager::MySQLSyncUserRaidScore(uint16_t userPk_, unsigned int userSco
     }
 }
 
-bool MySQLManager::CashCharge(uint16_t userPk_, uint16_t chargedAmount) {
+bool MySQLManager::CashCharge(uint16_t userPk_, uint32_t chargedAmount) {
     try {
         MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
 

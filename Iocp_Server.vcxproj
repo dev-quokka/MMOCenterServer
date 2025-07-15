@@ -142,12 +142,14 @@
     <ClCompile Include="CircularBuffer.cpp" />
     <ClCompile Include="ConnUsersManager.cpp" />
     <ClCompile Include="IngameUserManager.cpp" />
+    <ClCompile Include="ItemDataManager.cpp" />
     <ClCompile Include="MySQLManager.cpp" />
     <ClCompile Include="OverLappedManager.cpp" />
     <ClCompile Include="ChannelServersManager.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="QuokkaServer.cpp" />
     <ClCompile Include="RedisManager.cpp" />
+    <ClCompile Include="ShopDataManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ChannelServer.h" />
@@ -156,6 +158,10 @@
     <ClInclude Include="Define.h" />
     <ClInclude Include="InGameUser.h" />
     <ClInclude Include="InGameUserManager.h" />
+    <ClInclude Include="ItemData.h" />
+    <ClInclude Include="ItemDataManager.h" />
+    <ClInclude Include="ShopDataManager.h" />
+    <ClInclude Include="ShopItemData.h" />
     <ClInclude Include="UserSyncData.h" />
     <ClInclude Include="MySQLManager.h" />
     <ClInclude Include="OverLappedManager.h" />

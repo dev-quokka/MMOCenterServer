@@ -16,15 +16,6 @@
     <Filter Include="헤더 파일\Network">
       <UniqueIdentifier>{f8f33a88-553e-4e39-872a-2af71689ceee}</UniqueIdentifier>
     </Filter>
-    <Filter Include="헤더 파일\InGameConnUsers">
-      <UniqueIdentifier>{a4fea4b7-ee8a-4142-92a1-93257acbf2ad}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="헤더 파일\InGameConnUsers\RaidManager">
-      <UniqueIdentifier>{c9d2ae5a-5a12-490a-816d-4f86b29da142}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="헤더 파일\InGameConnUsers\InGameUserManager">
-      <UniqueIdentifier>{52b7f251-cd0d-4927-9c6a-562cad4688df}</UniqueIdentifier>
-    </Filter>
     <Filter Include="헤더 파일\Network\UserNetworkManager">
       <UniqueIdentifier>{a3e442f8-1f37-41ed-ba2a-da80f513604d}</UniqueIdentifier>
     </Filter>
@@ -33,6 +24,21 @@
     </Filter>
     <Filter Include="헤더 파일\Network\Redis">
       <UniqueIdentifier>{4f70c36f-c0c1-4b0d-9a89-57339c5fe71c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\InGame">
+      <UniqueIdentifier>{a4fea4b7-ee8a-4142-92a1-93257acbf2ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\InGame\RaidManager">
+      <UniqueIdentifier>{c9d2ae5a-5a12-490a-816d-4f86b29da142}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\InGame\InGameUserManager">
+      <UniqueIdentifier>{52b7f251-cd0d-4927-9c6a-562cad4688df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\InGame\ShopDataManager">
+      <UniqueIdentifier>{03a02627-0f15-46ab-a3f4-33128f5ee1d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일\InGame\ItemDataManager">
+      <UniqueIdentifier>{90ae3d76-4d60-4a49-8b88-3787a279fd1d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -52,16 +58,22 @@
       <Filter>헤더 파일\Network\UserNetworkManager</Filter>
     </ClCompile>
     <ClCompile Include="ChannelServersManager.cpp">
-      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
+      <Filter>헤더 파일\InGame\RaidManager</Filter>
     </ClCompile>
     <ClCompile Include="IngameUserManager.cpp">
-      <Filter>헤더 파일\InGameConnUsers\InGameUserManager</Filter>
+      <Filter>헤더 파일\InGame\InGameUserManager</Filter>
     </ClCompile>
     <ClCompile Include="OverLappedManager.cpp">
       <Filter>헤더 파일\Network</Filter>
     </ClCompile>
     <ClCompile Include="MySQLManager.cpp">
       <Filter>헤더 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="ShopDataManager.cpp">
+      <Filter>헤더 파일\InGame\ShopDataManager</Filter>
+    </ClCompile>
+    <ClCompile Include="ItemDataManager.cpp">
+      <Filter>헤더 파일\InGame\ItemDataManager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -84,13 +96,13 @@
       <Filter>헤더 파일\Network\UserNetworkManager</Filter>
     </ClInclude>
     <ClInclude Include="ChannelServersManager.h">
-      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
+      <Filter>헤더 파일\InGame\RaidManager</Filter>
     </ClInclude>
     <ClInclude Include="InGameUserManager.h">
-      <Filter>헤더 파일\InGameConnUsers\InGameUserManager</Filter>
+      <Filter>헤더 파일\InGame\InGameUserManager</Filter>
     </ClInclude>
     <ClInclude Include="InGameUser.h">
-      <Filter>헤더 파일\InGameConnUsers\InGameUserManager</Filter>
+      <Filter>헤더 파일\InGame\InGameUserManager</Filter>
     </ClInclude>
     <ClInclude Include="ConnUser.h">
       <Filter>헤더 파일\Network\UserNetworkManager</Filter>
@@ -99,7 +111,7 @@
       <Filter>헤더 파일\Network</Filter>
     </ClInclude>
     <ClInclude Include="ChannelServer.h">
-      <Filter>헤더 파일\InGameConnUsers\RaidManager</Filter>
+      <Filter>헤더 파일\InGame\RaidManager</Filter>
     </ClInclude>
     <ClInclude Include="ServerChannelEnum.h">
       <Filter>헤더 파일</Filter>
@@ -112,6 +124,18 @@
     </ClInclude>
     <ClInclude Include="UserSyncData.h">
       <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="ShopDataManager.h">
+      <Filter>헤더 파일\InGame\ShopDataManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ItemDataManager.h">
+      <Filter>헤더 파일\InGame\ItemDataManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ItemData.h">
+      <Filter>헤더 파일\InGame\ItemDataManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ShopItemData.h">
+      <Filter>헤더 파일\InGame\ShopDataManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

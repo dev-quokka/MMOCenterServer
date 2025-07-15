@@ -65,7 +65,7 @@ struct SERVER_USER_COUNTS_REQUEST : PACKET_HEADER {
 
 struct SERVER_USER_COUNTS_RESPONSE : PACKET_HEADER {
 	uint16_t serverCount;
-	char serverUserCnt[MAX_SERVER_USERS + 1];
+	uint16_t serverUserCnt[MAX_SERVER_USERS + 1];
 };
 
 struct MOVE_SERVER_REQUEST : PACKET_HEADER {
@@ -111,8 +111,8 @@ struct CASH_SERVER_CONNECT_RESPONSE : PACKET_HEADER {
 };
 
 struct CASH_CHARGE_RESULT_RESPONSE : PACKET_HEADER {
+	uint32_t chargedAmount; // 충전된 금액
 	uint16_t uCASH_CHARGE_RESULTserId; // 유저 고유 번호
-	uint16_t chargedAmount; // 충전된 금액
 	bool isSuccess; // 충전 성공 유무
 };
 

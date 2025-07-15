@@ -43,6 +43,22 @@ void RedisManager::SetManager(ConnUsersManager* connUsersManager_, InGameUserMan
     inGameUserManager = inGameUserManager_;
 }
 
+void RedisManager::InitItemData() {
+    auto equipData = mySQLManager->GetEquipmentItemData();
+    auto consumData = mySQLManager->GetConsumableItemData();
+    auto materialData = mySQLManager->GetMaterialItemData();
+
+    ItemDataManager::GetInstance().LoadFromMySQL(equipData, consumData, materialData);
+}
+
+void RedisManager::InitShopData() {
+    auto shopEquipData = mySQLManager->GetShopEquipmentItem();
+    auto shopConsumData = mySQLManager->GetShopConsumableItem();
+    auto shopMaterialData = mySQLManager->GetShopMaterialItem();
+
+    ShopDataManager::GetInstance().LoadFromMySQL(shopEquipData, shopConsumData, shopMaterialData);
+}
+
 
 // ===================== PACKET MANAGEMENT =====================
 
@@ -76,6 +92,9 @@ void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis S
 
         mySQLManager = new MySQLManager;
         mySQLManager->init();
+
+        InitItemData();
+        InitShopData();
 
         CreateRedisThread(RedisThreadCnt_);
     }
@@ -340,36 +359,28 @@ void RedisManager::UserDisConnect(uint16_t connObjNum_) {
 void RedisManager::SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
 	SERVER_USER_COUNTS_RESPONSE serverUserCountsResPacket;
     serverUserCountsResPacket.PacketId = (uint16_t)PACKET_ID::SERVER_USER_COUNTS_RESPONSE;
-    serverUserCountsResPacket.PacketLength = sizeof(SERVER_USER_COUNTS_RESPONSE);
 
-    auto tempV = channelServersManager->GetServerCounts();
+    const auto& tempV = channelServersManager->GetServerCounts();
+    uint16_t count = static_cast<uint16_t>(tempV.size());
 
-    char* tempC = new char[MAX_SERVER_USERS + 1];
-    char* tc = tempC;
-    uint16_t cnt = tempV.size();
-
-    for (int i = 1; i < cnt; i++) {
-		uint16_t userCount = tempV[i];
-        memcpy(tc, (char*)&userCount, sizeof(uint16_t));
-        tc += sizeof(uint16_t);
+    uint16_t validServerCount = 0;
+    for (int i = 1; i < count && validServerCount < MAX_SERVER_USERS; ++i) {
+        serverUserCountsResPacket.serverUserCnt[validServerCount++] = tempV[i];
     }
 
-    serverUserCountsResPacket.serverCount = cnt;
-    std::memcpy(serverUserCountsResPacket.serverUserCnt, tempC, MAX_SERVER_USERS + 1);
+    serverUserCountsResPacket.serverCount = validServerCount;
+    serverUserCountsResPacket.PacketLength = sizeof(uint16_t) * 3 + sizeof(uint16_t) * validServerCount;
 
     try {
         redis->hset("userinfo:{" + std::to_string(inGameUserManager->GetInGameUserByObjNum(connObjNum_)->GetPk()) + "}", "userstate", "serverSwitching"); // Set user status to "serverSwitching" in Redis Cluster
-        connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(RAID_RANKING_RESPONSE), (char*)&serverUserCountsResPacket);
+        connUsersManager->FindUser(connObjNum_)->PushSendMsg(serverUserCountsResPacket.PacketLength, reinterpret_cast<char*>(&serverUserCountsResPacket));
     }
     catch (const sw::redis::Error& e) {
         std::cerr << "Redis error : " << e.what() << std::endl;
-        return;
     }
     catch (const std::exception& e) {
         std::cerr << "Exception error : " << e.what() << std::endl;
     }
-
-    delete[] tempC;
 }
 
 void RedisManager::ChannelDisConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
@@ -458,12 +469,12 @@ void RedisManager::CashServerConnectResponse(uint16_t connObjNum_, uint16_t pack
 void RedisManager::CashChargeResultResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     ConnUser* tempConnUser = connUsersManager->FindUser(connObjNum_);
 
-    if (connObjNum_ != 11) { // 캐시 서버가 아닌 다른 유저의 부정 요청
+    if (connObjNum_ != 11) { // Cash Server가 아닌 해커의 부정 요청
         auto tempSocket = tempConnUser->GetSocket();
 
         sockaddr_in clientAddr;
         int addrLen = sizeof(clientAddr);
-        char ipStr[INET_ADDRSTRLEN] = { 0 };
+        char ipStr[INET_ADDRSTRLEN] = {};
 
         if (getpeername(tempSocket, (sockaddr*)&clientAddr, &addrLen) == 0) {
             inet_ntop(AF_INET, &(clientAddr.sin_addr), ipStr, INET_ADDRSTRLEN);
