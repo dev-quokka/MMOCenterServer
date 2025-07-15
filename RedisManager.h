@@ -65,11 +65,13 @@ private:
     void UserDisConnect(uint16_t connObjNum_);
     void SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
 
-    // ======================= CENTER SERVER =======================
+    // ======================= CASH SERVER =======================
     void CashServerConnectResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void CashChargeResultResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+
 
     // ======================== LOGIN SERVER =======================
     void LoginServerConnectRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);

@@ -134,10 +134,10 @@ std::unordered_map<uint16_t, MaterialItemData> MySQLManager::GetMaterialItemData
     }
 }
 
-std::unordered_map<uint16_t, ShopEquipmentItem> MySQLManager::GetShopEquipmentItem() {
+std::unordered_map<std::pair<uint16_t, uint16_t>, ShopEquipmentItem> MySQLManager::GetShopEquipmentItem() {
     std::string query_s = "SELECT item_code, itemPrice, days, currencyType FROM ShopEquipmentData";
 
-    std::unordered_map<uint16_t, ShopEquipmentItem> tempSEM;
+    std::unordered_map<std::pair<uint16_t, uint16_t>, ShopEquipmentItem> tempSEM;
 
     const char* Query = query_s.c_str();
 
@@ -162,7 +162,7 @@ std::unordered_map<uint16_t, ShopEquipmentItem> MySQLManager::GetShopEquipmentIt
             shopEquipmentData.days = (uint16_t)std::stoi(Row[2]);
             shopEquipmentData.currencyType = static_cast<CurrencyType>(std::stoi(Row[3]));
 
-            tempSEM[shopEquipmentData.itemCode] = shopEquipmentData;
+            tempSEM[{shopEquipmentData.itemCode, shopEquipmentData.days}] = shopEquipmentData;
         }
 
         mysql_free_result(Result);
@@ -176,7 +176,7 @@ std::unordered_map<uint16_t, ShopEquipmentItem> MySQLManager::GetShopEquipmentIt
 }
 
 std::unordered_map<uint16_t, ShopConsumableItem> MySQLManager::GetShopConsumableItem() {
-    std::string query_s = "SELECT item_code, itemPrice, days, currencyType FROM ShopConsumableData";
+    std::string query_s = "SELECT item_code, itemPrice, currencyType FROM ShopConsumableData";
 
     std::unordered_map<uint16_t, ShopConsumableItem> tempSCM;
 
@@ -195,13 +195,12 @@ std::unordered_map<uint16_t, ShopConsumableItem> MySQLManager::GetShopConsumable
         }
 
         while ((Row = mysql_fetch_row(Result)) != NULL) {
-            if (!Row[0] || !Row[1] || !Row[2] || !Row[3]) continue;
+            if (!Row[0] || !Row[1] || !Row[2]) continue;
 
             ShopConsumableItem ShopConsumableData;
             ShopConsumableData.itemCode = (uint16_t)std::stoi(Row[0]);
             ShopConsumableData.itemPrice = static_cast<uint32_t>(std::stoul(Row[1]));
-            ShopConsumableData.days = (uint16_t)std::stoi(Row[2]);
-            ShopConsumableData.currencyType = static_cast<CurrencyType>(std::stoi(Row[3]));
+            ShopConsumableData.currencyType = static_cast<CurrencyType>(std::stoi(Row[2]));
 
             tempSCM[ShopConsumableData.itemCode] = ShopConsumableData;
         }
@@ -217,7 +216,7 @@ std::unordered_map<uint16_t, ShopConsumableItem> MySQLManager::GetShopConsumable
 }
 
 std::unordered_map<uint16_t, ShopMaterialItem> MySQLManager::GetShopMaterialItem() {
-    std::string query_s = "SELECT item_code, itemPrice, days, currencyType FROM ShopMaterialData";
+    std::string query_s = "SELECT item_code, itemPrice, currencyType FROM ShopMaterialData";
 
     std::unordered_map<uint16_t, ShopMaterialItem> tempSMM;
 
@@ -236,13 +235,12 @@ std::unordered_map<uint16_t, ShopMaterialItem> MySQLManager::GetShopMaterialItem
         }
 
         while ((Row = mysql_fetch_row(Result)) != NULL) {
-            if (!Row[0] || !Row[1] || !Row[2] || !Row[3]) continue;
+            if (!Row[0] || !Row[1] || !Row[2]) continue;
 
             ShopMaterialItem ShopMaterialData;
             ShopMaterialData.itemCode = (uint16_t)std::stoi(Row[0]);
             ShopMaterialData.itemPrice = static_cast<uint32_t>(std::stoul(Row[1]));
-            ShopMaterialData.days = (uint16_t)std::stoi(Row[2]);
-            ShopMaterialData.currencyType = static_cast<CurrencyType>(std::stoi(Row[3]));
+            ShopMaterialData.currencyType = static_cast<CurrencyType>(std::stoi(Row[2]));
 
             tempSMM[ShopMaterialData.itemCode] = ShopMaterialData;
         }
@@ -260,7 +258,7 @@ std::unordered_map<uint16_t, ShopMaterialItem> MySQLManager::GetShopMaterialItem
 
 // ======================= SYNCRONIZATION =======================
 
-bool MySQLManager::LogoutSync(uint16_t userPk_, USERINFO userInfo_, std::vector<EQUIPMENT> userEquip_, 
+bool MySQLManager::LogoutSync(uint32_t userPk_, USERINFO userInfo_, std::vector<EQUIPMENT> userEquip_, 
     std::vector<CONSUMABLES> userConsum_, std::vector<MATERIALS> userMat_) {
     mysql_autocommit(ConnPtr, false); // Transaction start
 
@@ -292,7 +290,7 @@ bool MySQLManager::LogoutSync(uint16_t userPk_, USERINFO userInfo_, std::vector<
     return false;
 }
 
-bool MySQLManager::SyncUserInfo(uint16_t userPk_, USERINFO userInfo_) {
+bool MySQLManager::SyncUserInfo(uint32_t userPk_, USERINFO userInfo_) {
     try {
         std::string query_s = "UPDATE USERS left join Ranking r on USERS.name = r.name SET USERS.name = '" +
             userInfo_.userId + "', USERS.exp = " + std::to_string(userInfo_.exp) +
@@ -318,7 +316,7 @@ bool MySQLManager::SyncUserInfo(uint16_t userPk_, USERINFO userInfo_) {
     return true;
 }
 
-bool MySQLManager::SyncEquipment(uint16_t userPk_, std::vector<EQUIPMENT> userEquip_) {    
+bool MySQLManager::SyncEquipment(uint32_t userPk_, std::vector<EQUIPMENT> userEquip_) {
     try {
         std::ostringstream query_s;
         query_s << "UPDATE Equipment SET ";
@@ -360,7 +358,7 @@ bool MySQLManager::SyncEquipment(uint16_t userPk_, std::vector<EQUIPMENT> userEq
     return true;
 }
 
-bool MySQLManager::SyncConsumables(uint16_t userPk_, std::vector<CONSUMABLES> userConsum_) {
+bool MySQLManager::SyncConsumables(uint32_t userPk_, std::vector<CONSUMABLES> userConsum_) {
     try {
         std::ostringstream query_s;
         query_s << "UPDATE Consumables SET ";
@@ -401,7 +399,7 @@ bool MySQLManager::SyncConsumables(uint16_t userPk_, std::vector<CONSUMABLES> us
     return true;
 }
 
-bool MySQLManager::SyncMaterials(uint16_t userPk_, std::vector<MATERIALS> userMat_) {
+bool MySQLManager::SyncMaterials(uint32_t userPk_, std::vector<MATERIALS> userMat_) {
     try {
         std::ostringstream query_s;
         query_s << "UPDATE Materials SET ";
@@ -442,7 +440,7 @@ bool MySQLManager::SyncMaterials(uint16_t userPk_, std::vector<MATERIALS> userMa
     return true;
 }
 
-bool MySQLManager::MySQLSyncEqipmentEnhace(uint16_t userPk_, uint16_t itemPosition_, uint16_t enhancement_) {
+bool MySQLManager::MySQLSyncEqipmentEnhace(uint32_t userPk_, uint16_t itemPosition_, uint16_t enhancement_) {
     try {
         MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
 
@@ -484,7 +482,7 @@ bool MySQLManager::MySQLSyncEqipmentEnhace(uint16_t userPk_, uint16_t itemPositi
     }
 }
 
-bool MySQLManager::MySQLSyncUserRaidScore(uint16_t userPk_, unsigned int userScore_, std::string userId_) {
+bool MySQLManager::MySQLSyncUserRaidScore(uint32_t userPk_, unsigned int userScore_, std::string userId_) {
     try {
         MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
 
@@ -527,7 +525,7 @@ bool MySQLManager::MySQLSyncUserRaidScore(uint16_t userPk_, unsigned int userSco
     }
 }
 
-bool MySQLManager::CashCharge(uint16_t userPk_, uint32_t chargedAmount) {
+bool MySQLManager::CashCharge(uint32_t userPk_, uint32_t chargedAmount) {
     try {
         MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
 
@@ -561,4 +559,112 @@ bool MySQLManager::CashCharge(uint16_t userPk_, uint32_t chargedAmount) {
         std::cerr << "[CashCharge] Exception : " << e.what() << " (UserPk: " << userPk_ << ")" << '\n';
         return false;
     }
+}
+
+bool MySQLManager::BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t itemType_, uint16_t currencyType_, uint32_t userPk_, uint32_t itemPrice_) {
+    mysql_autocommit(ConnPtr, false); // Transaction start
+
+    // 금액 처리
+    MYSQL_STMT* goldStmt = mysql_stmt_init(ConnPtr);
+    std::string query;
+
+    if (currencyType_ == 0) { // 구매 수단이 골드일때
+        query = "UPDATE USERS SET gold = gold - ? WHERE id = ?";
+    }
+    else if (currencyType_ == 1) { // 구매 수단이 Cash일때
+        query = "UPDATE USERS SET cash = cash - ? WHERE id = ?";
+    }
+    else if (currencyType_ == 2) { // 구매 수단이 마일리지일때
+        query = "UPDATE USERS SET mileage = mileage - ? WHERE id = ?";
+    }
+    else {
+        std::cerr << "[BuyItem] Unknown currencyType : " << itemType_ << '\n';
+        mysql_rollback(ConnPtr);
+        mysql_autocommit(ConnPtr, true);
+        return false;
+    }
+
+    if (mysql_stmt_prepare(goldStmt, query.c_str(), query.length()) != 0) {
+        std::cerr << "[BuyItem] Statement prepare error : " << mysql_stmt_error(goldStmt) << std::endl;
+        return false;
+    }
+
+    MYSQL_BIND bind[2] = {};
+    bind[0].buffer_type = MYSQL_TYPE_LONG;
+    bind[0].buffer = (char*)&itemPrice_;
+    bind[0].is_unsigned = true;
+
+    bind[1].buffer_type = MYSQL_TYPE_LONG;
+    bind[1].buffer = (char*)&userPk_;
+    bind[1].is_unsigned = true;
+
+    if (mysql_stmt_bind_param(goldStmt, bind) != 0 || mysql_stmt_execute(goldStmt) != 0 || mysql_stmt_affected_rows(goldStmt) == 0) {
+        mysql_stmt_close(goldStmt);
+        mysql_rollback(ConnPtr);
+        mysql_autocommit(ConnPtr, true);
+        return false;
+    }
+
+    mysql_stmt_close(goldStmt);
+
+
+    // 인벤토리 처리
+    MYSQL_STMT* invenStmt = mysql_stmt_init(ConnPtr);
+    std::string query;
+
+    if (itemType_ == 0) { // 처리해야 할 아이템이 장비 아이템일 때
+        query = "INSERT INTO Equipment(user_pk, item_code, days) value(?,?,?)";
+    }
+    else if (itemType_ == 1) { // 처리해야 할 아이템이 소비 아이템일 때
+        query = "INSERT INTO Consumables(user_pk, item_code, count) value(?,?,?)";
+    }
+    else if (itemType_ == 2) { // 처리해야 할 아이템이 재료 아이템일 때
+        query = "INSERT INTO Materials(user_pk, item_code, count) value(?,?,?)";
+    }
+    else {
+        std::cerr << "[BuyItem] Unknown itemType : " << itemType_ << '\n';
+        mysql_rollback(ConnPtr);
+        mysql_autocommit(ConnPtr, true);
+        return false;
+    }
+
+    if (mysql_stmt_prepare(invenStmt, query.c_str(), query.length()) != 0) {
+        std::cerr << "[BuyItem] Statement prepare error : " << mysql_stmt_error(invenStmt) << std::endl;
+        mysql_stmt_close(invenStmt);
+        mysql_rollback(ConnPtr);
+        mysql_autocommit(ConnPtr, true);
+        return false;
+    }
+
+    MYSQL_BIND bind[3] = {};
+    bind[0].buffer_type = MYSQL_TYPE_LONG;
+    bind[0].buffer = (char*)&userPk_;
+    bind[0].is_unsigned = true;
+
+    bind[1].buffer_type = MYSQL_TYPE_LONG;
+    bind[1].buffer = (char*)&itemCode;
+    bind[1].is_unsigned = true;
+
+    bind[2].buffer_type = MYSQL_TYPE_LONG;
+    bind[2].buffer = (char*)&daysOrCounts_;
+    bind[2].is_unsigned = true;
+
+    if (mysql_stmt_bind_param(invenStmt, bind) != 0 || mysql_stmt_execute(invenStmt) != 0 || mysql_stmt_affected_rows(invenStmt) == 0) {
+        mysql_stmt_close(invenStmt);
+        mysql_rollback(ConnPtr);
+        mysql_autocommit(ConnPtr, true);
+        return false;
+    }
+
+    mysql_stmt_close(invenStmt);
+
+    if (mysql_commit(ConnPtr) != 0) {
+        std::cerr << "[BuyItem] Commit failed\n";
+        mysql_rollback(ConnPtr);
+        mysql_autocommit(ConnPtr, true);
+        return false;
+    }
+
+    mysql_autocommit(ConnPtr, true);
+    return true;
 }

@@ -449,6 +449,77 @@ void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* 
     }
 }
 
+void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    auto buyItemReq = reinterpret_cast<SHOP_BUY_ITEM_REQUEST*>(pPacket_);
+    auto itemInfo = ShopDataManager::GetInstance().GetEquipment(buyItemReq->itemCode, buyItemReq->days);
+
+    ConnUser* user = connUsersManager->FindUser(connObjNum_);
+    std::string key = "userinfo:{" + std::to_string(user->GetPk()) + "}";
+
+    CurrencyType tempType = static_cast<CurrencyType>(itemInfo->currencyType);
+
+    SHOP_BUY_ITEM_RESPONSE shopBuyRes;
+    shopBuyRes.PacketId = (uint16_t)PACKET_ID::SHOP_BUY_ITEM_RESPONSE;
+    shopBuyRes.PacketLength = sizeof(SHOP_BUY_ITEM_RESPONSE);
+
+    if (currencyTypeMap.find(tempType) == currencyTypeMap.end()) {
+        std::cerr << "[BuyItemFromShop] Unknown currency type" << '\n';
+        shopBuyRes.isSuccess = false;
+        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        return;
+    }
+
+    uint32_t userMoney = 0;
+    try {
+        auto val = redis->hget(key, currencyTypeMap[tempType]);
+        if (!val) {
+            std::cerr << "[BuyItemFromShop] Redis key not found : " << key << '\n';
+            shopBuyRes.isSuccess = false;
+            user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+            return;
+        }
+        userMoney = std::stoul(*val);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[BuyItemFromShop] Redis get failed : " << e.what() << '\n';
+        shopBuyRes.isSuccess = false;
+        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        return;
+    }
+
+    if (userMoney < itemInfo->itemPrice) {
+        shopBuyRes.isSuccess = false;
+        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        return;
+    }
+
+    try {
+        redis->hincrby(key, currencyTypeMap[tempType], -itemInfo->itemPrice);
+    }
+    catch (const sw::redis::Error& e) {
+        std::cerr << "[BuyItemFromShop] Redis hincrby failed : " << e.what() << '\n';
+        shopBuyRes.isSuccess = false;
+        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        return;
+    }
+
+    bool dbSuccess = mySQLManager->BuyItem(itemInfo->itemCode, itemInfo->days, buyItemReq->itemType,
+        static_cast<uint16_t>(itemInfo->currencyType),
+        user->GetPk(), itemInfo->itemPrice);  // 아이템 구매 트랜잭션 실행
+
+    if (!dbSuccess) { // 트랜잭션 실패시 레디스 클러스터에 금액 복구
+        redis->hincrby(key, currencyTypeMap[tempType], itemInfo->itemPrice);
+        shopBuyRes.isSuccess = false;
+        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        return;
+    }
+
+    // 아이템 구매 성공
+    shopBuyRes.isSuccess = true;
+    user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+}
+
+
 
 // ======================================================= CASH SERVER =======================================================
 

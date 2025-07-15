@@ -12,6 +12,12 @@ enum class CurrencyType : uint16_t {
     MILEAGE
 };
 
+inline const std::unordered_map<CurrencyType, std::string> currencyTypeMap = {
+     {CurrencyType::GOLD, "gold"},
+     {CurrencyType::CASH, "cash"},
+     {CurrencyType::MILEAGE, "mileage"},
+};
+
 struct ShopEquipmentItem {
     uint32_t itemPrice = 0;
     uint16_t itemCode = 0;
@@ -23,7 +29,6 @@ struct ShopEquipmentItem {
 struct ShopConsumableItem {
     uint32_t itemPrice = 0;
     uint16_t itemCode = 0;
-    uint16_t days = 0; // 사용 기한
     CurrencyType currencyType; // 결제수단
     const ConsumableItemData* itemInfo = nullptr; // 아이템 정보
 };
@@ -31,7 +36,6 @@ struct ShopConsumableItem {
 struct ShopMaterialItem {
     uint32_t itemPrice = 0;
     uint16_t itemCode = 0;
-    uint16_t days = 0; // 사용 기한
     CurrencyType currencyType; // 결제수단
     const MaterialItemData* itemInfo = nullptr; // 아이템 정보
 };

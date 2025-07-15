@@ -99,6 +99,16 @@ struct RAID_RANKING_RESPONSE : PACKET_HEADER {
 	char reqScore[MAX_SCORE_SIZE + 1];
 };
 
+struct SHOP_BUY_ITEM_REQUEST : PACKET_HEADER {
+	uint16_t itemCode = 0;
+	uint16_t days = 0; // 사용 기한
+	uint16_t itemType; // 0: 장비, 1: 소비, 2: 재료
+};
+
+struct SHOP_BUY_ITEM_RESPONSE : PACKET_HEADER {
+	bool isSuccess;
+};
+
 
 // ======================= CASH SERVER =======================
 
@@ -260,6 +270,9 @@ enum class PACKET_ID : uint16_t {
 
 	RAID_END_REQUEST_TO_GAME_SERVER = 52,
 
+	// SHOP (101~ )
+	SHOP_BUY_ITEM_REQUEST = 101,
+	SHOP_BUY_ITEM_RESPONSE = 102,
 
 	// ======================= CASH SERVER (501~ ) =======================	
 	CASH_SERVER_CONNECT_REQUEST = 501,
