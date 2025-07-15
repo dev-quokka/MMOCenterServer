@@ -31,6 +31,8 @@ public:
 	bool MySQLSyncEqipmentEnhace(uint16_t userPk_, uint16_t itemPosition, uint16_t enhancement);
 	bool MySQLSyncUserRaidScore(uint16_t userPk_, unsigned int userScore_, std::string userId_);
 
+	bool CashCharge(uint16_t userPk_, uint16_t chargedAmount);
+
 private:
 	MYSQL Conn;
 	MYSQL* ConnPtr = NULL;

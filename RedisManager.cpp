@@ -439,6 +439,58 @@ void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* 
 }
 
 
+// ======================================================= CASH SERVER =======================================================
+
+void RedisManager::CashServerConnectResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    auto cashReqPacket = reinterpret_cast<CASH_SERVER_CONNECT_REQUEST*>(pPacket_);
+
+    CASH_SERVER_CONNECT_RESPONSE cashRes;
+    cashRes.PacketId = (uint16_t)PACKET_ID::CASH_SERVER_CONNECT_RESPONSE;
+    cashRes.PacketLength = sizeof(CASH_SERVER_CONNECT_RESPONSE);
+    cashRes.isSuccess = true;
+
+    connUsersManager->FindUser(connObjNum_)->SetPk(0); // Set server PK to 0 for servers connected to the center server
+    connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(CASH_SERVER_CONNECT_RESPONSE), (char*)&cashRes);
+
+    std::cout << "Cash Server Authentication Successful" << std::endl;
+}
+
+void RedisManager::CashChargeResultResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    ConnUser* tempConnUser = connUsersManager->FindUser(connObjNum_);
+
+    if (connObjNum_ != 11) { // 캐시 서버가 아닌 다른 유저의 부정 요청
+        auto tempSocket = tempConnUser->GetSocket();
+
+        sockaddr_in clientAddr;
+        int addrLen = sizeof(clientAddr);
+        char ipStr[INET_ADDRSTRLEN] = { 0 };
+
+        if (getpeername(tempSocket, (sockaddr*)&clientAddr, &addrLen) == 0) {
+            inet_ntop(AF_INET, &(clientAddr.sin_addr), ipStr, INET_ADDRSTRLEN);
+        }
+        else {
+            std::cerr << "getpeername() failed : " << WSAGetLastError() << std::endl;
+        }
+
+        std::cout << "[AbnormalCashRequest] User Pk : " << tempConnUser->GetPk() << " || IP : " << ipStr << std::endl;
+        return;
+    }
+
+    auto cashChargeResPacket = reinterpret_cast<CASH_CHARGE_RESULT_RESPONSE*>(pPacket_);
+
+    try { // 충전된 금액 Redis와 Mysql에 업데이트
+        redis->hincrby("userinfo:{" + std::to_string(tempConnUser->GetPk()) + "}", "usercash", cashChargeResPacket->chargedAmount);
+        if (!mySQLManager->CashCharge(tempConnUser->GetPk(), cashChargeResPacket->chargedAmount)) {
+            // MYSQL 업데이트 실패시 처리 서버로 전달해서 우선순위로 처리해주기
+
+        }
+    }
+    catch (const sw::redis::Error& e) {
+        std::cerr << "Redis error : " << e.what() << std::endl;
+    }
+}
+
+
 // ======================================================= LOGIN SERVER =======================================================
 
 void RedisManager::LoginServerConnectRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
@@ -449,7 +501,7 @@ void RedisManager::LoginServerConnectRequest(uint16_t connObjNum_, uint16_t pack
     imLRes.PacketLength = sizeof(LOGIN_SERVER_CONNECT_RESPONSE);
     imLRes.isSuccess = true;
 
-    connUsersManager->FindUser(connObjNum_)->SetPk(0);// Set server PK to 0 for servers connected to the center server
+    connUsersManager->FindUser(connObjNum_)->SetPk(0); // Set server PK to 0 for servers connected to the center server
     connUsersManager->FindUser(connObjNum_)->PushSendMsg(sizeof(LOGIN_SERVER_CONNECT_RESPONSE), (char*)&imLRes);
 
     std::cout << "Login Server Authentication Successful" << std::endl;
@@ -527,7 +579,6 @@ void RedisManager::MatchStartResponse(uint16_t connObjNum_, uint16_t packetSize_
 
             tempUser->SetUserState(UserState::raidMatching);
             connUsersManager->FindUser(matchSuccessReqPacket->userCenterObjNum)->PushSendMsg(sizeof(RAID_MATCHING_RESPONSE), (char*)&matchResPacket);
-
             return;
         }
         catch (const sw::redis::Error& e) {

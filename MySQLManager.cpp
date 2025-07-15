@@ -43,6 +43,10 @@ bool MySQLManager::LogoutSync(uint16_t userPk_, USERINFO userInfo_, std::vector<
     }
 
     mysql_autocommit(ConnPtr, true);
+
+    // 실패 시 처리 해주는 서버 생성하여 해당 서버로 정보 전달
+    //
+
     std::cerr << "(LogoutSync Failed) userPk : " << userPk_ << '\n';
     return false;
 }
@@ -278,6 +282,42 @@ bool MySQLManager::MySQLSyncUserRaidScore(uint16_t userPk_, unsigned int userSco
     catch (const std::exception& e) {
         std::cerr << "(MySQLSyncUserRaidScore) Failed to sync raid score. userId : " << userId_
             << ", score : " << userScore_ << std::endl;
+        return false;
+    }
+}
+
+bool MySQLManager::CashCharge(uint16_t userPk_, uint16_t chargedAmount) {
+    try {
+        MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
+
+        std::string query = "UPDATE USERS SET cash = cash + ? WHERE id = ?";
+        if (mysql_stmt_prepare(stmt, query.c_str(), query.length()) != 0) {
+            std::cerr << "[CashCharge] Statement prepare error : " << mysql_stmt_error(stmt) << std::endl;
+            return false;
+        }
+
+        MYSQL_BIND bind[2] = {};
+        bind[0].buffer_type = MYSQL_TYPE_LONG;
+        bind[0].buffer = (char*)&chargedAmount;
+
+        bind[1].buffer_type = MYSQL_TYPE_LONG;
+        bind[1].buffer = (char*)&userPk_;
+
+        if (mysql_stmt_bind_param(stmt, bind) != 0) {
+            std::cerr << "[CashCharge] Bind error : " << mysql_stmt_error(stmt) << std::endl;
+            return false;
+        }
+
+        if (mysql_stmt_execute(stmt) != 0) {
+            std::cerr << "[CashCharge] Execute error : " << mysql_stmt_error(stmt) << std::endl;
+            return false;
+        }
+
+        mysql_stmt_close(stmt);
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[CashCharge] Exception : " << e.what() << " (UserPk: " << userPk_ << ")" << '\n';
         return false;
     }
 }

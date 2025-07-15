@@ -100,6 +100,23 @@ struct RAID_RANKING_RESPONSE : PACKET_HEADER {
 };
 
 
+// ======================= CASH SERVER =======================
+
+struct CASH_SERVER_CONNECT_REQUEST : PACKET_HEADER {
+
+};
+
+struct CASH_SERVER_CONNECT_RESPONSE : PACKET_HEADER {
+	bool isSuccess;
+};
+
+struct CASH_CHARGE_RESULT_RESPONSE : PACKET_HEADER {
+	uint16_t uCASH_CHARGE_RESULTserId; // 유저 고유 번호
+	uint16_t chargedAmount; // 충전된 금액
+	bool isSuccess; // 충전 성공 유무
+};
+
+
 // ======================= LOGIN SERVER =======================
 
 struct LOGIN_SERVER_CONNECT_REQUEST : PACKET_HEADER {
@@ -242,6 +259,12 @@ enum class PACKET_ID : uint16_t {
 	RAID_READY_FAIL = 50,
 
 	RAID_END_REQUEST_TO_GAME_SERVER = 52,
+
+
+	// ======================= CASH SERVER (501~ ) =======================	
+	CASH_SERVER_CONNECT_REQUEST = 501,
+	CASH_SERVER_CONNECT_RESPONSE = 502,
+	CASH_CHARGE_RESULT_RESPONSE = 503,
 
 
 	// ======================= LOGIN SERVER (801~ ) =======================

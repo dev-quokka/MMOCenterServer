@@ -64,6 +64,10 @@ private:
     void MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
 
+    // ======================= CENTER SERVER =======================
+    void CashServerConnectResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void CashChargeResultResponse(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+
     // ======================== LOGIN SERVER =======================
     void LoginServerConnectRequest(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 

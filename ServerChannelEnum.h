@@ -23,7 +23,10 @@ enum class ServerType : uint16_t {
 	LoginServer = 4,
 
 	// Matching Server (5)
-	MatchingServer = 5
+	MatchingServer = 5,
+
+	// Cash Server (11)
+	CashServer = 11,
 };
 
 enum class ChannelServerType : uint16_t {
