@@ -86,7 +86,7 @@ bool QuokkaServer::StartWork() {
     inGameUserManager->Init(maxClientCount);
     redisManager->SetManager(connUsersManager, inGameUserManager);
 
-    CashServerConnect();
+    // CashServerConnect();
 
     return true;
 }

@@ -5,7 +5,7 @@ ShopDataManager& ShopDataManager::GetInstance() {
     return instance;
 }
 
-bool ShopDataManager::LoadFromMySQL(std::unordered_map<std::pair<uint16_t, uint16_t>, ShopEquipmentItem>& em, std::unordered_map<uint16_t, ShopConsumableItem>& cm, std::unordered_map<uint16_t, ShopMaterialItem>& mm) {
+bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopEquipmentKey, ShopEquipmentItem, ShopEquipmentKeyHash>& em, std::unordered_map<uint16_t, ShopConsumableItem>& cm, std::unordered_map<uint16_t, ShopMaterialItem>& mm) {
 	
 	if (loadCheck) { // 이미 데이터가 로드되었으므로 중복 호출 방지
 		std::cout << "[ShopDataManager] LoadFromMySQL already completed." << '\n';
@@ -51,7 +51,6 @@ bool ShopDataManager::LoadFromMySQL(std::unordered_map<std::pair<uint16_t, uint1
 	loadCheck = true;
 	return true;
 }
-
 
 const ShopEquipmentItem* ShopDataManager::GetEquipment(uint16_t itemId, uint16_t days) const {
 	auto it = shopEquipmentItemMap.find({ itemId , days});

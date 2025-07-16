@@ -7,7 +7,7 @@ public:
 	static ShopDataManager& GetInstance();
 
 	bool LoadFromMySQL( // MySQL에서 상점 데이터를 로드한 뒤, 각 아이템 코드에 해당하는 ItemData 정보를 매칭하여 저장
-		std::unordered_map<std::pair<uint16_t, uint16_t>, ShopEquipmentItem>& em,
+		std::unordered_map<ShopEquipmentKey, ShopEquipmentItem, ShopEquipmentKeyHash>& em,
 		std::unordered_map<uint16_t, ShopConsumableItem>& cm,
 		std::unordered_map<uint16_t, ShopMaterialItem>& mm
 	);
@@ -27,7 +27,7 @@ private:
 	ShopDataManager(const ShopDataManager&) = delete;
 	ShopDataManager& operator=(const ShopDataManager&) = delete;
 
-	std::unordered_map<std::pair<uint16_t, uint16_t>, ShopEquipmentItem> shopEquipmentItemMap; // { 아이템 코드, 사용 기한 }
+	std::unordered_map<ShopEquipmentKey, ShopEquipmentItem, ShopEquipmentKeyHash> shopEquipmentItemMap; // { 아이템 코드, 사용 기한 }
 	std::unordered_map<uint16_t, ShopConsumableItem> shopConsumableItemMap;
 	std::unordered_map<uint16_t, ShopMaterialItem> shopMaterialItemMap;
 

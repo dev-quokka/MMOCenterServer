@@ -25,7 +25,7 @@ public:
 	std::unordered_map<uint16_t, EquipmentItemData> GetEquipmentItemData();
 	std::unordered_map<uint16_t, ConsumableItemData> GetConsumableItemData();
 	std::unordered_map<uint16_t, MaterialItemData> GetMaterialItemData();
-	std::unordered_map<std::pair<uint16_t, uint16_t>, ShopEquipmentItem> GetShopEquipmentItem();
+	std::unordered_map<ShopEquipmentKey, ShopEquipmentItem, ShopEquipmentKeyHash> GetShopEquipmentItem();
 	std::unordered_map<uint16_t, ShopConsumableItem> GetShopConsumableItem();
 	std::unordered_map<uint16_t, ShopMaterialItem> GetShopMaterialItem();
 

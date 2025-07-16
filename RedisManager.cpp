@@ -470,8 +470,10 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
     }
 
     uint32_t userMoney = 0;
+    auto moneyType = currencyTypeMap.at(tempType);
+
     try {
-        auto val = redis->hget(key, currencyTypeMap[tempType]);
+        auto val = redis->hget(key, moneyType);
         if (!val) {
             std::cerr << "[BuyItemFromShop] Redis key not found : " << key << '\n';
             shopBuyRes.isSuccess = false;
@@ -494,7 +496,7 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
     }
 
     try {
-        redis->hincrby(key, currencyTypeMap[tempType], -itemInfo->itemPrice);
+        redis->hincrby(key, moneyType, -static_cast<int64_t>(itemInfo->itemPrice));
     }
     catch (const sw::redis::Error& e) {
         std::cerr << "[BuyItemFromShop] Redis hincrby failed : " << e.what() << '\n';
@@ -508,7 +510,7 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
         user->GetPk(), itemInfo->itemPrice);  // 아이템 구매 트랜잭션 실행
 
     if (!dbSuccess) { // 트랜잭션 실패시 레디스 클러스터에 금액 복구
-        redis->hincrby(key, currencyTypeMap[tempType], itemInfo->itemPrice);
+        redis->hincrby(key, moneyType, itemInfo->itemPrice);
         shopBuyRes.isSuccess = false;
         user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
         return;

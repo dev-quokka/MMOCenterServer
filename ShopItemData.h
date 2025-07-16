@@ -18,6 +18,23 @@ inline const std::unordered_map<CurrencyType, std::string> currencyTypeMap = {
      {CurrencyType::MILEAGE, "mileage"},
 };
 
+struct ShopEquipmentKey {
+    uint16_t itemCode = 0;
+    uint16_t days = 0;
+  
+    ShopEquipmentKey(uint16_t itemCode_, uint16_t days_) : itemCode(itemCode_), days(days_) {}
+
+    bool operator==(const ShopEquipmentKey& other) const {
+        return itemCode == other.itemCode && days == other.days;
+    }
+};
+
+struct ShopEquipmentKeyHash { // ShopEquipmentKey용 해시 함수 (unordered_map에서 사용)
+    size_t operator()(const ShopEquipmentKey& k) const noexcept {
+        return std::hash<uint16_t>()(k.itemCode)^(std::hash<uint16_t>()(k.days) << 1);
+    }
+};
+
 struct ShopEquipmentItem {
     uint32_t itemPrice = 0;
     uint16_t itemCode = 0;

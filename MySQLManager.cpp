@@ -134,10 +134,10 @@ std::unordered_map<uint16_t, MaterialItemData> MySQLManager::GetMaterialItemData
     }
 }
 
-std::unordered_map<std::pair<uint16_t, uint16_t>, ShopEquipmentItem> MySQLManager::GetShopEquipmentItem() {
+std::unordered_map<ShopEquipmentKey, ShopEquipmentItem, ShopEquipmentKeyHash> MySQLManager::GetShopEquipmentItem() {
     std::string query_s = "SELECT item_code, itemPrice, days, currencyType FROM ShopEquipmentData";
 
-    std::unordered_map<std::pair<uint16_t, uint16_t>, ShopEquipmentItem> tempSEM;
+    std::unordered_map<ShopEquipmentKey, ShopEquipmentItem, ShopEquipmentKeyHash> tempSEM;
 
     const char* Query = query_s.c_str();
 
@@ -589,16 +589,16 @@ bool MySQLManager::BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t i
         return false;
     }
 
-    MYSQL_BIND bind[2] = {};
-    bind[0].buffer_type = MYSQL_TYPE_LONG;
-    bind[0].buffer = (char*)&itemPrice_;
-    bind[0].is_unsigned = true;
+    MYSQL_BIND goldBind[2] = {};
+    goldBind[0].buffer_type = MYSQL_TYPE_LONG;
+    goldBind[0].buffer = (char*)&itemPrice_;
+    goldBind[0].is_unsigned = true;
 
-    bind[1].buffer_type = MYSQL_TYPE_LONG;
-    bind[1].buffer = (char*)&userPk_;
-    bind[1].is_unsigned = true;
+    goldBind[1].buffer_type = MYSQL_TYPE_LONG;
+    goldBind[1].buffer = (char*)&userPk_;
+    goldBind[1].is_unsigned = true;
 
-    if (mysql_stmt_bind_param(goldStmt, bind) != 0 || mysql_stmt_execute(goldStmt) != 0 || mysql_stmt_affected_rows(goldStmt) == 0) {
+    if (mysql_stmt_bind_param(goldStmt, goldBind) != 0 || mysql_stmt_execute(goldStmt) != 0 || mysql_stmt_affected_rows(goldStmt) == 0) {
         mysql_stmt_close(goldStmt);
         mysql_rollback(ConnPtr);
         mysql_autocommit(ConnPtr, true);
@@ -610,7 +610,6 @@ bool MySQLManager::BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t i
 
     // 인벤토리 처리
     MYSQL_STMT* invenStmt = mysql_stmt_init(ConnPtr);
-    std::string query;
 
     if (itemType_ == 0) { // 처리해야 할 아이템이 장비 아이템일 때
         query = "INSERT INTO Equipment(user_pk, item_code, days) value(?,?,?)";
@@ -636,20 +635,20 @@ bool MySQLManager::BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t i
         return false;
     }
 
-    MYSQL_BIND bind[3] = {};
-    bind[0].buffer_type = MYSQL_TYPE_LONG;
-    bind[0].buffer = (char*)&userPk_;
-    bind[0].is_unsigned = true;
+    MYSQL_BIND invenBind[3] = {};
+    invenBind[0].buffer_type = MYSQL_TYPE_LONG;
+    invenBind[0].buffer = (char*)&userPk_;
+    invenBind[0].is_unsigned = true;
 
-    bind[1].buffer_type = MYSQL_TYPE_LONG;
-    bind[1].buffer = (char*)&itemCode;
-    bind[1].is_unsigned = true;
+    invenBind[1].buffer_type = MYSQL_TYPE_LONG;
+    invenBind[1].buffer = (char*)&itemCode;
+    invenBind[1].is_unsigned = true;
 
-    bind[2].buffer_type = MYSQL_TYPE_LONG;
-    bind[2].buffer = (char*)&daysOrCounts_;
-    bind[2].is_unsigned = true;
+    invenBind[2].buffer_type = MYSQL_TYPE_LONG;
+    invenBind[2].buffer = (char*)&daysOrCounts_;
+    invenBind[2].is_unsigned = true;
 
-    if (mysql_stmt_bind_param(invenStmt, bind) != 0 || mysql_stmt_execute(invenStmt) != 0 || mysql_stmt_affected_rows(invenStmt) == 0) {
+    if (mysql_stmt_bind_param(invenStmt, invenBind) != 0 || mysql_stmt_execute(invenStmt) != 0 || mysql_stmt_affected_rows(invenStmt) == 0) {
         mysql_stmt_close(invenStmt);
         mysql_rollback(ConnPtr);
         mysql_autocommit(ConnPtr, true);
