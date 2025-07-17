@@ -5,10 +5,10 @@ ItemDataManager& ItemDataManager::GetInstance() {
 	return instance;
 }
 
-bool ItemDataManager::LoadFromMySQL(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& em){
+bool ItemDataManager::LoadFromMySQL(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& em){
 	
 	if (loadCheck) { // 이미 데이터가 로드되었으므로 중복 호출 방지
-		std::cout << "[ItemDataManager] LoadFromMySQL already completed." << '\n';
+		std::cout << "[ItemDataManager::LoadFromMySQL] LoadFromMySQL already completed." << '\n';
 		return true;
 	}
 	
@@ -18,8 +18,8 @@ bool ItemDataManager::LoadFromMySQL(std::unordered_map<uint16_t, std::unique_ptr
 	return true;
 }
 
-const ItemData* ItemDataManager::GetItemData(uint16_t itemId) const {
-	auto it = ItemMap.find(itemId);
+const ItemData* ItemDataManager::GetItemData(uint16_t itemId_, uint16_t itemType_) const {
+	auto it = ItemMap.find({ itemId_, itemType_ });
 	if (it == ItemMap.end()) {
 		return nullptr;
 	}

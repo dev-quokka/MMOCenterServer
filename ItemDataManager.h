@@ -6,16 +6,16 @@ public:
     static ItemDataManager& GetInstance();
 
     // Mysql에서 데이터 로드 후 세팅
-    bool LoadFromMySQL(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& em);
+    bool LoadFromMySQL(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& em);
 
-    const ItemData* GetItemData(uint16_t itemId) const;
+    const ItemData* GetItemData(uint16_t itemId_, uint16_t itemType_) const;
 
 private:
     ItemDataManager() = default;
     ItemDataManager(const ItemDataManager&) = delete;
     ItemDataManager& operator=(const ItemDataManager&) = delete;
 
-    std::unordered_map<uint16_t, std::unique_ptr<ItemData>> ItemMap;
+    std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash> ItemMap;
 
     bool loadCheck = false;
 };

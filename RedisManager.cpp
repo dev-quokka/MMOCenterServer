@@ -11,7 +11,8 @@ void RedisManager::init(const uint16_t RedisThreadCnt_) {
     packetIDTable[(uint16_t)PACKET_ID::USER_CONNECT_REQUEST] = &RedisManager::UserConnect;
     packetIDTable[(uint16_t)PACKET_ID::SERVER_USER_COUNTS_REQUEST] = &RedisManager::SendServerUserCounts;
     packetIDTable[(uint16_t)PACKET_ID::MOVE_SERVER_REQUEST] = &RedisManager::MoveServer;
-
+    packetIDTable[(uint16_t)PACKET_ID::SHOP_DATA_REQUEST] = &RedisManager::SendShopDataToClient;
+    
     // LOGIN
     packetIDTable[(uint16_t)PACKET_ID::LOGIN_SERVER_CONNECT_REQUEST] = &RedisManager::LoginServerConnectRequest;
 
@@ -44,7 +45,7 @@ void RedisManager::SetManager(ConnUsersManager* connUsersManager_, InGameUserMan
 }
 
 void RedisManager::InitItemData() {
-    std::unordered_map<uint16_t, std::unique_ptr<ItemData>> itemData;
+    std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash> itemData;
 
     if (!mySQLManager->GetEquipmentItemData(itemData)) return;
     if (!mySQLManager->GetConsumableItemData(itemData)) return;
@@ -396,7 +397,7 @@ void RedisManager::SendShopDataToClient(uint16_t connObjNum_, uint16_t packetSiz
     shopDataResPacket->PacketLength = static_cast<uint16_t>(packetSize);
     shopDataResPacket->shopItemSize = shopVectorSize;
 
-    ShopItemForSend* itemVector = reinterpret_cast<ShopItemForSend*>(packetBuffer);
+    ShopItemForSend* itemVector = reinterpret_cast<ShopItemForSend*>(packetBuffer + sizeof(SHOP_DATA_RESPONSE));
 
     for (int i = 0; i < shopVectorSize; ++i) {
         ShopItemForSend& tempShopItem = itemVector[i];

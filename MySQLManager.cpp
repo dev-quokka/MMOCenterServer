@@ -16,7 +16,7 @@ bool MySQLManager::init() {
     return true;
 }
 
-bool MySQLManager::GetEquipmentItemData(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& itemData_) {
+bool MySQLManager::GetEquipmentItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_) {
     std::string query_s = "SELECT item_code, itemName, attackPower FROM EquipmentData";
     const char* Query = query_s.c_str();
 
@@ -41,7 +41,7 @@ bool MySQLManager::GetEquipmentItemData(std::unordered_map<uint16_t, std::unique
             equipmentData->attackPower = (uint16_t)std::stoi(Row[2]);
             equipmentData->itemType = ItemType::EQUIPMENT;
 
-            itemData_[equipmentData->itemCode] = std::move(equipmentData);
+            itemData_[{equipmentData->itemCode, static_cast<uint16_t>(equipmentData->itemType)}] = std::move(equipmentData);
         }
 
         mysql_free_result(Result);
@@ -53,7 +53,7 @@ bool MySQLManager::GetEquipmentItemData(std::unordered_map<uint16_t, std::unique
     }
 }
 
-bool MySQLManager::GetConsumableItemData(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& itemData_) {
+bool MySQLManager::GetConsumableItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_) {
     std::string query_s = "SELECT item_code, itemName FROM ConsumableData";
     const char* Query = query_s.c_str();
 
@@ -77,7 +77,7 @@ bool MySQLManager::GetConsumableItemData(std::unordered_map<uint16_t, std::uniqu
             consumableData->itemName = Row[1];
             consumableData->itemType = ItemType::CONSUMABLE;
 
-            itemData_[consumableData->itemCode] = std::move(consumableData);
+            itemData_[{consumableData->itemCode, static_cast<uint16_t>(consumableData->itemType)}] = std::move(consumableData);
         }
 
         mysql_free_result(Result);
@@ -89,7 +89,7 @@ bool MySQLManager::GetConsumableItemData(std::unordered_map<uint16_t, std::uniqu
     }
 }
 
-bool MySQLManager::GetMaterialItemData(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& itemData_) {
+bool MySQLManager::GetMaterialItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_) {
     std::string query_s = "SELECT item_code, itemName FROM MaterialData";
     const char* Query = query_s.c_str();
 
@@ -113,7 +113,7 @@ bool MySQLManager::GetMaterialItemData(std::unordered_map<uint16_t, std::unique_
             materialData->itemName = Row[1];
             materialData->itemType = ItemType::MATERIAL;
 
-            itemData_[materialData->itemCode] = std::move(materialData);
+            itemData_[{materialData->itemCode, static_cast<uint16_t>(materialData->itemType)}]= std::move(materialData);
         }
 
         mysql_free_result(Result);
@@ -126,7 +126,7 @@ bool MySQLManager::GetMaterialItemData(std::unordered_map<uint16_t, std::unique_
 }
 
 std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> MySQLManager::GetShopItemData() {
-    std::string query_s = "SELECT item_code, itemPrice, itemCount, daysOrCount, currencyType FROM ShopEquipmentData";
+    std::string query_s = "SELECT item_code, itemType, itemPrice, itemCount, daysOrCount, currencyType FROM ShopItemData";
 
     std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> tempSEM;
 
@@ -149,10 +149,11 @@ std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> MySQLManager::GetShop
 
             ShopItem shopItemData;
             shopItemData.itemCode = (uint16_t)std::stoi(Row[0]);
-            shopItemData.itemPrice = static_cast<uint32_t>(std::stoul(Row[1]));
-            shopItemData.itemCount = (uint16_t)std::stoi(Row[2]);
-            shopItemData.daysOrCount = (uint16_t)std::stoi(Row[3]);
-            shopItemData.currencyType = static_cast<CurrencyType>(std::stoi(Row[4]));
+            shopItemData.itemType = static_cast<ItemType>(std::stoi(Row[1]));
+            shopItemData.itemPrice = static_cast<uint32_t>(std::stoul(Row[2]));
+            shopItemData.itemCount = (uint16_t)std::stoi(Row[3]);
+            shopItemData.daysOrCount = (uint16_t)std::stoi(Row[4]);
+            shopItemData.currencyType = static_cast<CurrencyType>(std::stoi(Row[5]));
 
             tempSEM[{shopItemData.itemCode, shopItemData.daysOrCount}] = shopItemData;
         }

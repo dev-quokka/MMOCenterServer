@@ -22,9 +22,9 @@ public:
 
 	// ====================== INITIALIZATION =======================
 	bool init();
-	bool GetEquipmentItemData(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& itemData_);
-	bool GetConsumableItemData(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& itemData_);
-	bool GetMaterialItemData(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& itemData_);
+	bool GetEquipmentItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
+	bool GetConsumableItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
+	bool GetMaterialItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
 	std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> GetShopItemData();
 
 
