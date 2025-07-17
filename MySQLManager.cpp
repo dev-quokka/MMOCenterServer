@@ -278,7 +278,7 @@ bool MySQLManager::SyncConsumables(uint32_t userPk_, std::vector<CONSUMABLES> us
 
         std::ostringstream item_code_case, count_case, where;
         item_code_case << "Item_code = CASE ";
-        count_case << "count = CASE ";
+        count_case << "daysOrCount = CASE ";
 
         where << "WHERE user_pk = " << std::to_string(userPk_) << " AND position IN (";
 
@@ -319,7 +319,7 @@ bool MySQLManager::SyncMaterials(uint32_t userPk_, std::vector<MATERIALS> userMa
 
         std::ostringstream item_code_case, count_case, where;
         item_code_case << "Item_code = CASE ";
-        count_case << "count = CASE ";
+        count_case << "daysOrCount = CASE ";
 
         where << "WHERE user_pk = " << std::to_string(userPk_) << " AND position IN (";
 
@@ -525,13 +525,13 @@ bool MySQLManager::BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t i
     MYSQL_STMT* invenStmt = mysql_stmt_init(ConnPtr);
 
     if (itemType_ == 0) { // 처리해야 할 아이템이 장비 아이템일 때
-        query = "INSERT INTO Equipment(user_pk, item_code, days) value(?,?,?)";
+        query = "INSERT INTO Equipment(user_pk, item_code, daysOrCount) value(?,?,?)";
     }
     else if (itemType_ == 1) { // 처리해야 할 아이템이 소비 아이템일 때
-        query = "INSERT INTO Consumables(user_pk, item_code, count) value(?,?,?)";
+        query = "INSERT INTO Consumables(user_pk, item_code, daysOrCount) value(?,?,?)";
     }
     else if (itemType_ == 2) { // 처리해야 할 아이템이 재료 아이템일 때
-        query = "INSERT INTO Materials(user_pk, item_code, count) value(?,?,?)";
+        query = "INSERT INTO Materials(user_pk, item_code, daysOrCount) value(?,?,?)";
     }
     else {
         std::cerr << "[BuyItem] Unknown itemType : " << itemType_ << '\n';
@@ -568,15 +568,15 @@ bool MySQLManager::BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t i
         return false;
     }
 
-    mysql_stmt_close(invenStmt);
+    mysql_stmt_close(invenStmt); 
 
     if (mysql_commit(ConnPtr) != 0) {
-        std::cerr << "[BuyItem] Commit failed\n";
+        std::cerr << "[BuyItem] Commit failed" << '\n';
         mysql_rollback(ConnPtr);
         mysql_autocommit(ConnPtr, true);
         return false;
     }
-
+    std::cout << "성공 " << '\n';
     mysql_autocommit(ConnPtr, true);
     return true;
 }

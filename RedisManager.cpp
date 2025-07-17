@@ -12,6 +12,7 @@ void RedisManager::init(const uint16_t RedisThreadCnt_) {
     packetIDTable[(uint16_t)PACKET_ID::SERVER_USER_COUNTS_REQUEST] = &RedisManager::SendServerUserCounts;
     packetIDTable[(uint16_t)PACKET_ID::MOVE_SERVER_REQUEST] = &RedisManager::MoveServer;
     packetIDTable[(uint16_t)PACKET_ID::SHOP_DATA_REQUEST] = &RedisManager::SendShopDataToClient;
+    packetIDTable[(uint16_t)PACKET_ID::SHOP_BUY_ITEM_REQUEST] = &RedisManager::BuyItemFromShop;
     
     // LOGIN
     packetIDTable[(uint16_t)PACKET_ID::LOGIN_SERVER_CONNECT_REQUEST] = &RedisManager::LoginServerConnectRequest;
@@ -513,9 +514,9 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
     auto itemInfo = ShopDataManager::GetInstance().GetItem(buyItemReq->itemCode, buyItemReq->daysOrCount);
 
     ConnUser* user = connUsersManager->FindUser(connObjNum_);
-    std::string key = "userinfo:{" + std::to_string(user->GetPk()) + "}";
+    std::string currencyTypeKey = "userinfo:{" + std::to_string(user->GetPk()) + "}";
 
-    CurrencyType tempType = static_cast<CurrencyType>(itemInfo->currencyType);
+    CurrencyType tempType = itemInfo->currencyType;
 
     SHOP_BUY_ITEM_RESPONSE shopBuyRes;
     shopBuyRes.PacketId = (uint16_t)PACKET_ID::SHOP_BUY_ITEM_RESPONSE;
@@ -532,9 +533,9 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
     auto moneyType = currencyTypeMap.at(tempType);
 
     try {
-        auto val = redis->hget(key, moneyType);
+        auto val = redis->hget(currencyTypeKey, moneyType);
         if (!val) {
-            std::cerr << "[BuyItemFromShop] Redis key not found : " << key << '\n';
+            std::cerr << "[BuyItemFromShop] Redis key not found : " << currencyTypeKey << '\n';
             shopBuyRes.isSuccess = false;
             user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
             return;
@@ -554,22 +555,54 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
         return;
     }
 
+    std::string tag = "{" + std::to_string(user->GetPk()) + "}";
+    std::string invenKey;
+
+    if (buyItemReq->itemType == 0) { // 장비
+        invenKey = "equipment:" + tag;
+    }
+    else if (buyItemReq->itemType == 1) { // 소비
+        invenKey = "consumables:" + tag;
+    }
+    else if (buyItemReq->itemType == 2) { // 재료
+        invenKey = "materials:" + tag;
+    }
+
     try {
-        redis->hincrby(key, moneyType, -static_cast<int64_t>(itemInfo->itemPrice));
+        // 유저 금액 차감
+        redis->hincrby(currencyTypeKey, moneyType, -static_cast<int64_t>(itemInfo->itemPrice));
     }
     catch (const sw::redis::Error& e) {
-        std::cerr << "[BuyItemFromShop] Redis hincrby failed : " << e.what() << '\n';
+        std::cerr << "[BuyItemFromShop] Redis failed : " << e.what() << '\n';
         shopBuyRes.isSuccess = false;
         user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
         return;
     }
 
+    try {
+        // 인벤토리에 아이템 추가
+        redis->hset(invenKey, std::to_string(buyItemReq->itemType), std::to_string(itemInfo->itemCode) + ":" + std::to_string(itemInfo->daysOrCount));
+    }
+    catch (const sw::redis::Error& e) {
+        // 인벤토리 삽입 실패 시, 차감한 금액 복구
+        redis->hincrby(currencyTypeKey, moneyType, itemInfo->itemPrice);
+
+        std::cerr << "[BuyItemFromShop] Redis failed : " << e.what() << '\n';
+        shopBuyRes.isSuccess = false;
+        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        return;
+    }
+
+    // MySQL 트랜잭션 실행 (금액 차감 + 아이템 삽입)
     bool dbSuccess = mySQLManager->BuyItem(itemInfo->itemCode, itemInfo->daysOrCount, buyItemReq->itemType,
         static_cast<uint16_t>(itemInfo->currencyType),
-        user->GetPk(), itemInfo->itemPrice);  // 아이템 구매 트랜잭션 실행
+        user->GetPk(), itemInfo->itemPrice);
 
-    if (!dbSuccess) { // 트랜잭션 실패시 레디스 클러스터에 금액 복구
-        redis->hincrby(key, moneyType, itemInfo->itemPrice);
+    if (!dbSuccess) { 
+        // MySQL 트랜잭션 실패 시 Redis 상태 복원 (금액 복구 및 아이템 제거)
+        redis->hincrby(currencyTypeKey, moneyType, itemInfo->itemPrice);
+        redis->hdel(invenKey, std::to_string(buyItemReq->itemType));
+
         shopBuyRes.isSuccess = false;
         user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
         return;
