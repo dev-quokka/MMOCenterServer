@@ -64,6 +64,7 @@ private:
     void UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void UserDisConnect(uint16_t connObjNum_);
     void SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void SendShopDataToClient(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 

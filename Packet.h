@@ -64,8 +64,17 @@ struct SERVER_USER_COUNTS_REQUEST : PACKET_HEADER {
 };
 
 struct SERVER_USER_COUNTS_RESPONSE : PACKET_HEADER {
-	uint16_t serverCount;
 	uint16_t serverUserCnt[MAX_SERVER_USERS + 1];
+	uint16_t serverCount;
+};
+
+struct SHOP_DATA_REQUEST : PACKET_HEADER {
+
+};
+
+struct SHOP_DATA_RESPONSE : PACKET_HEADER {
+	uint16_t serverUserCnt[MAX_SERVER_USERS + 1];
+	uint16_t serverCount;
 };
 
 struct MOVE_SERVER_REQUEST : PACKET_HEADER {
@@ -271,8 +280,10 @@ enum class PACKET_ID : uint16_t {
 	RAID_END_REQUEST_TO_GAME_SERVER = 52,
 
 	// SHOP (101~ )
-	SHOP_BUY_ITEM_REQUEST = 101,
-	SHOP_BUY_ITEM_RESPONSE = 102,
+	SHOP_DATA_REQUEST = 101,
+	SHOP_DATA_RESPONSE = 102,
+	SHOP_BUY_ITEM_REQUEST = 103,
+	SHOP_BUY_ITEM_RESPONSE = 104,
 
 	// ======================= CASH SERVER (501~ ) =======================	
 	CASH_SERVER_CONNECT_REQUEST = 501,

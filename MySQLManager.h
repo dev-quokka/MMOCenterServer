@@ -22,12 +22,10 @@ public:
 
 	// ====================== INITIALIZATION =======================
 	bool init();
-	std::unordered_map<uint16_t, EquipmentItemData> GetEquipmentItemData();
-	std::unordered_map<uint16_t, ConsumableItemData> GetConsumableItemData();
-	std::unordered_map<uint16_t, MaterialItemData> GetMaterialItemData();
-	std::unordered_map<ShopEquipmentKey, ShopEquipmentItem, ShopEquipmentKeyHash> GetShopEquipmentItem();
-	std::unordered_map<uint16_t, ShopConsumableItem> GetShopConsumableItem();
-	std::unordered_map<uint16_t, ShopMaterialItem> GetShopMaterialItem();
+	bool GetEquipmentItemData(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& itemData_);
+	bool GetConsumableItemData(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& itemData_);
+	bool GetMaterialItemData(std::unordered_map<uint16_t, std::unique_ptr<ItemData>>& itemData_);
+	std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> GetShopItemData();
 
 
 	// ======================= SYNCRONIZATION =======================

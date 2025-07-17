@@ -44,19 +44,19 @@ void RedisManager::SetManager(ConnUsersManager* connUsersManager_, InGameUserMan
 }
 
 void RedisManager::InitItemData() {
-    auto equipData = mySQLManager->GetEquipmentItemData();
-    auto consumData = mySQLManager->GetConsumableItemData();
-    auto materialData = mySQLManager->GetMaterialItemData();
+    std::unordered_map<uint16_t, std::unique_ptr<ItemData>> itemData;
 
-    ItemDataManager::GetInstance().LoadFromMySQL(equipData, consumData, materialData);
+    if (!mySQLManager->GetEquipmentItemData(itemData)) return;
+    if (!mySQLManager->GetConsumableItemData(itemData)) return;
+    if (!mySQLManager->GetMaterialItemData(itemData)) return;
+
+    ItemDataManager::GetInstance().LoadFromMySQL(itemData);
 }
 
 void RedisManager::InitShopData() {
-    auto shopEquipData = mySQLManager->GetShopEquipmentItem();
-    auto shopConsumData = mySQLManager->GetShopConsumableItem();
-    auto shopMaterialData = mySQLManager->GetShopMaterialItem();
+    auto shopItemData = mySQLManager->GetShopItemData();
 
-    ShopDataManager::GetInstance().LoadFromMySQL(shopEquipData, shopConsumData, shopMaterialData);
+    ShopDataManager::GetInstance().LoadFromMySQL(shopItemData);
 }
 
 
@@ -383,6 +383,10 @@ void RedisManager::SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSiz
     }
 }
 
+void RedisManager::SendShopDataToClient(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+
+}
+
 void RedisManager::ChannelDisConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto MoveCHReqPacket = reinterpret_cast<USER_DISCONNECT_AT_CHANNEL_REQUEST*>(pPacket_);
 
@@ -451,7 +455,7 @@ void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* 
 
 void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto buyItemReq = reinterpret_cast<SHOP_BUY_ITEM_REQUEST*>(pPacket_);
-    auto itemInfo = ShopDataManager::GetInstance().GetEquipment(buyItemReq->itemCode, buyItemReq->days);
+    auto itemInfo = ShopDataManager::GetInstance().GetItem(buyItemReq->itemCode, buyItemReq->days);
 
     ConnUser* user = connUsersManager->FindUser(connObjNum_);
     std::string key = "userinfo:{" + std::to_string(user->GetPk()) + "}";
@@ -505,7 +509,7 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
         return;
     }
 
-    bool dbSuccess = mySQLManager->BuyItem(itemInfo->itemCode, itemInfo->days, buyItemReq->itemType,
+    bool dbSuccess = mySQLManager->BuyItem(itemInfo->itemCode, itemInfo->daysOrCount, buyItemReq->itemType,
         static_cast<uint16_t>(itemInfo->currencyType),
         user->GetPk(), itemInfo->itemPrice);  // 아이템 구매 트랜잭션 실행
 

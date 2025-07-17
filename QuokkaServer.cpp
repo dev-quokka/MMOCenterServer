@@ -128,7 +128,7 @@ void QuokkaServer::ServerEnd() {
 
     std::cout << "Wait 5 Seconds Before Shutdown" << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(5)); // Wait 5 seconds before server shutdown
-    std::cout << "Game Server1 Shutdown" << std::endl;
+    std::cout << "Center Server Shutdown" << std::endl;
 }
 
 

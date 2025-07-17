@@ -18,41 +18,29 @@ inline const std::unordered_map<CurrencyType, std::string> currencyTypeMap = {
      {CurrencyType::MILEAGE, "mileage"},
 };
 
-struct ShopEquipmentKey {
+struct ShopItemKey {
     uint16_t itemCode = 0;
     uint16_t days = 0;
   
-    ShopEquipmentKey(uint16_t itemCode_, uint16_t days_) : itemCode(itemCode_), days(days_) {}
+    ShopItemKey(uint16_t itemCode_, uint16_t days_) : itemCode(itemCode_), days(days_) {}
 
-    bool operator==(const ShopEquipmentKey& other) const {
+    bool operator==(const ShopItemKey& other) const {
         return itemCode == other.itemCode && days == other.days;
     }
 };
 
-struct ShopEquipmentKeyHash { // ShopEquipmentKey용 해시 함수 (unordered_map에서 사용)
-    size_t operator()(const ShopEquipmentKey& k) const noexcept {
+struct ShopItemKeyHash { // ShopItemKey용 해시 함수 (unordered_map에서 사용)
+    size_t operator()(const ShopItemKey& k) const noexcept {
         return std::hash<uint16_t>()(k.itemCode)^(std::hash<uint16_t>()(k.days) << 1);
     }
 };
 
-struct ShopEquipmentItem {
+struct ShopItem {
     uint32_t itemPrice = 0;
     uint16_t itemCode = 0;
-    uint16_t days = 0; // 사용 기한
+    uint16_t itemCount = 1; // 아이템 개수
+    uint16_t daysOrCount = 0; // [장비: 기간, 소비: 개수 묶음] 
+    ItemType itemType;
     CurrencyType currencyType; // 결제수단
-    const EquipmentItemData* itemInfo = nullptr; // 아이템 정보
-};
-
-struct ShopConsumableItem {
-    uint32_t itemPrice = 0;
-    uint16_t itemCode = 0;
-    CurrencyType currencyType; // 결제수단
-    const ConsumableItemData* itemInfo = nullptr; // 아이템 정보
-};
-
-struct ShopMaterialItem {
-    uint32_t itemPrice = 0;
-    uint16_t itemCode = 0;
-    CurrencyType currencyType; // 결제수단
-    const MaterialItemData* itemInfo = nullptr; // 아이템 정보
+    const ItemData* itemInfo = nullptr; // 아이템 정보
 };
