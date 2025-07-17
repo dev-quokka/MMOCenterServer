@@ -33,6 +33,22 @@ struct PACKET_HEADER
 	uint16_t PacketId;
 };
 
+struct ShopItemForSend {
+	uint32_t itemPrice = 0;
+	uint16_t itemCode = 0;
+	uint16_t itemCount = 1; // 아이템 개수
+	uint16_t daysOrCount = 0; // [장비: 기간, 소비: 개수 묶음] 
+	uint16_t itemType;
+	uint16_t currencyType; // 결제수단
+
+	// 장비 아이템 필요 변수
+	uint16_t attackPower = 0;
+
+	// 소비 아이템 필요 변수
+
+	// 재료 아이템 필요 변수
+};
+
 
 // ======================= CENTER SERVER =======================
 
@@ -73,8 +89,7 @@ struct SHOP_DATA_REQUEST : PACKET_HEADER {
 };
 
 struct SHOP_DATA_RESPONSE : PACKET_HEADER {
-	uint16_t serverUserCnt[MAX_SERVER_USERS + 1];
-	uint16_t serverCount;
+	uint16_t shopItemSize;
 };
 
 struct MOVE_SERVER_REQUEST : PACKET_HEADER {
@@ -110,7 +125,7 @@ struct RAID_RANKING_RESPONSE : PACKET_HEADER {
 
 struct SHOP_BUY_ITEM_REQUEST : PACKET_HEADER {
 	uint16_t itemCode = 0;
-	uint16_t days = 0; // 사용 기한
+	uint16_t daysOrCount = 0; // [장비: 유저가 원하는 아이템의 사용 기간, 소비: 유저가 원하는 아이템 개수 묶음] 
 	uint16_t itemType; // 0: 장비, 1: 소비, 2: 재료
 };
 
@@ -286,10 +301,11 @@ enum class PACKET_ID : uint16_t {
 	SHOP_BUY_ITEM_RESPONSE = 104,
 
 	// ======================= CASH SERVER (501~ ) =======================	
+
 	CASH_SERVER_CONNECT_REQUEST = 501,
 	CASH_SERVER_CONNECT_RESPONSE = 502,
-	CASH_CHARGE_RESULT_RESPONSE = 503,
 
+	CASH_CHARGE_RESULT_RESPONSE = 503,
 
 	// ======================= LOGIN SERVER (801~ ) =======================
 

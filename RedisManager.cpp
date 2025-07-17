@@ -384,7 +384,61 @@ void RedisManager::SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSiz
 }
 
 void RedisManager::SendShopDataToClient(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    const auto& shopVector = ShopDataManager::GetInstance().GetShopData();
+    uint16_t shopVectorSize = static_cast<uint16_t>(shopVector.size());
+    
+    // 전송할 전체 버퍼 크기
+    size_t packetSize = sizeof(SHOP_DATA_RESPONSE) + sizeof(ShopItemForSend) * shopVectorSize;
+    char* packetBuffer = new char[packetSize];
 
+    auto* shopDataResPacket = reinterpret_cast<SHOP_DATA_RESPONSE*>(packetBuffer);
+    shopDataResPacket->PacketId = static_cast<uint16_t>(PACKET_ID::SHOP_DATA_RESPONSE);
+    shopDataResPacket->PacketLength = static_cast<uint16_t>(packetSize);
+    shopDataResPacket->shopItemSize = shopVectorSize;
+
+    ShopItemForSend* itemVector = reinterpret_cast<ShopItemForSend*>(packetBuffer);
+
+    for (int i = 0; i < shopVectorSize; ++i) {
+        ShopItemForSend& tempShopItem = itemVector[i];
+        const ShopItem& tempShopVector = shopVector[i];
+
+        tempShopItem.itemPrice = tempShopVector.itemPrice;
+        tempShopItem.itemCode = tempShopVector.itemCode;
+        tempShopItem.itemCount = tempShopVector.itemCount;
+        tempShopItem.daysOrCount = tempShopVector.daysOrCount;
+        tempShopItem.itemType = static_cast<uint16_t>(tempShopVector.itemType);
+        tempShopItem.currencyType = static_cast<uint16_t>(tempShopVector.currencyType);
+
+        switch (tempShopVector.itemType) // 각 타입에 맞는 데이터 세팅
+        {
+            case ItemType::EQUIPMENT: {
+                const EquipmentItemData* eq = static_cast<const EquipmentItemData*>(tempShopVector.itemInfo);
+                if (eq) {
+                    tempShopItem.attackPower = eq->attackPower;
+                }
+                break;
+            }
+            case ItemType::CONSUMABLE: {
+
+                break;
+            }
+            case ItemType::MATERIAL: {
+
+                break;
+            }
+            default: break;
+        }
+    }
+
+    try {
+        connUsersManager->FindUser(connObjNum_)->
+            PushSendMsg(static_cast<uint16_t>(packetSize), packetBuffer);
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[SendShopDataToClient] Exception: " << e.what() << '\n';
+    }
+
+    delete[] packetBuffer;
 }
 
 void RedisManager::ChannelDisConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
@@ -455,7 +509,7 @@ void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* 
 
 void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto buyItemReq = reinterpret_cast<SHOP_BUY_ITEM_REQUEST*>(pPacket_);
-    auto itemInfo = ShopDataManager::GetInstance().GetItem(buyItemReq->itemCode, buyItemReq->days);
+    auto itemInfo = ShopDataManager::GetInstance().GetItem(buyItemReq->itemCode, buyItemReq->daysOrCount);
 
     ConnUser* user = connUsersManager->FindUser(connObjNum_);
     std::string key = "userinfo:{" + std::to_string(user->GetPk()) + "}";
@@ -524,7 +578,6 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
     shopBuyRes.isSuccess = true;
     user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
 }
-
 
 
 // ======================================================= CASH SERVER =======================================================
