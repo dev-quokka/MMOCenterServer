@@ -162,6 +162,7 @@
     <ClInclude Include="ItemDataManager.h" />
     <ClInclude Include="ShopDataManager.h" />
     <ClInclude Include="ShopItemData.h" />
+    <ClInclude Include="ShopItemPacket.h" />
     <ClInclude Include="UserSyncData.h" />
     <ClInclude Include="MySQLManager.h" />
     <ClInclude Include="OverLappedManager.h" />

@@ -411,24 +411,8 @@ void RedisManager::SendShopDataToClient(uint16_t connObjNum_, uint16_t packetSiz
         tempShopItem.itemType = static_cast<uint16_t>(tempShopVector.itemType);
         tempShopItem.currencyType = static_cast<uint16_t>(tempShopVector.currencyType);
 
-        switch (tempShopVector.itemType) // 각 타입에 맞는 데이터 세팅
-        {
-            case ItemType::EQUIPMENT: {
-                const EquipmentItemData* eq = static_cast<const EquipmentItemData*>(tempShopVector.itemInfo);
-                if (eq) {
-                    tempShopItem.attackPower = eq->attackPower;
-                }
-                break;
-            }
-            case ItemType::CONSUMABLE: {
-
-                break;
-            }
-            case ItemType::MATERIAL: {
-
-                break;
-            }
-            default: break;
+        if (tempShopVector.itemInfo) {
+            tempShopVector.itemInfo->FillShopItemData(tempShopItem);
         }
     }
 
