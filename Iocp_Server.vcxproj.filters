@@ -140,5 +140,11 @@
     <ClInclude Include="ShopItemPacket.h">
       <Filter>헤더 파일\InGame\ShopDataManager</Filter>
     </ClInclude>
+    <ClInclude Include="DBConfig.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CountingSemaphore.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

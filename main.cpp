@@ -1,6 +1,6 @@
 #include "QuokkaServer.h"
 
-constexpr uint16_t maxThreadCount = 1;
+constexpr uint16_t maxThreadCount = 2;
 constexpr uint16_t maxClientCount = 100; // User objects allocated for average Center Server load + additional allocation for connected servers 
 
 std::unordered_map<ServerType, ServerAddress> ServerAddressMap = { // Set server addresses

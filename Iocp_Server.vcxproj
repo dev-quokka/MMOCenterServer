@@ -108,7 +108,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>C:\Users\82104\jwt-cpp-master\include;C:\Users\82104\boost_1_87_0;C:\Users\82104\hiredis\Build\hiredis_install\include;C:\Users\82104\OpenSSL-Win64\include;C:\Users\82104\oneapi-tbb-2022.0.0\include;C:\Users\82104\json-develop\include;C:\Users\82104\jsoncpp-master\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -155,6 +155,8 @@
     <ClInclude Include="ChannelServer.h" />
     <ClInclude Include="ConnUser.h" />
     <ClInclude Include="ConnUsersManager.h" />
+    <ClInclude Include="CountingSemaphore.h" />
+    <ClInclude Include="DBConfig.h" />
     <ClInclude Include="Define.h" />
     <ClInclude Include="InGameUser.h" />
     <ClInclude Include="InGameUserManager.h" />

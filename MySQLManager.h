@@ -1,24 +1,20 @@
 #pragma once
 #pragma comment (lib, "libmysql.lib")
 
-#include <iostream>
-#include <cstdint>
-#include <string>
-#include <mysql.h>
-#include <sstream>
-#include <vector>
-#include <unordered_map>
-
-#include "UserSyncData.h"
-#include "ItemData.h"
-#include "ShopItemData.h"
+#include "DBConfig.h"
 
 class MySQLManager {
 public:
+	MySQLManager() : semaphore(dbConnectionCount) {}
 	~MySQLManager() {
-		mysql_close(ConnPtr);
-		std::cout << "MySQL End" << std::endl;
+		while (!dbPool.empty()) {
+			MYSQL* conn = dbPool.front();
+			dbPool.pop();
+			mysql_close(conn);
+		}
 	}
+
+	MYSQL* GetConnection();
 
 	// ====================== INITIALIZATION =======================
 	bool init();
@@ -40,11 +36,11 @@ public:
 	bool CashCharge(uint32_t userPk_, uint32_t chargedAmount);
 	bool BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t itemType_, uint16_t currencyType_, uint32_t userPk_, uint32_t itemPrice_);
 
+
 private:
-	MYSQL Conn;
-	MYSQL* ConnPtr = NULL;
-	MYSQL_RES* Result;
-	MYSQL_ROW Row;
+	std::mutex dbPoolMutex;
+	std::queue<MYSQL*> dbPool;
+	std::counting_semaphore<dbConnectionCount> semaphore;
 
 	int MysqlResult;
 };

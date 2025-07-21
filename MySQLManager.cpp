@@ -3,13 +3,20 @@
 // ====================== INITIALIZATION =======================
 
 bool MySQLManager::init() {
-    mysql_init(&Conn);
+    for (int i = 0; i < dbConnectionCount; i++) {
+        MYSQL* Conn = mysql_init(nullptr);
+        if (!Conn) {
+            std::cerr << "Mysql Init Fail" << std::endl;
+            return false;
+        }
 
-    ConnPtr = mysql_real_connect(&Conn, "127.0.0.1", "quokka", "1234", "iocp", 3306, (char*)NULL, 0);
-    if (ConnPtr == NULL) {
-        std::cout << mysql_error(&Conn) << std::endl;
-        std::cout << "Mysql Connection Fail" << std::endl;
-        return false;
+        MYSQL* ConnPtr = mysql_real_connect(Conn, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT, (char*)NULL, 0);
+        if (!ConnPtr) {
+            std::cerr << "Mysql Connection Fail : " << mysql_error(Conn) << '\n';
+            return false;
+        }
+
+        dbPool.push(ConnPtr);
     }
 
     std::cout << "Mysql Connection Success" << std::endl;
@@ -17,6 +24,20 @@ bool MySQLManager::init() {
 }
 
 bool MySQLManager::GetEquipmentItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_) {
+    semaphore.acquire();
+    MYSQL* ConnPtr;
+
+    {
+        std::lock_guard<std::mutex> lock(dbPoolMutex);
+        ConnPtr = dbPool.front();
+        dbPool.pop();
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
     std::string query_s = "SELECT item_code, itemName, attackPower FROM EquipmentData";
     const char* Query = query_s.c_str();
 
@@ -45,6 +66,7 @@ bool MySQLManager::GetEquipmentItemData(std::unordered_map<ItemDataKey, std::uni
         }
 
         mysql_free_result(Result);
+
         return true;
     }
     catch (const std::exception& e) {
@@ -54,6 +76,20 @@ bool MySQLManager::GetEquipmentItemData(std::unordered_map<ItemDataKey, std::uni
 }
 
 bool MySQLManager::GetConsumableItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_) {
+    semaphore.acquire();
+    MYSQL* ConnPtr;
+
+    {
+        std::lock_guard<std::mutex> lock(dbPoolMutex);
+        ConnPtr = dbPool.front();
+        dbPool.pop();
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
     std::string query_s = "SELECT item_code, itemName FROM ConsumableData";
     const char* Query = query_s.c_str();
 
@@ -90,6 +126,20 @@ bool MySQLManager::GetConsumableItemData(std::unordered_map<ItemDataKey, std::un
 }
 
 bool MySQLManager::GetMaterialItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_) {
+    semaphore.acquire();
+    MYSQL* ConnPtr;
+
+    {
+        std::lock_guard<std::mutex> lock(dbPoolMutex);
+        ConnPtr = dbPool.front();
+        dbPool.pop();
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
     std::string query_s = "SELECT item_code, itemName FROM MaterialData";
     const char* Query = query_s.c_str();
 
@@ -126,6 +176,20 @@ bool MySQLManager::GetMaterialItemData(std::unordered_map<ItemDataKey, std::uniq
 }
 
 std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> MySQLManager::GetShopItemData() {
+    semaphore.acquire();
+    MYSQL* ConnPtr;
+
+    {
+        std::lock_guard<std::mutex> lock(dbPoolMutex);
+        ConnPtr = dbPool.front();
+        dbPool.pop();
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
     std::string query_s = "SELECT item_code, itemType, itemPrice, itemCount, daysOrCount, currencyType FROM ShopItemData";
 
     std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> tempSEM;
@@ -168,11 +232,38 @@ std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> MySQLManager::GetShop
     }
 }
 
+MYSQL* MySQLManager::GetConnection() {
+    MYSQL* ConnPtr;
+    {
+        std::lock_guard<std::mutex> lock(dbPoolMutex);
+        if (dbPool.empty()) {
+            std::cerr << "[GetConnection] dbPool is empty" << '\n';
+            return nullptr;
+        }
+        ConnPtr = dbPool.front();
+        dbPool.pop();
+    }
+    return ConnPtr;
+};
+
 
 // ======================= SYNCRONIZATION =======================
 
 bool MySQLManager::LogoutSync(uint32_t userPk_, USERINFO userInfo_, std::vector<EQUIPMENT> userEquip_, 
     std::vector<CONSUMABLES> userConsum_, std::vector<MATERIALS> userMat_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[LogoutSync] Failed to get DB connection." << std::endl;
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
     mysql_autocommit(ConnPtr, false); // Transaction start
 
     for (int i = 0; i < 3; i++) { // // Retry up to 3 times on failure
@@ -204,6 +295,19 @@ bool MySQLManager::LogoutSync(uint32_t userPk_, USERINFO userInfo_, std::vector<
 }
 
 bool MySQLManager::SyncUserInfo(uint32_t userPk_, USERINFO userInfo_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[LogoutSync] Failed to get DB connection." << std::endl;
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
     try {
         std::string query_s = "UPDATE USERS left join Ranking r on USERS.name = r.name SET USERS.name = '" +
             userInfo_.userId + "', USERS.exp = " + std::to_string(userInfo_.exp) +
@@ -230,6 +334,19 @@ bool MySQLManager::SyncUserInfo(uint32_t userPk_, USERINFO userInfo_) {
 }
 
 bool MySQLManager::SyncEquipment(uint32_t userPk_, std::vector<EQUIPMENT> userEquip_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[LogoutSync] Failed to get DB connection." << std::endl;
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
     try {
         std::ostringstream query_s;
         query_s << "UPDATE Equipment SET ";
@@ -272,6 +389,19 @@ bool MySQLManager::SyncEquipment(uint32_t userPk_, std::vector<EQUIPMENT> userEq
 }
 
 bool MySQLManager::SyncConsumables(uint32_t userPk_, std::vector<CONSUMABLES> userConsum_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[LogoutSync] Failed to get DB connection." << std::endl;
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
     try {
         std::ostringstream query_s;
         query_s << "UPDATE Consumables SET ";
@@ -313,6 +443,19 @@ bool MySQLManager::SyncConsumables(uint32_t userPk_, std::vector<CONSUMABLES> us
 }
 
 bool MySQLManager::SyncMaterials(uint32_t userPk_, std::vector<MATERIALS> userMat_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[LogoutSync] Failed to get DB connection." << std::endl;
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+    
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+    
     try {
         std::ostringstream query_s;
         query_s << "UPDATE Materials SET ";
@@ -354,6 +497,19 @@ bool MySQLManager::SyncMaterials(uint32_t userPk_, std::vector<MATERIALS> userMa
 }
 
 bool MySQLManager::MySQLSyncEqipmentEnhace(uint32_t userPk_, uint16_t itemPosition_, uint16_t enhancement_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[LogoutSync] Failed to get DB connection." << std::endl;
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+    
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
     try {
         MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
 
@@ -396,6 +552,19 @@ bool MySQLManager::MySQLSyncEqipmentEnhace(uint32_t userPk_, uint16_t itemPositi
 }
 
 bool MySQLManager::MySQLSyncUserRaidScore(uint32_t userPk_, unsigned int userScore_, std::string userId_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[LogoutSync] Failed to get DB connection." << std::endl;
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+    
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+    
     try {
         MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
 
@@ -439,6 +608,19 @@ bool MySQLManager::MySQLSyncUserRaidScore(uint32_t userPk_, unsigned int userSco
 }
 
 bool MySQLManager::CashCharge(uint32_t userPk_, uint32_t chargedAmount) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[LogoutSync] Failed to get DB connection." << std::endl;
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+    
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+    
     try {
         MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
 
@@ -475,6 +657,19 @@ bool MySQLManager::CashCharge(uint32_t userPk_, uint32_t chargedAmount) {
 }
 
 bool MySQLManager::BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t itemType_, uint16_t currencyType_, uint32_t userPk_, uint32_t itemPrice_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[LogoutSync] Failed to get DB connection." << std::endl;
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+    
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+    
     mysql_autocommit(ConnPtr, false); // Transaction start
 
     // 금액 처리
