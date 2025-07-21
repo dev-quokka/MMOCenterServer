@@ -56,7 +56,9 @@ void RedisManager::InitItemData() {
 }
 
 void RedisManager::InitShopData() {
-    auto shopItemData = mySQLManager->GetShopItemData();
+    std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> shopItemData;
+
+    if (!mySQLManager->GetShopItemData(shopItemData)) return;
 
     ShopDataManager::GetInstance().LoadFromMySQL(shopItemData);
 }

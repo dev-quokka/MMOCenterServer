@@ -22,7 +22,7 @@ constexpr const char* DB_NAME = "iocp";
 
 constexpr uint16_t DB_PORT = 3306;
 
-constexpr uint16_t dbConnectionCount = 3;
+constexpr uint16_t dbConnectionCount = 5;
 
 
 struct AutoConn { // 함수 실행 후 커넥션, 세마포어 자동 반환을 위한 임시 구조체 (안전성 및 가독성 향상 목적)

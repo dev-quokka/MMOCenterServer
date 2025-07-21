@@ -18,10 +18,11 @@ public:
 
 	// ====================== INITIALIZATION =======================
 	bool init();
+
 	bool GetEquipmentItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
 	bool GetConsumableItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
 	bool GetMaterialItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
-	std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> GetShopItemData();
+	bool GetShopItemData(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& shopItemData_);
 
 
 	// ======================= SYNCRONIZATION =======================
@@ -33,6 +34,8 @@ public:
 	bool MySQLSyncEqipmentEnhace(uint32_t userPk_, uint16_t itemPosition, uint16_t enhancement);
 	bool MySQLSyncUserRaidScore(uint32_t userPk_, unsigned int userScore_, std::string userId_);
 
+
+	// ======================== TRANSACTION ========================
 	bool CashCharge(uint32_t userPk_, uint32_t chargedAmount);
 	bool BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t itemType_, uint16_t currencyType_, uint32_t userPk_, uint32_t itemPrice_);
 
