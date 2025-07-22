@@ -16,8 +16,8 @@ bool PassRewardManager::LoadFromMySQL(std::string passId_, std::unordered_map<Pa
 	PassRewardData passRewardData;
 	passRewardData.LoadFromMySQL(PassDataMap_, passExpLimit_);
 
-	passMap[passId_] = passRewardData;
-
+	passMap[passId_] = std::move(passRewardData);
+	
 	return true;
 }
 

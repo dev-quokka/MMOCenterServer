@@ -8,6 +8,7 @@
 #include "UserSyncData.h"
 
 constexpr uint16_t MAX_IP_LEN = 32;
+constexpr uint16_t MAX_PASS_ID_LEN = 32;
 constexpr uint16_t MAX_SERVER_USERS = 128;
 constexpr uint16_t MAX_JWT_TOKEN_LEN = 256;
 constexpr uint16_t MAX_SCORE_SIZE = 512;
@@ -114,6 +115,16 @@ struct SHOP_BUY_ITEM_REQUEST : PACKET_HEADER {
 };
 
 struct SHOP_BUY_ITEM_RESPONSE : PACKET_HEADER {
+	bool isSuccess;
+};
+
+struct GET_PASS_ITEM_REQUEST : PACKET_HEADER {
+	char passId[MAX_PASS_ID_LEN + 1];
+	uint16_t passLevel;
+	uint16_t passCurrencyType;
+};
+
+struct GET_PASS_ITEM_RESPONSE : PACKET_HEADER {
 	bool isSuccess;
 };
 
@@ -283,6 +294,11 @@ enum class PACKET_ID : uint16_t {
 	SHOP_DATA_RESPONSE = 102,
 	SHOP_BUY_ITEM_REQUEST = 103,
 	SHOP_BUY_ITEM_RESPONSE = 104,
+
+	// PASSITEM
+	GET_PASS_ITEM_REQUEST = 105,
+	GET_PASS_ITEM_RESPONSE = 106,
+
 
 	// ======================= CASH SERVER (501~ ) =======================	
 

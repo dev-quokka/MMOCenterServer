@@ -65,16 +65,24 @@ void RedisManager::InitShopData() {
 
 void RedisManager::InitPassData() {
 
-    std::vector<std::string> passIdVector = { 
-        "BattlePass1001"
+    std::vector<std::pair<std::string, std::uint16_t>> passVector = { // { 패스 이름, 패스 최대 레벨 }
+        { "BattlePass1001", 50 },
+        { "SeasonPass1001", 50 },
+        { "LevelPass1001", 100 }
     };
 
-    for (auto& tempPassId : passIdVector) {
+    for (auto& tempPass : passVector) {
         std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash> passDataMap;
-        std::vector<uint16_t> passExpLimit;
+
+        auto tempPassId = tempPass.first;
+        auto tempPassMaxLevel = tempPass.second;
 
         // 패스 데이터 하나라도 불러오기 실패 시 return
         if (!mySQLManager->GetPassItemData(tempPassId, passDataMap)) return;
+
+        std::vector<uint16_t> passExpLimit;
+        passExpLimit.resize(tempPassMaxLevel+1);
+
         if (!mySQLManager->GetPassExpData(tempPassId, passExpLimit)) return;
 
         PassRewardManager::GetInstance().LoadFromMySQL(tempPassId, passDataMap, passExpLimit);
@@ -117,6 +125,7 @@ void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis S
 
         InitItemData();
         InitShopData();
+        InitPassData();
 
         CreateRedisThread(RedisThreadCnt_);
     }
@@ -615,6 +624,16 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
     // 아이템 구매 성공
     shopBuyRes.isSuccess = true;
     user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+}
+
+void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
+    auto cashReqPacket = reinterpret_cast<GET_PASS_ITEM_REQUEST*>(pPacket_);
+    auto tempPassId = (std::string)cashReqPacket->passId;
+
+    PassRewardManager::GetInstance().GetPassItemDataByPassId(tempPassId, cashReqPacket->passLevel, cashReqPacket->passCurrencyType);
+
+
+
 }
 
 

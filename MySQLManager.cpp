@@ -252,7 +252,7 @@ bool MySQLManager::GetPassItemData(std::string& passId_, std::unordered_map<Pass
     MYSQL_RES* Result;
     MYSQL_ROW Row;
 
-    std::string query_s = "SELECT passItemName, item_code, itemCount, daysOrCount, itemType, passCurrencyType FROM " + passId_;
+    std::string query_s = "SELECT passItemName, item_code, passLevel, itemCount, daysOrCount, itemType, passCurrencyType FROM " + passId_;
 
     const char* Query = query_s.c_str();
 
@@ -269,16 +269,17 @@ bool MySQLManager::GetPassItemData(std::string& passId_, std::unordered_map<Pass
         }
 
         while ((Row = mysql_fetch_row(Result)) != NULL) {
-            if (!Row[0] || !Row[1] || !Row[2] || !Row[3] || !Row[4] || !Row[5]) continue;
+            if (!Row[0] || !Row[1] || !Row[2] || !Row[3] || !Row[4] || !Row[5] || !Row[6]) continue;
 
             auto passItemData = std::make_unique<PassData>();
             passItemData->itemCode = (uint16_t)std::stoi(Row[1]);
-            passItemData->itemCount = (uint16_t)std::stoi(Row[2]);
-            passItemData->daysOrCount = (uint16_t)std::stoi(Row[3]);
-            passItemData->itemType = static_cast<ItemType>(std::stoi(Row[4]));
-            passItemData->passCurrencyType = static_cast<PassCurrencyType>(std::stoi(Row[5]));
+            passItemData->passLevel = (uint16_t)std::stoi(Row[2]);
+            passItemData->itemCount = (uint16_t)std::stoi(Row[3]);
+            passItemData->daysOrCount = (uint16_t)std::stoi(Row[4]);
+            passItemData->itemType = static_cast<ItemType>(std::stoi(Row[5]));
+            passItemData->passCurrencyType = static_cast<PassCurrencyType>(std::stoi(Row[6]));
 
-            PassDataMap_[{passItemData->itemCode, passItemData->daysOrCount}] = std::move(passItemData);
+            passDataMap_[{passItemData->passLevel, static_cast<uint16_t>(passItemData->passCurrencyType)}] = std::move(passItemData);
         }
 
         mysql_free_result(Result);
@@ -322,7 +323,6 @@ bool MySQLManager::GetPassExpData(std::string& passId_, std::vector<uint16_t>& p
 
         while ((Row = mysql_fetch_row(Result)) != NULL) {
             if (!Row[0] || !Row[1]) continue;
-
             passExpLimit_[(uint16_t)std::stoi(Row[0])] = (uint16_t)std::stoi(Row[1]);
         }
 

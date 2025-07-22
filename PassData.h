@@ -12,6 +12,7 @@ enum class PassCurrencyType : uint16_t { // 무료 패스 or 유료 패스
 
 struct PassData {
     uint16_t itemCode = 0;
+    uint16_t passLevel = 0;
     uint16_t itemCount = 1; // 아이템 개수
     uint16_t daysOrCount = 0;
     ItemType itemType;

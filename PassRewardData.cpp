@@ -11,10 +11,22 @@ bool PassRewardData::LoadFromMySQL(std::unordered_map<PassDataKey, std::unique_p
 	for (auto& [passKey, passItem] : passDataMap) {
 		auto tempItemInfo = ItemDataManager::GetInstance().GetItemData(passItem.get()->itemCode, static_cast<uint16_t>(passItem.get()->itemType));
 		if (!tempItemInfo) {
-			std::cerr << "[ShopDataManager::LoadFromMySQL] Invalid itemCode: " << passItem.get()->itemCode << '\n';
+			std::cerr << "[PassRewardData::LoadFromMySQL] Invalid itemCode: " << passItem.get()->itemCode << '\n';
 			continue;
 		}
 
+		switch (passItem->passCurrencyType) {
+		case PassCurrencyType::FREE:
+			std::cout << "패스 레벨 : " << passItem->passLevel << ", 패스 아이템 결제 타입 : FREE" << '\n';
+			break;
+		case PassCurrencyType::CASH1:
+			std::cout << "패스 레벨 : " << passItem->passLevel << ", 패스 아이템 결제 타입 : CASH1" << '\n';
+			break;
+		default:
+			std::cout << "패스 레벨 : " << passItem->passLevel << ", 패스 아이템 결제 타입 : UNKNOWN" << '\n';
+			break;
+		}
+			
 		passItem.get()->itemInfo = tempItemInfo;
 	}
 
