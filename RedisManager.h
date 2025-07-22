@@ -15,6 +15,7 @@
 #include "ConnUsersManager.h"
 #include "MySQLManager.h"
 #include "ShopDataManager.h"
+#include "PassRewardManager.h"
 
 const std::string JWT_SECRET = "Cute_Quokka";
 constexpr int MAX_CENTER_PACKET_SIZE = 256;
@@ -36,6 +37,7 @@ public:
     void SetManager(ConnUsersManager* connUsersManager_, InGameUserManager* inGameUserManager_);
     void InitItemData();
     void InitShopData();
+    void InitPassData();
 
 
     // ===================== PACKET MANAGEMENT =====================

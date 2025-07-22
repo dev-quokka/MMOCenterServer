@@ -1,5 +1,18 @@
 #include "MySQLManager.h"
 
+MYSQL* MySQLManager::GetConnection() {
+    MYSQL* ConnPtr;
+    {
+        std::lock_guard<std::mutex> lock(dbPoolMutex);
+        if (dbPool.empty()) {
+            return nullptr;
+        }
+        ConnPtr = dbPool.front();
+        dbPool.pop();
+    }
+    return ConnPtr;
+};
+
 // ====================== INITIALIZATION =======================
 
 bool MySQLManager::init() {
@@ -203,7 +216,7 @@ bool MySQLManager::GetShopItemData(std::unordered_map<ShopItemKey, ShopItem, Sho
         }
 
         while ((Row = mysql_fetch_row(Result)) != NULL) {
-            if (!Row[0] || !Row[1] || !Row[2] || !Row[3]) continue;
+            if (!Row[0] || !Row[1] || !Row[2] || !Row[3] || !Row[4] || !Row[5]) continue;
 
             ShopItem shopItemData;
             shopItemData.itemCode = (uint16_t)std::stoi(Row[0]);
@@ -225,18 +238,102 @@ bool MySQLManager::GetShopItemData(std::unordered_map<ShopItemKey, ShopItem, Sho
     }
 }
 
-MYSQL* MySQLManager::GetConnection() {
-    MYSQL* ConnPtr;
-    {
-        std::lock_guard<std::mutex> lock(dbPoolMutex);
-        if (dbPool.empty()) {
-            return nullptr;
-        }
-        ConnPtr = dbPool.front();
-        dbPool.pop();
+bool MySQLManager::GetPassItemData(std::string& passId_, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>& passDataMap_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[GetPassItemData] dbPool is empty. Failed to get DB connection." << '\n';
+        return false;
     }
-    return ConnPtr;
-};
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
+    std::string query_s = "SELECT passItemName, item_code, itemCount, daysOrCount, itemType, passCurrencyType FROM " + passId_;
+
+    const char* Query = query_s.c_str();
+
+    if (mysql_query(ConnPtr, Query) != 0) {
+        std::cerr << "[GetPassItemData] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        return false;
+    }
+
+    try {
+        Result = mysql_store_result(ConnPtr);
+        if (Result == nullptr) {
+            std::cerr << "[GetPassItemData] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            return false;
+        }
+
+        while ((Row = mysql_fetch_row(Result)) != NULL) {
+            if (!Row[0] || !Row[1] || !Row[2] || !Row[3] || !Row[4] || !Row[5]) continue;
+
+            auto passItemData = std::make_unique<PassData>();
+            passItemData->itemCode = (uint16_t)std::stoi(Row[1]);
+            passItemData->itemCount = (uint16_t)std::stoi(Row[2]);
+            passItemData->daysOrCount = (uint16_t)std::stoi(Row[3]);
+            passItemData->itemType = static_cast<ItemType>(std::stoi(Row[4]));
+            passItemData->passCurrencyType = static_cast<PassCurrencyType>(std::stoi(Row[5]));
+
+            PassDataMap_[{passItemData->itemCode, passItemData->daysOrCount}] = std::move(passItemData);
+        }
+
+        mysql_free_result(Result);
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[GetPassItemData] Exception Error : " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool MySQLManager::GetPassExpData(std::string& passId_, std::vector<uint16_t>& passExpLimit_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[GetPassExpData] dbPool is empty. Failed to get DB connection." << '\n';
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
+    std::string query_s = "SELECT level, exp FROM " + passId_ + "Exp";
+
+    const char* Query = query_s.c_str();
+
+    if (mysql_query(ConnPtr, Query) != 0) {
+        std::cerr << "[GetPassExpData] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        return false;
+    }
+
+    try {
+        Result = mysql_store_result(ConnPtr);
+        if (Result == nullptr) {
+            std::cerr << "[GetPassExpData] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            return false;
+        }
+
+        while ((Row = mysql_fetch_row(Result)) != NULL) {
+            if (!Row[0] || !Row[1]) continue;
+
+            passExpLimit_[(uint16_t)std::stoi(Row[0])] = (uint16_t)std::stoi(Row[1]);
+        }
+
+        mysql_free_result(Result);
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[GetPassExpData] Exception Error : " << e.what() << std::endl;
+        return false;
+    }
+}
 
 
 // ======================= SYNCRONIZATION =======================

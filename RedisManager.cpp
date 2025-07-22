@@ -63,6 +63,24 @@ void RedisManager::InitShopData() {
     ShopDataManager::GetInstance().LoadFromMySQL(shopItemData);
 }
 
+void RedisManager::InitPassData() {
+
+    std::vector<std::string> passIdVector = { 
+        "BattlePass1001"
+    };
+
+    for (auto& tempPassId : passIdVector) {
+        std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash> passDataMap;
+        std::vector<uint16_t> passExpLimit;
+
+        // 패스 데이터 하나라도 불러오기 실패 시 return
+        if (!mySQLManager->GetPassItemData(tempPassId, passDataMap)) return;
+        if (!mySQLManager->GetPassExpData(tempPassId, passExpLimit)) return;
+
+        PassRewardManager::GetInstance().LoadFromMySQL(tempPassId, passDataMap, passExpLimit);
+    }
+}
+
 
 // ===================== PACKET MANAGEMENT =====================
 

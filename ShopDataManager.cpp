@@ -5,7 +5,7 @@ ShopDataManager& ShopDataManager::GetInstance() {
     return instance;
 }
 
-bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& em) {
+bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& shopItemMap_) {
 	
 	if (loadCheck) { // 이미 데이터가 로드되었으므로 중복 호출 방지
 		std::cout << "[ShopDataManager::LoadFromMySQL] LoadFromMySQL already completed." << '\n';
@@ -13,7 +13,7 @@ bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, Sh
 	}
 
 	// 상점 장비 데이터 저장
-	shopItemMap = std::move(em);
+	shopItemMap = std::move(shopItemMap_);
 	for (auto& [itemId, shopItem] : shopItemMap) {
 		auto tempItemInfo = ItemDataManager::GetInstance().GetItemData(shopItem.itemCode, static_cast<uint16_t>(shopItem.itemType));
 		if (!tempItemInfo) {

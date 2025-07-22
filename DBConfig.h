@@ -13,6 +13,7 @@
 
 #include "UserSyncData.h"
 #include "ItemData.h"
+#include "PassData.h"
 #include "ShopItemData.h"
 
 constexpr const char* DB_HOST = "127.0.0.1";

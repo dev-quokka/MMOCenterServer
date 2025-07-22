@@ -7,7 +7,7 @@ public:
 	static ShopDataManager& GetInstance();
 
 	// MySQL에서 상점 데이터를 로드한 뒤, 각 아이템 코드에 해당하는 ItemData 정보를 매칭하여 저장
-	bool LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& em);
+	bool LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& shopItemMap_);
 
 	// 유저가 상점에서 특정 아이템을 선택했을 때 해당 아이템 정보를 반환
 	const ShopItem* GetItem(uint16_t itemId, uint16_t days) const;
@@ -19,6 +19,8 @@ private:
 	ShopDataManager() = default;
 	ShopDataManager(const ShopDataManager&) = delete;
 	ShopDataManager& operator=(const ShopDataManager&) = delete;
+	ShopDataManager(ShopDataManager&&) = delete;
+	ShopDataManager& operator=(ShopDataManager&&) = delete;
 
 	std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> shopItemMap;
 	std::vector<ShopItem> shopItemVector;

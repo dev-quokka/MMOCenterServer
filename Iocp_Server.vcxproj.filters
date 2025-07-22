@@ -40,6 +40,9 @@
     <Filter Include="헤더 파일\InGame\ItemDataManager">
       <UniqueIdentifier>{90ae3d76-4d60-4a49-8b88-3787a279fd1d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="헤더 파일\InGame\PassRewardManager">
+      <UniqueIdentifier>{aa2d9840-8f4d-49c2-971b-f95c77dd8f59}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -74,6 +77,12 @@
     </ClCompile>
     <ClCompile Include="ItemDataManager.cpp">
       <Filter>헤더 파일\InGame\ItemDataManager</Filter>
+    </ClCompile>
+    <ClCompile Include="PassRewardManager.cpp">
+      <Filter>헤더 파일\InGame\PassRewardManager</Filter>
+    </ClCompile>
+    <ClCompile Include="PassRewardData.cpp">
+      <Filter>헤더 파일\InGame\PassRewardManager</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -143,8 +152,14 @@
     <ClInclude Include="DBConfig.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="CountingSemaphore.h">
-      <Filter>헤더 파일</Filter>
+    <ClInclude Include="PassRewardManager.h">
+      <Filter>헤더 파일\InGame\PassRewardManager</Filter>
+    </ClInclude>
+    <ClInclude Include="PassData.h">
+      <Filter>헤더 파일\InGame\PassRewardManager</Filter>
+    </ClInclude>
+    <ClInclude Include="PassRewardData.h">
+      <Filter>헤더 파일\InGame\PassRewardManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

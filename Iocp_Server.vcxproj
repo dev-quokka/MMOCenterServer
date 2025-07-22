@@ -147,6 +147,8 @@
     <ClCompile Include="OverLappedManager.cpp" />
     <ClCompile Include="ChannelServersManager.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="PassRewardData.cpp" />
+    <ClCompile Include="PassRewardManager.cpp" />
     <ClCompile Include="QuokkaServer.cpp" />
     <ClCompile Include="RedisManager.cpp" />
     <ClCompile Include="ShopDataManager.cpp" />
@@ -155,13 +157,15 @@
     <ClInclude Include="ChannelServer.h" />
     <ClInclude Include="ConnUser.h" />
     <ClInclude Include="ConnUsersManager.h" />
-    <ClInclude Include="CountingSemaphore.h" />
     <ClInclude Include="DBConfig.h" />
     <ClInclude Include="Define.h" />
     <ClInclude Include="InGameUser.h" />
     <ClInclude Include="InGameUserManager.h" />
     <ClInclude Include="ItemData.h" />
     <ClInclude Include="ItemDataManager.h" />
+    <ClInclude Include="PassData.h" />
+    <ClInclude Include="PassRewardData.h" />
+    <ClInclude Include="PassRewardManager.h" />
     <ClInclude Include="ShopDataManager.h" />
     <ClInclude Include="ShopItemData.h" />
     <ClInclude Include="ShopItemPacket.h" />
