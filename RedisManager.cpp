@@ -65,28 +65,19 @@ void RedisManager::InitShopData() {
 
 void RedisManager::InitPassData() {
 
-    std::vector<std::pair<std::string, std::uint16_t>> passVector = { // { 패스 이름, 패스 최대 레벨 }
-        { "BattlePass1001", 50 },
-        { "SeasonPass1001", 50 },
-        { "LevelPass1001", 100 }
-    };
+    // 현재 날짜 기준으로 진행 중인 패스 ID 및 최대 레벨 조회
+    std::vector<std::pair<std::string, PassInfo>> passIdVector; // { 패스 ID, 패스 최대 레벨 }
+    if (!mySQLManager->GetPassInfo(passIdVector)) return;
 
-    for (auto& tempPass : passVector) {
-        std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash> passDataMap;
+    // 각 패스 ID에 해당하는 보상 아이템 데이터 로드
+    std::unordered_map<std::string, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>> passDataMap;
+    if (!mySQLManager->GetPassItemData(passIdVector, passDataMap)) return;
 
-        auto tempPassId = tempPass.first;
-        auto tempPassMaxLevel = tempPass.second;
+    // 패스 레벨별 누적 경험치 정보 로드 (추후 패스별 경험치 테이블이 필요하면 passIdVector를 넘겨 패스별 경험치를 로드하도록 변경)
+    std::vector<uint32_t> passExpLimit_;
+    if (!mySQLManager->GetPassExpData(passExpLimit_)) return;
 
-        // 패스 데이터 하나라도 불러오기 실패 시 return
-        if (!mySQLManager->GetPassItemData(tempPassId, passDataMap)) return;
-
-        std::vector<uint16_t> passExpLimit;
-        passExpLimit.resize(tempPassMaxLevel+1);
-
-        if (!mySQLManager->GetPassExpData(tempPassId, passExpLimit)) return;
-
-        PassRewardManager::GetInstance().LoadFromMySQL(tempPassId, passDataMap, passExpLimit);
-    }
+    PassRewardManager::GetInstance().LoadFromMySQL(passIdVector, passDataMap, passExpLimit_);
 }
 
 

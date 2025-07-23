@@ -10,6 +10,12 @@ enum class PassCurrencyType : uint16_t { // 무료 패스 or 유료 패스
     CASH1
 };
 
+struct PassInfo {
+    std::string eventStart;
+    std::string eventEnd;
+    uint16_t passMaxLevel = 0;
+};
+
 struct PassData {
     uint16_t itemCode = 0;
     uint16_t passLevel = 0;

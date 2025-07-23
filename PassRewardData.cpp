@@ -1,6 +1,6 @@
 #include "PassRewardData.h"
 
-bool PassRewardData::LoadFromMySQL(std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>& PassDataMap_, std::vector<uint16_t>& passExpLimit_) {
+bool PassRewardData::LoadFromMySQL(PassInfo& passInfo_, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>& PassDataMap_) {
 	
 	if (loadCheck) { // 이미 데이터가 로드되었으므로 중복 호출 방지
 		std::cout << "[PassRewardData::LoadFromMySQL] LoadFromMySQL already completed." << '\n';
@@ -14,7 +14,7 @@ bool PassRewardData::LoadFromMySQL(std::unordered_map<PassDataKey, std::unique_p
 			std::cerr << "[PassRewardData::LoadFromMySQL] Invalid itemCode: " << passItem.get()->itemCode << '\n';
 			continue;
 		}
-
+		
 		switch (passItem->passCurrencyType) {
 		case PassCurrencyType::FREE:
 			std::cout << "패스 레벨 : " << passItem->passLevel << ", 패스 아이템 결제 타입 : FREE" << '\n';
@@ -26,12 +26,14 @@ bool PassRewardData::LoadFromMySQL(std::unordered_map<PassDataKey, std::unique_p
 			std::cout << "패스 레벨 : " << passItem->passLevel << ", 패스 아이템 결제 타입 : UNKNOWN" << '\n';
 			break;
 		}
-			
+
 		passItem.get()->itemInfo = tempItemInfo;
 	}
 
-	passExpLimit = std::move(passExpLimit_);
-
+	passInfo = passInfo_;
+	std::cout << "이벤트 시작 : " << passInfo.eventStart << '\n';
+	std::cout << "이벤트 종료 : " << passInfo.eventEnd << '\n';
+	std::cout << "패스 최대 레벨 : " << passInfo.passMaxLevel << '\n';
 	loadCheck = true;
 	return true;
 }
@@ -43,4 +45,8 @@ const PassData* PassRewardData::GetPassItemData(uint16_t passLevel_, uint16_t pa
 	}
 
 	return it->second.get();
+}
+
+const uint16_t PassRewardData::GetPassMaxLevel(uint16_t passLevel_) const {
+	return passInfo.passMaxLevel;
 }

@@ -238,7 +238,7 @@ bool MySQLManager::GetShopItemData(std::unordered_map<ShopItemKey, ShopItem, Sho
     }
 }
 
-bool MySQLManager::GetPassItemData(std::string& passId_, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>& passDataMap_) {
+bool MySQLManager::GetPassInfo(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_) {
     semaphore.acquire();
 
     MYSQL* ConnPtr = GetConnection();
@@ -252,7 +252,67 @@ bool MySQLManager::GetPassItemData(std::string& passId_, std::unordered_map<Pass
     MYSQL_RES* Result;
     MYSQL_ROW Row;
 
-    std::string query_s = "SELECT passItemName, item_code, passLevel, itemCount, daysOrCount, itemType, passCurrencyType FROM " + passId_;
+    std::string query_s = "SELECT passId, passMaxLevel, eventStart, eventEnd FROM PassInfoData WHERE eventStart<= NOW() AND eventEnd > NOW()";
+
+    const char* Query = query_s.c_str();
+
+    if (mysql_query(ConnPtr, Query) != 0) {
+        std::cerr << "[GetPassItemData] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        return false;
+    }
+
+    try {
+        Result = mysql_store_result(ConnPtr);
+        if (Result == nullptr) {
+            std::cerr << "[GetPassItemData] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            return false;
+        }
+
+        while ((Row = mysql_fetch_row(Result)) != NULL) {
+            if (!Row[0] || !Row[1] || !Row[2] || !Row[3]) continue;
+
+            PassInfo tempInfo;
+            tempInfo.passMaxLevel = static_cast<uint16_t>(std::stoi(Row[1]));
+            tempInfo.eventStart = Row[2];
+            tempInfo.eventEnd = Row[3];
+
+            passInfoVector_.emplace_back(Row[0], tempInfo);
+        }
+
+        mysql_free_result(Result);
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[GetPassItemData] Exception Error : " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool MySQLManager::GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>>& passDataMap_) {
+    
+    if (passInfoVector_.empty()) {
+        std::cerr << "[GetPassItemData] passInfoVector is empty." << '\n';
+        return false;
+    }
+
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[GetPassItemData] dbPool is empty. Failed to get DB connection." << '\n';
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    MYSQL_RES* Result;
+    MYSQL_ROW Row;
+
+    std::string query_s = "SELECT passId, item_code, passLevel, itemCount, daysOrCount, itemType, passCurrencyType FROM PassItemData WHERE passId IN (";
+    for (int i = 0; i < passInfoVector_.size(); i++) {
+        if (i != passInfoVector_.size() - 1) query_s += "'" + passInfoVector_[i].first + "', ";
+        else query_s += "'" + passInfoVector_[i].first + "')";
+    }
 
     const char* Query = query_s.c_str();
 
@@ -279,7 +339,7 @@ bool MySQLManager::GetPassItemData(std::string& passId_, std::unordered_map<Pass
             passItemData->itemType = static_cast<ItemType>(std::stoi(Row[5]));
             passItemData->passCurrencyType = static_cast<PassCurrencyType>(std::stoi(Row[6]));
 
-            passDataMap_[{passItemData->passLevel, static_cast<uint16_t>(passItemData->passCurrencyType)}] = std::move(passItemData);
+            passDataMap_[Row[0]][{passItemData->passLevel, static_cast<uint16_t>(passItemData->passCurrencyType)}] = std::move(passItemData);
         }
 
         mysql_free_result(Result);
@@ -291,7 +351,7 @@ bool MySQLManager::GetPassItemData(std::string& passId_, std::unordered_map<Pass
     }
 }
 
-bool MySQLManager::GetPassExpData(std::string& passId_, std::vector<uint16_t>& passExpLimit_) {
+bool MySQLManager::GetPassExpData(std::vector<uint32_t>& passExpLimit_) {
     semaphore.acquire();
 
     MYSQL* ConnPtr = GetConnection();
@@ -305,7 +365,7 @@ bool MySQLManager::GetPassExpData(std::string& passId_, std::vector<uint16_t>& p
     MYSQL_RES* Result;
     MYSQL_ROW Row;
 
-    std::string query_s = "SELECT level, exp FROM " + passId_ + "Exp";
+    std::string query_s = "SELECT level, exp FROM PassExpData";
 
     const char* Query = query_s.c_str();
 
@@ -321,9 +381,23 @@ bool MySQLManager::GetPassExpData(std::string& passId_, std::vector<uint16_t>& p
             return false;
         }
 
+        std::unordered_map<uint16_t, uint32_t> passLevelExpMap;
+        uint16_t maxLevel = 0;
+
         while ((Row = mysql_fetch_row(Result)) != NULL) {
             if (!Row[0] || !Row[1]) continue;
-            passExpLimit_[(uint16_t)std::stoi(Row[0])] = (uint16_t)std::stoi(Row[1]);
+
+            uint16_t tempLevel = static_cast<uint16_t>(std::stoi(Row[0]));
+            uint32_t tempExp = static_cast<uint32_t>(std::stoi(Row[1]));
+
+            passLevelExpMap[tempLevel] = tempExp;
+            if (tempLevel > maxLevel) maxLevel = tempLevel;
+        }
+
+        // maxLevel 기준으로 passExpLimit_ 크기를 조정하여 passLevelExpMap의 값을 passExpLimit_에 할당
+        passExpLimit_.resize(maxLevel + 1);
+        for (auto& [level, exp] : passLevelExpMap) {
+            passExpLimit_[level] = exp;
         }
 
         mysql_free_result(Result);

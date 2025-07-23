@@ -23,8 +23,9 @@ public:
 	bool GetConsumableItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
 	bool GetMaterialItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
 	bool GetShopItemData(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& shopItemData_);
-	bool GetPassItemData(std::string& passId_, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>& passDataMap_);
-	bool GetPassExpData(std::string& passId_, std::vector<uint16_t>& passExpLimit_);
+	bool GetPassInfo(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_);
+	bool GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>>& passDataMap_);
+	bool GetPassExpData(std::vector<uint32_t>& passExpLimit_);
 
 	// ======================= SYNCRONIZATION =======================
 	bool LogoutSync(uint32_t userPk_, USERINFO userInfo_, std::vector<EQUIPMENT> userEquip_, std::vector<CONSUMABLES> userConsum_, std::vector<MATERIALS> userMat_);

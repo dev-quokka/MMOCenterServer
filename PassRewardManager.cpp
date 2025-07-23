@@ -6,18 +6,23 @@ PassRewardManager& PassRewardManager::GetInstance() {
 }
 
 // Mysql에서 데이터 로드 후 세팅
-bool PassRewardManager::LoadFromMySQL(std::string passId_, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>& PassDataMap_, std::vector<uint16_t>& passExpLimit_) {
+bool PassRewardManager::LoadFromMySQL(std::vector<std::pair<std::string, PassInfo>> passIdVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>>& passDataMap_, std::vector<uint32_t>& passExpLimit_) {
 
-	if (passMap.count(passId_)) { // 이미 데이터가 로드되었으므로 중복 호출 방지
+	if (loadCheck) { // 이미 데이터가 로드되었으므로 중복 호출 방지
 		std::cout << "[PassRewardManager::LoadFromMySQL] LoadFromMySQL already completed." << '\n';
 		return true;
-	}   
+	}
 
-	PassRewardData passRewardData;
-	passRewardData.LoadFromMySQL(PassDataMap_, passExpLimit_);
+	for (auto& t : passIdVector_) {
+		PassRewardData passRewardData;
+		passRewardData.LoadFromMySQL(t.second, passDataMap_[t.first]);
 
-	passMap[passId_] = std::move(passRewardData);
+		passMap[t.first] = std::move(passRewardData);
+	}
+
+	passExpLimit = std::move(passExpLimit_);
 	
+	loadCheck = true;
 	return true;
 }
 
@@ -36,3 +41,13 @@ const PassData* PassRewardManager::GetPassItemDataByPassId(std::string& passId_,
 
 	return nullptr;
 }
+
+const uint32_t PassRewardManager::GetPassLevelUpExp(std::string& passId_, uint16_t passLevel_) const {
+	auto passIter = passMap.find(passId_);
+	if (passIter != passMap.end()) {
+		auto tempPassMaxLevel = passIter->second.GetPassMaxLevel(passLevel_);
+		if (passLevel_ > tempPassMaxLevel) return 0;
+		return passExpLimit[passLevel_];
+	}
+	return 0;
+};
