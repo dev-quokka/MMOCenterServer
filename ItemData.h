@@ -23,6 +23,7 @@ struct EquipmentItemData : public ItemData {
     // 추후 필요한 데이터(레벨 제한 및 등급 제한) 추가 예정
 
     void setEquipmentItemData(ShopItemForSend& tempShopData_) const {
+        strncpy_s(tempShopData_.itemName, itemName.c_str(), MAX_ITEM_ID_LEN);
         tempShopData_.attackPower = attackPower;
     }
 };
@@ -32,7 +33,7 @@ struct ConsumableItemData : public ItemData {
     // 추후 필요한 데이터 추가 예정
     
     //void setConsumableItemData(ShopItemForSend& tempShopData_) {
-
+    //     strncpy(tempShopData_.itemName, itemName.c_str(), MAX_ITEM_ID_LEN);
     //}
 };
 
@@ -41,7 +42,7 @@ struct MaterialItemData : public ItemData {
     // 추후 필요한 데이터 추가 예정
 
     //void setMaterialItemData(ShopItemForSend& tempShopData_) {
-
+    //     strncpy(tempShopData_.itemName, itemName.c_str(), MAX_ITEM_ID_LEN);
     //}
 };
 

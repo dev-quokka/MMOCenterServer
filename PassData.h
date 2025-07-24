@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <string>
 #include <iostream>
+#include <algorithm>
 
 #include "ItemDataManager.h"
 
@@ -19,16 +20,6 @@ struct PassInfo {
     std::string eventStart;
     std::string eventEnd;
     uint16_t passMaxLevel = 0;
-};
-
-struct PassData {
-    uint16_t itemCode = 0;
-    uint16_t passLevel = 0;
-    uint16_t itemCount = 1; // 아이템 개수
-    uint16_t daysOrCount = 0;
-    ItemType itemType;
-    PassCurrencyType passCurrencyType;
-    const ItemData* itemInfo = nullptr; // 아이템 정보
 };
 
 struct PassDataKey {

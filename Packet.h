@@ -6,9 +6,10 @@
 #include <chrono>
 
 #include "UserSyncData.h"
+#include "ShopItemPacket.h"
+#include "PassDataPacket.h"
 
 constexpr uint16_t MAX_IP_LEN = 32;
-constexpr uint16_t MAX_PASS_ID_LEN = 32;
 constexpr uint16_t MAX_SERVER_USERS = 128;
 constexpr uint16_t MAX_JWT_TOKEN_LEN = 256;
 constexpr uint16_t MAX_SCORE_SIZE = 512;
@@ -77,6 +78,14 @@ struct SHOP_DATA_RESPONSE : PACKET_HEADER {
 	uint16_t shopItemSize;
 };
 
+struct PASS_DATA_REQUEST : PACKET_HEADER {
+
+};
+
+struct PASS_DATA_RESPONSE : PACKET_HEADER {
+	uint16_t passDataSize;
+};
+
 struct MOVE_SERVER_REQUEST : PACKET_HEADER {
 	uint16_t serverNum;
 };
@@ -109,6 +118,7 @@ struct RAID_RANKING_RESPONSE : PACKET_HEADER {
 };
 
 struct SHOP_BUY_ITEM_REQUEST : PACKET_HEADER {
+	char itemName[MAX_ITEM_ID_LEN + 1];
 	uint16_t itemCode = 0;
 	uint16_t daysOrCount = 0; // [장비: 유저가 원하는 아이템의 사용 기간, 소비: 유저가 원하는 아이템 개수 묶음] 
 	uint16_t itemType; // 0: 장비, 1: 소비, 2: 재료
@@ -119,6 +129,7 @@ struct SHOP_BUY_ITEM_RESPONSE : PACKET_HEADER {
 };
 
 struct GET_PASS_ITEM_REQUEST : PACKET_HEADER {
+	char itemName[MAX_ITEM_ID_LEN + 1];
 	char passId[MAX_PASS_ID_LEN + 1];
 	uint16_t passLevel;
 	uint16_t passCurrencyType;
@@ -295,9 +306,11 @@ enum class PACKET_ID : uint16_t {
 	SHOP_BUY_ITEM_REQUEST = 103,
 	SHOP_BUY_ITEM_RESPONSE = 104,
 
-	// PASSITEM
-	GET_PASS_ITEM_REQUEST = 105,
-	GET_PASS_ITEM_RESPONSE = 106,
+	// PASSITEM (301~ )
+	PASS_DATA_REQUEST = 301,
+	PASS_DATA_RESPONSE = 302,
+	GET_PASS_ITEM_REQUEST = 303,
+	GET_PASS_ITEM_RESPONSE = 304,
 
 
 	// ======================= CASH SERVER (501~ ) =======================	

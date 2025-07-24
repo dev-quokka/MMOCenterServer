@@ -1,4 +1,5 @@
 #pragma once
+
 #include "ShopItemData.h"
 #include "ItemDataManager.h"
 

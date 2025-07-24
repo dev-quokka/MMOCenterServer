@@ -16,6 +16,8 @@ public:
 
 	MYSQL* GetConnection();
 
+	bool UpdatePassItem(char* passId_, uint32_t userPk_, uint16_t passLevel_, uint16_t passCurrencyType_, uint16_t itemCode, uint16_t daysOrCounts_, uint16_t itemType_);
+
 	// ====================== INITIALIZATION =======================
 	bool init();
 
@@ -24,7 +26,7 @@ public:
 	bool GetMaterialItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
 	bool GetShopItemData(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& shopItemData_);
 	bool GetPassInfo(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_);
-	bool GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>>& passDataMap_);
+	bool GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, PassDataForSend, PassDataKeyHash>>& passDataMap_);
 	bool GetPassExpData(std::vector<uint32_t>& passExpLimit_);
 
 

@@ -164,6 +164,7 @@
     <ClInclude Include="ItemData.h" />
     <ClInclude Include="ItemDataManager.h" />
     <ClInclude Include="PassData.h" />
+    <ClInclude Include="PassDataPacket.h" />
     <ClInclude Include="PassRewardData.h" />
     <ClInclude Include="PassRewardManager.h" />
     <ClInclude Include="ShopDataManager.h" />

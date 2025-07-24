@@ -161,5 +161,8 @@
     <ClInclude Include="PassRewardData.h">
       <Filter>헤더 파일\InGame\PassRewardManager</Filter>
     </ClInclude>
+    <ClInclude Include="PassDataPacket.h">
+      <Filter>헤더 파일\InGame\PassRewardManager</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

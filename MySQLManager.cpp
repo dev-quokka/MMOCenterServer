@@ -13,6 +13,120 @@ MYSQL* MySQLManager::GetConnection() {
     return ConnPtr;
 };
 
+bool MySQLManager::UpdatePassItem(char* passId_, uint32_t userPk_, uint16_t passLevel_, uint16_t passCurrencyType_, uint16_t itemCode, uint16_t daysOrCounts_, uint16_t itemType_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[CheckGetPassItem] dbPool is empty. Failed to get DB connection." << '\n';
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    mysql_autocommit(ConnPtr, false);
+
+    MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
+
+    std::string query = "UPDATE PassUserRewardData SET rewardBits = rewardBits | ? WHERE userPk = ? AND passId = ? AND ( rewardBits & ?  ) = 0";
+    if (mysql_stmt_prepare(stmt, query.c_str(), query.length()) != 0) {
+        std::cerr << "[UpdatePassItem] Prepare Error : " << mysql_stmt_error(stmt) << std::endl;
+        return false;
+    }
+
+    MYSQL_BIND passBitBind[4] = {};
+    uint64_t tempBit = 1ULL << (passLevel_ - 1);
+    unsigned long passIdLength = strlen(passId_);
+
+    passBitBind[0].buffer_type = MYSQL_TYPE_LONGLONG;
+    passBitBind[0].buffer = &tempBit;
+
+    passBitBind[1].buffer_type = MYSQL_TYPE_LONG;
+    passBitBind[1].buffer = &userPk_;
+
+    passBitBind[2].buffer_type = MYSQL_TYPE_STRING;
+    passBitBind[2].buffer = (void*)passId_;
+    passBitBind[2].buffer_length = passIdLength;
+    passBitBind[2].length = &passIdLength;
+
+    passBitBind[3].buffer_type = MYSQL_TYPE_LONGLONG;
+    passBitBind[3].buffer = &tempBit;
+
+    if (mysql_stmt_bind_param(stmt, passBitBind) != 0 || mysql_stmt_execute(stmt) != 0) {
+        std::cerr << "[UpdatePassItem] Bind or Exec Error : " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        mysql_rollback(ConnPtr);
+        mysql_autocommit(ConnPtr, true);
+        return false;
+    }
+
+    my_ulonglong affected = mysql_stmt_affected_rows(stmt);
+    mysql_stmt_close(stmt);
+
+    if (affected == 1) { // UPDATE문 성공
+
+        std::string invenQuery;
+
+        if (itemType_ == 0) {
+            invenQuery = "INSERT INTO Equipment(user_pk, item_code, daysOrCount) VALUES (?, ?, ?)";
+        }
+        else if (itemType_ == 1) {
+            invenQuery = "INSERT INTO Consumables(user_pk, item_code, daysOrCount) VALUES (?, ?, ?)";
+        }
+        else if (itemType_ == 2) {
+            invenQuery = "INSERT INTO Materials(user_pk, item_code, daysOrCount) VALUES (?, ?, ?)";
+        }
+        else {
+            std::cerr << "[UpdatePassItem] Unknown itemType : " << itemType_ << '\n';
+            mysql_rollback(ConnPtr);
+            mysql_autocommit(ConnPtr, true);
+            return false;
+        }
+
+        MYSQL_STMT* invenStmt = mysql_stmt_init(ConnPtr);
+        if (mysql_stmt_prepare(invenStmt, invenQuery.c_str(), invenQuery.length()) != 0) {
+            std::cerr << "[UpdatePassItem] Prepare invenStmt Error: " << mysql_stmt_error(invenStmt) << std::endl;
+            mysql_stmt_close(invenStmt);
+            mysql_rollback(ConnPtr);
+            mysql_autocommit(ConnPtr, true);
+            return false;
+        }
+
+        MYSQL_BIND invenBind[3] = {};
+        invenBind[0].buffer_type = MYSQL_TYPE_LONG;
+        invenBind[0].buffer = &userPk_;
+        invenBind[0].is_unsigned = true;
+
+        invenBind[1].buffer_type = MYSQL_TYPE_LONG;
+        invenBind[1].buffer = &itemCode;
+        invenBind[1].is_unsigned = true;
+
+        invenBind[2].buffer_type = MYSQL_TYPE_LONG;
+        invenBind[2].buffer = &daysOrCounts_;
+        invenBind[2].is_unsigned = true;
+
+        if (mysql_stmt_bind_param(invenStmt, invenBind) != 0 || mysql_stmt_execute(invenStmt) != 0 || mysql_stmt_affected_rows(invenStmt) == 0) {
+            std::cerr << "[UpdatePassItem] Execute invenStmt Error" << std::endl;
+            mysql_stmt_close(invenStmt);
+            mysql_rollback(ConnPtr);
+            mysql_autocommit(ConnPtr, true);
+            return false;
+        }
+
+        mysql_stmt_close(invenStmt);
+    }
+
+    if (mysql_commit(ConnPtr) != 0) {
+        std::cerr << "[UpdatePassItem] Commit failed" << std::endl;
+        mysql_rollback(ConnPtr);
+        mysql_autocommit(ConnPtr, true);
+        return false;
+    }
+
+    mysql_autocommit(ConnPtr, true);
+    return true;
+}
+
 // ====================== INITIALIZATION =======================
 
 bool MySQLManager::init() {
@@ -288,7 +402,7 @@ bool MySQLManager::GetPassInfo(std::vector<std::pair<std::string, PassInfo>>& pa
     }
 }
 
-bool MySQLManager::GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>>& passDataMap_) {
+bool MySQLManager::GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, PassDataForSend, PassDataKeyHash>>& passDataMap_) {
     
     if (passInfoVector_.empty()) {
         std::cerr << "[GetPassItemData] passInfoVector is empty." << '\n';
@@ -331,15 +445,15 @@ bool MySQLManager::GetPassItemData(std::vector<std::pair<std::string, PassInfo>>
         while ((Row = mysql_fetch_row(Result)) != NULL) {
             if (!Row[0] || !Row[1] || !Row[2] || !Row[3] || !Row[4] || !Row[5] || !Row[6]) continue;
 
-            auto passItemData = std::make_unique<PassData>();
-            passItemData->itemCode = (uint16_t)std::stoi(Row[1]);
-            passItemData->passLevel = (uint16_t)std::stoi(Row[2]);
-            passItemData->itemCount = (uint16_t)std::stoi(Row[3]);
-            passItemData->daysOrCount = (uint16_t)std::stoi(Row[4]);
-            passItemData->itemType = static_cast<ItemType>(std::stoi(Row[5]));
-            passItemData->passCurrencyType = static_cast<PassCurrencyType>(std::stoi(Row[6]));
+            PassDataForSend passItemData;
+            passItemData.itemCode = (uint16_t)std::stoi(Row[1]);
+            passItemData.passLevel = (uint16_t)std::stoi(Row[2]);
+            passItemData.itemCount = (uint16_t)std::stoi(Row[3]);
+            passItemData.daysOrCount = (uint16_t)std::stoi(Row[4]);
+            passItemData.itemType = std::stoi(Row[5]);
+            passItemData.passCurrencyType = std::stoi(Row[6]);
 
-            passDataMap_[Row[0]][{passItemData->passLevel, static_cast<uint16_t>(passItemData->passCurrencyType)}] = std::move(passItemData);
+            passDataMap_[Row[0]][{passItemData.passLevel, static_cast<uint16_t>(passItemData.passCurrencyType)}] = std::move(passItemData);
         }
 
         mysql_free_result(Result);
@@ -829,10 +943,7 @@ bool MySQLManager::BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t i
     }
 
     auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
-    
-    MYSQL_RES* Result;
-    MYSQL_ROW Row;
-    
+
     mysql_autocommit(ConnPtr, false); // Transaction start
 
     // 금액 처리

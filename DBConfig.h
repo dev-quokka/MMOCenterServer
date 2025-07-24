@@ -15,6 +15,7 @@
 #include "ItemData.h"
 #include "PassData.h"
 #include "ShopItemData.h"
+#include "PassDataPacket.h"
 
 constexpr const char* DB_HOST = "127.0.0.1";
 constexpr const char* DB_USER = "quokka";

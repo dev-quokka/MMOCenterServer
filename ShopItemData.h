@@ -42,5 +42,4 @@ struct ShopItem {
     uint16_t daysOrCount = 0; // [장비: 기간, 소비: 개수 묶음] 
     ItemType itemType;
     CurrencyType currencyType; // 결제수단
-    const ItemData* itemInfo = nullptr; // 아이템 정보
 };
