@@ -27,6 +27,7 @@ public:
 	bool GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, std::unique_ptr<PassData>, PassDataKeyHash>>& passDataMap_);
 	bool GetPassExpData(std::vector<uint32_t>& passExpLimit_);
 
+
 	// ======================= SYNCRONIZATION =======================
 	bool LogoutSync(uint32_t userPk_, USERINFO userInfo_, std::vector<EQUIPMENT> userEquip_, std::vector<CONSUMABLES> userConsum_, std::vector<MATERIALS> userMat_);
 	bool SyncUserInfo(uint32_t userPk_, USERINFO userInfo_);

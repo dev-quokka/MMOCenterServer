@@ -10,10 +10,10 @@ public:
 	bool LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& shopItemMap_);
 
 	// 유저가 상점에서 특정 아이템을 선택했을 때 해당 아이템 정보를 반환
-	const ShopItem* GetItem(uint16_t itemId, uint16_t days) const;
+	const ShopItemForSend* GetItem(uint16_t itemId, uint16_t days) const;
 
 	// 유저 접속 시 전체 상점 정보를 전달하기 위한 벡터 반환
-	const std::vector<ShopItem>& GetShopData() const;
+	const std::vector<ShopItemForSend>& GetShopData() const;
 
 private:
 	ShopDataManager() = default;
@@ -22,8 +22,8 @@ private:
 	ShopDataManager(ShopDataManager&&) = delete;
 	ShopDataManager& operator=(ShopDataManager&&) = delete;
 
-	std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash> shopItemMap;
-	std::vector<ShopItem> shopItemVector;
+	std::unordered_map<ShopItemKey, ShopItemForSend, ShopItemKeyHash> shopItemMap;
+	std::vector<ShopItemForSend> shopItemVector;
 
 	bool loadCheck = false;
 };

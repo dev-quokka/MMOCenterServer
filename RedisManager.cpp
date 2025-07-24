@@ -421,19 +421,7 @@ void RedisManager::SendShopDataToClient(uint16_t connObjNum_, uint16_t packetSiz
     ShopItemForSend* itemVector = reinterpret_cast<ShopItemForSend*>(packetBuffer + sizeof(SHOP_DATA_RESPONSE));
 
     for (int i = 0; i < shopVectorSize; ++i) {
-        ShopItemForSend& tempShopItem = itemVector[i];
-        const ShopItem& tempShopVector = shopVector[i];
-
-        tempShopItem.itemPrice = tempShopVector.itemPrice;
-        tempShopItem.itemCode = tempShopVector.itemCode;
-        tempShopItem.itemCount = tempShopVector.itemCount;
-        tempShopItem.daysOrCount = tempShopVector.daysOrCount;
-        tempShopItem.itemType = static_cast<uint16_t>(tempShopVector.itemType);
-        tempShopItem.currencyType = static_cast<uint16_t>(tempShopVector.currencyType);
-
-        if (tempShopVector.itemInfo) {
-            tempShopVector.itemInfo->FillShopItemData(tempShopItem);
-        }
+        itemVector[i] = shopVector[i];
     }
 
     try {
@@ -520,7 +508,7 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
     ConnUser* user = connUsersManager->FindUser(connObjNum_);
     std::string currencyTypeKey = "userinfo:{" + std::to_string(user->GetPk()) + "}";
 
-    CurrencyType tempType = itemInfo->currencyType;
+    auto tempType = itemInfo->currencyType;
 
     SHOP_BUY_ITEM_RESPONSE shopBuyRes;
     shopBuyRes.PacketId = (uint16_t)PACKET_ID::SHOP_BUY_ITEM_RESPONSE;
@@ -621,8 +609,55 @@ void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char*
     auto cashReqPacket = reinterpret_cast<GET_PASS_ITEM_REQUEST*>(pPacket_);
     auto tempPassId = (std::string)cashReqPacket->passId;
 
-    PassRewardManager::GetInstance().GetPassItemDataByPassId(tempPassId, cashReqPacket->passLevel, cashReqPacket->passCurrencyType);
+    ConnUser* user = connUsersManager->FindUser(connObjNum_);
+    auto* tempPassData = PassRewardManager::GetInstance().GetPassItemDataByPassId(tempPassId, cashReqPacket->passLevel, cashReqPacket->passCurrencyType);
 
+    GET_PASS_ITEM_RESPONSE getPassRes;
+    getPassRes.PacketId = (uint16_t)PACKET_ID::GET_PASS_ITEM_RESPONSE;
+    getPassRes.PacketLength = sizeof(GET_PASS_ITEM_RESPONSE);
+
+    if (PassCurrencyTypeMap.find(tempPassData->passCurrencyType) == PassCurrencyTypeMap.end()) {
+        std::cerr << "[GetPassItem] Unknown passCurrency type" << '\n';
+        getPassRes.isSuccess = false;
+        user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+        return;
+    }
+
+    std::string passCurrencyType = PassCurrencyTypeMap.at(tempPassData->passCurrencyType);
+    std::string passKey = "pass:{" + std::to_string(user->GetPk()) + "}:" + tempPassId + ":" + passCurrencyType;
+
+    // 유저 현재 패스 레벨과 요청한 패스 레벨 체크
+    try {
+        auto val = redis->hget(passCurrencyType, "userPassLevel");
+        if (!val) {
+            std::cerr << "[GetPassItem] Redis key not found : " << passKey << '\n';
+            getPassRes.isSuccess = false;
+            user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+            return;
+        }
+
+        if (std::stoi(*val) < cashReqPacket->passLevel) { // 유저가 요청한 패스 레벨이 현재 레벨 보다 높다면 false 전송
+            getPassRes.isSuccess = false;
+            user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+            return;
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[GetPassItem] Redis get failed : " << e.what() << '\n';
+        getPassRes.isSuccess = false;
+        user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+        return;
+    }
+
+    // 유저 해당 아이템 이미 받았는지 체크
+    
+    // 레디스에서 비트셋 부분 확인해서 안받았으면 비트셋 수정해주고
+    // tempPassData 레디스 인벤토리에 넣어주기.
+
+    // 그 다음 MySQL에 업데이트문 실행하고 실패하면 FALSE 반환,
+    // 성공하면 아이템을 인벤토리에 넣는 과정까지 트랜잭션 수행.
+    
+    // 결과 여부 유저에게 반환
 
 
 }

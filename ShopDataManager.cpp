@@ -13,18 +13,40 @@ bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, Sh
 	}
 
 	// 상점 장비 데이터 저장
-	shopItemMap = std::move(shopItemMap_);
-	for (auto& [itemId, shopItem] : shopItemMap) {
+	for (auto& [itemId, shopItem] : shopItemMap_) {
 		auto tempItemInfo = ItemDataManager::GetInstance().GetItemData(shopItem.itemCode, static_cast<uint16_t>(shopItem.itemType));
 		if (!tempItemInfo) {
 			std::cerr << "[ShopDataManager::LoadFromMySQL] Invalid itemCode: " << shopItem.itemCode << '\n';
 			continue;
 		}
 
-		shopItem.itemInfo = tempItemInfo;
-		shopItem.itemType = tempItemInfo->itemType;
+        ShopItemForSend tempSendData;
+		tempSendData.itemPrice = shopItem.itemPrice;
+		tempSendData.itemCode = shopItem.itemCode;
+		tempSendData.itemCount = shopItem.itemCount;
+		tempSendData.daysOrCount = shopItem.daysOrCount;
+		tempSendData.itemType = static_cast<uint16_t>(shopItem.itemType);
+		tempSendData.currencyType = static_cast<uint16_t>(shopItem.currencyType);
 
-		shopItemVector.emplace_back(shopItem);
+		// 각 타입에 맞는 아이템 정보 세팅
+        switch (shopItem.itemType) {
+			case ItemType::EQUIPMENT: {
+				const EquipmentItemData* eq = static_cast<const EquipmentItemData*>(tempItemInfo);
+				eq->setEquipmentItemData(tempSendData);
+			}
+			break;
+			case ItemType::CONSUMABLE:
+				// const ConsumableItemData* cs = static_cast<const ConsumableItemData*>(tempItemInfo);
+				break;
+			case ItemType::MATERIAL:
+				// const MaterialItemData* mt = static_cast<const MaterialItemData*>(tempItemInfo);
+				break;
+			default:
+				break;
+        }
+
+		shopItemMap[itemId] = tempSendData;
+		shopItemVector.emplace_back(tempSendData);
 	}
 
 	std::sort(shopItemVector.begin(), shopItemVector.end(), [](const auto& a, const auto& b) { // itemType 기준 오름차순 정렬 후, itemCode 기준 오름차순 정렬 후, daysOrCount 기준 오름차순 정렬
@@ -36,7 +58,7 @@ bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, Sh
 	return true;
 }
 
-const ShopItem* ShopDataManager::GetItem(uint16_t itemId, uint16_t days) const {
+const ShopItemForSend* ShopDataManager::GetItem(uint16_t itemId, uint16_t days) const {
 	auto it = shopItemMap.find({ itemId , days});
 	if (it == shopItemMap.end()) {
 		return nullptr;
@@ -45,6 +67,6 @@ const ShopItem* ShopDataManager::GetItem(uint16_t itemId, uint16_t days) const {
 	return &(it->second);
 }
 
-const std::vector<ShopItem>& ShopDataManager::GetShopData() const {
+const std::vector<ShopItemForSend>& ShopDataManager::GetShopData() const {
 	return shopItemVector;
 }

@@ -10,6 +10,11 @@ enum class PassCurrencyType : uint16_t { // 무료 패스 or 유료 패스
     CASH1
 };
 
+inline const std::unordered_map<PassCurrencyType, std::string> PassCurrencyTypeMap = {
+     {PassCurrencyType::FREE, "free"},
+     {PassCurrencyType::CASH1, "cash1"},
+};
+
 struct PassInfo {
     std::string eventStart;
     std::string eventEnd;

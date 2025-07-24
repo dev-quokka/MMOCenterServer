@@ -12,10 +12,10 @@ enum class CurrencyType : uint16_t {
     MILEAGE
 };
 
-inline const std::unordered_map<CurrencyType, std::string> currencyTypeMap = {
-     {CurrencyType::GOLD, "gold"},
-     {CurrencyType::CASH, "cash"},
-     {CurrencyType::MILEAGE, "mileage"},
+inline const std::unordered_map<uint16_t, std::string> currencyTypeMap = {
+     {0, "gold"}, // CurrencyType::GOLD
+     {1, "cash"}, // CurrencyType::CASH
+     {2, "mileage"}, // CurrencyType::MILEAGE
 };
 
 struct ShopItemKey {

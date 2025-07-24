@@ -14,26 +14,11 @@ bool PassRewardData::LoadFromMySQL(PassInfo& passInfo_, std::unordered_map<PassD
 			std::cerr << "[PassRewardData::LoadFromMySQL] Invalid itemCode: " << passItem.get()->itemCode << '\n';
 			continue;
 		}
-		
-		switch (passItem->passCurrencyType) {
-		case PassCurrencyType::FREE:
-			std::cout << "패스 레벨 : " << passItem->passLevel << ", 패스 아이템 결제 타입 : FREE" << '\n';
-			break;
-		case PassCurrencyType::CASH1:
-			std::cout << "패스 레벨 : " << passItem->passLevel << ", 패스 아이템 결제 타입 : CASH1" << '\n';
-			break;
-		default:
-			std::cout << "패스 레벨 : " << passItem->passLevel << ", 패스 아이템 결제 타입 : UNKNOWN" << '\n';
-			break;
-		}
 
 		passItem.get()->itemInfo = tempItemInfo;
 	}
 
 	passInfo = passInfo_;
-	std::cout << "이벤트 시작 : " << passInfo.eventStart << '\n';
-	std::cout << "이벤트 종료 : " << passInfo.eventEnd << '\n';
-	std::cout << "패스 최대 레벨 : " << passInfo.passMaxLevel << '\n';
 	loadCheck = true;
 	return true;
 }
