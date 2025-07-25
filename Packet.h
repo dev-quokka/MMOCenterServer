@@ -128,6 +128,20 @@ struct SHOP_BUY_ITEM_RESPONSE : PACKET_HEADER {
 	bool isSuccess;
 };
 
+struct PASS_EXP_UP_REQUEST : PACKET_HEADER {
+	char passId[MAX_PASS_ID_LEN + 1];
+	uint16_t passLevel;
+	uint16_t passCurrencyType;
+	uint16_t acqPassExp;
+};
+
+struct PASS_EXP_UP_RESPONSE : PACKET_HEADER {
+	char passId[MAX_PASS_ID_LEN + 1];
+	uint16_t passLevel = 0;
+	uint16_t passExp;
+	bool isSuccess;
+};
+
 struct GET_PASS_ITEM_REQUEST : PACKET_HEADER {
 	char itemName[MAX_ITEM_ID_LEN + 1];
 	char passId[MAX_PASS_ID_LEN + 1];
@@ -311,6 +325,9 @@ enum class PACKET_ID : uint16_t {
 	PASS_DATA_RESPONSE = 302,
 	GET_PASS_ITEM_REQUEST = 303,
 	GET_PASS_ITEM_RESPONSE = 304,
+
+	PASS_EXP_UP_REQUEST = 310,
+	PASS_EXP_UP_RESPONSE = 311,
 
 
 	// ======================= CASH SERVER (501~ ) =======================	

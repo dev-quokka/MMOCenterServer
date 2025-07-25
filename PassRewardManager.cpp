@@ -6,7 +6,7 @@ PassRewardManager& PassRewardManager::GetInstance() {
 }
 
 // Mysql에서 데이터 로드 후 세팅
-bool PassRewardManager::LoadFromMySQL(std::vector<std::pair<std::string, PassInfo>> passIdVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, PassDataForSend, PassDataKeyHash>>& passDataMap_, std::vector<uint32_t>& passExpLimit_) {
+bool PassRewardManager::LoadFromMySQL(std::vector<std::pair<std::string, PassInfo>> passIdVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, PassDataForSend, PassDataKeyHash>>& passDataMap_, std::vector<uint16_t>& passExpLimit_) {
 
 	if (loadCheck) { // 이미 데이터가 로드되었으므로 중복 호출 방지
 		std::cout << "[PassRewardManager::LoadFromMySQL] LoadFromMySQL already completed." << '\n';
@@ -70,12 +70,15 @@ const PassDataForSend* PassRewardManager::GetPassItemDataByPassId(std::string& p
 	return nullptr;
 }
 
-const uint32_t PassRewardManager::GetPassLevelUpExp(std::string& passId_, uint16_t passLevel_) const {
-	auto passIter = passMap.find(passId_);
-	if (passIter != passMap.end()) {
-		auto tempPassMaxLevel = passIter->second.GetPassMaxLevel(passLevel_);
-		if (passLevel_ > tempPassMaxLevel) return 0;
-		return passExpLimit[passLevel_];
+const std::pair<uint16_t, uint16_t> PassRewardManager::PassExpUp(uint16_t acqPassExp_, uint16_t userLevel, uint16_t currentPassExp_) {
+	currentPassExp_ += acqPassExp_;
+
+	uint16_t levelUpCount = 0;
+
+	while(passExpLimit[userLevel + levelUpCount] <= currentPassExp_) { // 레벨 업 체크
+		currentPassExp_ -= passExpLimit[userLevel + levelUpCount];
+		levelUpCount++;
 	}
-	return 0;
-};
+
+	return { levelUpCount , currentPassExp_ }; // {레벨 증가량, 현재 경험치}	
+}

@@ -70,6 +70,7 @@ private:
     void MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void SendPassDataToClient(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
+    void PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
     void GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
 
     // ======================= CASH SERVER =======================

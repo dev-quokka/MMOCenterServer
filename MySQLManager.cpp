@@ -465,7 +465,7 @@ bool MySQLManager::GetPassItemData(std::vector<std::pair<std::string, PassInfo>>
     }
 }
 
-bool MySQLManager::GetPassExpData(std::vector<uint32_t>& passExpLimit_) {
+bool MySQLManager::GetPassExpData(std::vector<uint16_t>& passExpLimit_) {
     semaphore.acquire();
 
     MYSQL* ConnPtr = GetConnection();
@@ -495,14 +495,14 @@ bool MySQLManager::GetPassExpData(std::vector<uint32_t>& passExpLimit_) {
             return false;
         }
 
-        std::unordered_map<uint16_t, uint32_t> passLevelExpMap;
+        std::unordered_map<uint16_t, uint16_t> passLevelExpMap;
         uint16_t maxLevel = 0;
 
         while ((Row = mysql_fetch_row(Result)) != NULL) {
             if (!Row[0] || !Row[1]) continue;
 
             uint16_t tempLevel = static_cast<uint16_t>(std::stoi(Row[0]));
-            uint32_t tempExp = static_cast<uint32_t>(std::stoi(Row[1]));
+            uint16_t tempExp = static_cast<uint16_t>(std::stoi(Row[1]));
 
             passLevelExpMap[tempLevel] = tempExp;
             if (tempLevel > maxLevel) maxLevel = tempLevel;
