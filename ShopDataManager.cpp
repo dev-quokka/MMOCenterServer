@@ -45,6 +45,8 @@ bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, Sh
 				break;
         }
 
+
+
 		shopItemMap[itemId] = tempSendData;
 		shopItemVector.emplace_back(tempSendData);
 	}

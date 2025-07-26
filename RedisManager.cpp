@@ -1,5 +1,26 @@
 #include "RedisManager.h"
 
+void RedisManager::Test_CashCahrge(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_){
+    auto testCashCharge = reinterpret_cast<CASH_CHARGE_COMPLETE_REQUEST*>(pPacket_);
+    ConnUser* user = connUsersManager->FindUser(connObjNum_);
+
+    CASH_CHARGE_COMPLETE_RESPONSE ccRes;
+    ccRes.PacketId = (uint16_t)PACKET_ID::CASH_CHARGE_COMPLETE_RESPONSE;
+    ccRes.PacketLength = sizeof(CASH_CHARGE_COMPLETE_RESPONSE);
+
+    std::string currencyTypeKey = "userinfo:{" + std::to_string(user->GetPk()) + "}";
+
+    try {
+        ccRes.chargedCash = redis->hincrby("userinfo:{" + std::to_string(user->GetPk()) + "}", "usercash", testCashCharge->chargedCash);
+        ccRes.isSuccess = true;
+        user->PushSendMsg(sizeof(ccRes), (char*)&ccRes);
+    }
+    catch (const sw::redis::Error& e) {
+        std::cerr << "Redis error : " << e.what() << std::endl;
+        user->PushSendMsg(sizeof(ccRes), (char*)&ccRes);
+    }
+}
+
 // ========================== INITIALIZATION =========================
 
 void RedisManager::init(const uint16_t RedisThreadCnt_) {
@@ -7,12 +28,16 @@ void RedisManager::init(const uint16_t RedisThreadCnt_) {
     // -------------------- SET PACKET HANDLERS ----------------------
     packetIDTable = std::unordered_map<uint16_t, RECV_PACKET_FUNCTION>();
 
+    packetIDTable[(uint16_t)PACKET_ID::CASH_CHARGE_COMPLETE_REQUEST] = &RedisManager::Test_CashCahrge;
+
     // CENTER
     packetIDTable[(uint16_t)PACKET_ID::USER_CONNECT_REQUEST] = &RedisManager::UserConnect;
     packetIDTable[(uint16_t)PACKET_ID::SERVER_USER_COUNTS_REQUEST] = &RedisManager::SendServerUserCounts;
     packetIDTable[(uint16_t)PACKET_ID::MOVE_SERVER_REQUEST] = &RedisManager::MoveServer;
     packetIDTable[(uint16_t)PACKET_ID::SHOP_DATA_REQUEST] = &RedisManager::SendShopDataToClient;
     packetIDTable[(uint16_t)PACKET_ID::SHOP_BUY_ITEM_REQUEST] = &RedisManager::BuyItemFromShop;
+    packetIDTable[(uint16_t)PACKET_ID::PASS_DATA_REQUEST] = &RedisManager::SendPassDataToClient;
+    packetIDTable[(uint16_t)PACKET_ID::PASS_EXP_UP_REQUEST] = &RedisManager::PassExpUp;
     packetIDTable[(uint16_t)PACKET_ID::GET_PASS_ITEM_REQUEST] = &RedisManager::GetPassItem;
 
     // LOGIN
@@ -504,47 +529,55 @@ void RedisManager::MoveServer(uint16_t connObjNum_, uint16_t packetSize_, char* 
 
 void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto buyItemReq = reinterpret_cast<SHOP_BUY_ITEM_REQUEST*>(pPacket_);
-    auto itemInfo = ShopDataManager::GetInstance().GetItem(buyItemReq->itemCode, buyItemReq->daysOrCount);
-
-    ConnUser* user = connUsersManager->FindUser(connObjNum_);
-    std::string currencyTypeKey = "userinfo:{" + std::to_string(user->GetPk()) + "}";
-
-    auto tempType = itemInfo->currencyType;
 
     SHOP_BUY_ITEM_RESPONSE shopBuyRes;
     shopBuyRes.PacketId = (uint16_t)PACKET_ID::SHOP_BUY_ITEM_RESPONSE;
     shopBuyRes.PacketLength = sizeof(SHOP_BUY_ITEM_RESPONSE);
 
-    if (currencyTypeMap.find(tempType) == currencyTypeMap.end()) {
-        std::cerr << "[BuyItemFromShop] Unknown currency type" << '\n';
+    ConnUser* user = connUsersManager->FindUser(connObjNum_);
+    std::string currencyTypeKey = "userinfo:{" + std::to_string(user->GetPk()) + "}";
+
+    auto itemInfo = ShopDataManager::GetInstance().GetItem(buyItemReq->itemCode, buyItemReq->daysOrCount);
+    if (!itemInfo) {
+        std::cerr << "[BuyItemFromShop] Unknown Item" << '\n';
         shopBuyRes.isSuccess = false;
         user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+    }
+
+    auto tempItemType = itemInfo->itemType;
+    shopBuyRes.passCurrencyType = itemInfo->itemType;
+
+    auto BuyItemFail = [&]() {
+        shopBuyRes.isSuccess = false;
+        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+    };
+
+    if (currencyTypeMap.find(tempItemType) == currencyTypeMap.end()) {
+        std::cerr << "[BuyItemFromShop] Unknown currency type" << '\n';
+        BuyItemFail();
         return;
     }
 
     uint32_t userMoney = 0;
-    auto moneyType = currencyTypeMap.at(tempType);
+    auto moneyType = currencyTypeMap.at(tempItemType);
 
     try {
         auto val = redis->hget(currencyTypeKey, moneyType);
         if (!val) {
             std::cerr << "[BuyItemFromShop] Redis key not found : " << currencyTypeKey << '\n';
-            shopBuyRes.isSuccess = false;
-            user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+            BuyItemFail();
             return;
         }
         userMoney = std::stoul(*val);
     }
     catch (const std::exception& e) {
         std::cerr << "[BuyItemFromShop] Redis get failed : " << e.what() << '\n';
-        shopBuyRes.isSuccess = false;
-        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        BuyItemFail();
         return;
     }
 
     if (userMoney < itemInfo->itemPrice) {
-        shopBuyRes.isSuccess = false;
-        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        BuyItemFail();
         return;
     }
 
@@ -567,8 +600,7 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
     }
     catch (const sw::redis::Error& e) {
         std::cerr << "[BuyItemFromShop] Redis failed : " << e.what() << '\n';
-        shopBuyRes.isSuccess = false;
-        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        BuyItemFail();
         return;
     }
 
@@ -581,28 +613,26 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
         redis->hincrby(currencyTypeKey, moneyType, itemInfo->itemPrice);
 
         std::cerr << "[BuyItemFromShop] Redis failed : " << e.what() << '\n';
-        shopBuyRes.isSuccess = false;
-        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        BuyItemFail();
         return;
     }
 
     // MySQL 트랜잭션 실행 (금액 차감 + 아이템 삽입)
     bool dbSuccess = mySQLManager->BuyItem(itemInfo->itemCode, itemInfo->daysOrCount, buyItemReq->itemType,
-        static_cast<uint16_t>(itemInfo->currencyType),
-        user->GetPk(), itemInfo->itemPrice);
+        itemInfo->currencyType, user->GetPk(), itemInfo->itemPrice);
 
     if (!dbSuccess) { 
         // MySQL 트랜잭션 실패 시 Redis 상태 복원 (금액 복구 및 아이템 제거)
         redis->hincrby(currencyTypeKey, moneyType, itemInfo->itemPrice);
         redis->hdel(invenKey, std::to_string(buyItemReq->itemType));
 
-        shopBuyRes.isSuccess = false;
-        user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+        BuyItemFail();
         return;
     }
 
     // 아이템 구매 성공
     shopBuyRes.isSuccess = true;
+    shopBuyRes.remainMoney = (userMoney - itemInfo->itemPrice);
     user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
 }
 
@@ -613,10 +643,10 @@ void RedisManager::SendPassDataToClient(uint16_t connObjNum_, uint16_t packetSiz
     size_t packetSize = sizeof(PASS_DATA_RESPONSE) + sizeof(PassDataForSend) * passVectorSize;
     char* packetBuffer = new char[packetSize];
 
-    auto* passDataResPacket = reinterpret_cast<SHOP_DATA_RESPONSE*>(packetBuffer);
+    auto* passDataResPacket = reinterpret_cast<PASS_DATA_RESPONSE*>(packetBuffer);
     passDataResPacket->PacketId = static_cast<uint16_t>(PACKET_ID::PASS_DATA_RESPONSE);
     passDataResPacket->PacketLength = static_cast<uint16_t>(packetSize);
-    passDataResPacket->shopItemSize = passVectorSize;
+    passDataResPacket->passDataSize = passVectorSize;
 
     PassDataForSend* passVectorForSend = reinterpret_cast<PassDataForSend*>(packetBuffer + sizeof(PASS_DATA_RESPONSE));
 
@@ -741,11 +771,11 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
 }
 
 void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
-    auto cashReqPacket = reinterpret_cast<GET_PASS_ITEM_REQUEST*>(pPacket_);
-    auto tempPassId = (std::string)cashReqPacket->passId;
+    auto passReqPacket = reinterpret_cast<GET_PASS_ITEM_REQUEST*>(pPacket_);
+    auto tempPassId = (std::string)passReqPacket->passId;
 
     ConnUser* user = connUsersManager->FindUser(connObjNum_);
-    auto* tempPassData = PassRewardManager::GetInstance().GetPassItemDataByPassId(tempPassId, cashReqPacket->passLevel, cashReqPacket->passCurrencyType);
+    auto* tempPassData = PassRewardManager::GetInstance().GetPassItemDataByPassId(tempPassId, passReqPacket->passLevel, passReqPacket->passCurrencyType);
 
     GET_PASS_ITEM_RESPONSE getPassRes;
     getPassRes.PacketId = (uint16_t)PACKET_ID::GET_PASS_ITEM_RESPONSE;
@@ -753,10 +783,14 @@ void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char*
 
     auto tempPassCurrencyType = static_cast<PassCurrencyType>(tempPassData->passCurrencyType);
 
-    if (PassCurrencyTypeMap.find(tempPassCurrencyType) == PassCurrencyTypeMap.end()) {
-        std::cerr << "[GetPassItem] Unknown passCurrency type" << '\n';
+    auto GetPassFail = [&]() {
         getPassRes.isSuccess = false;
         user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+    };
+
+    if (PassCurrencyTypeMap.find(tempPassCurrencyType) == PassCurrencyTypeMap.end()) {
+        std::cerr << "[GetPassItem] Unknown passCurrency type" << '\n';
+        GetPassFail();
         return;
     }
 
@@ -768,21 +802,18 @@ void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char*
         auto val = redis->hget(passKey, "userPassLevel");
         if (!val) {
             std::cerr << "[GetPassItem] Redis key not found : " << passKey << '\n';
-            getPassRes.isSuccess = false;
-            user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+            GetPassFail();
             return;
         }
 
-        if (std::stoi(*val) < cashReqPacket->passLevel) { // 유저가 요청한 패스 레벨이 현재 레벨 보다 높다면 false 전송
-            getPassRes.isSuccess = false;
-            user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+        if (std::stoi(*val) < passReqPacket->passLevel) { // 유저가 요청한 패스 레벨이 현재 레벨 보다 높다면 false 전송
+            GetPassFail();
             return;
         }
     }
     catch (const std::exception& e) {
         std::cerr << "[GetPassItem] Redis get failed : " << e.what() << '\n';
-        getPassRes.isSuccess = false;
-        user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+        GetPassFail();
         return;
     }
     
@@ -805,20 +836,18 @@ void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char*
     }
     catch (const sw::redis::Error& e) {
         std::cerr << "[GetPassItem] Redis failed : " << e.what() << '\n';
-        getPassRes.isSuccess = false;
-        user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+        GetPassFail();
         return;
     }
 
     // MySQL 트랜잭션 실행 (패스 아이템 획득 체크 + 패스 아이템 인벤토리 추가)
-    bool dbSuccess = mySQLManager->UpdatePassItem(cashReqPacket->passId, user->GetPk(), cashReqPacket->passLevel, cashReqPacket->passCurrencyType, 
+    bool dbSuccess = mySQLManager->UpdatePassItem(passReqPacket->passId, user->GetPk(), passReqPacket->passLevel, passReqPacket->passCurrencyType,
         tempPassData->itemCode, tempPassData->daysOrCount, tempPassData->itemType);
 
     if (!dbSuccess) { // 해당 패스 아이템 이미 받았거나 업데이트 실패 (레디스에 추가한 아이템 제거)
         redis->hdel(invenKey, std::to_string(tempPassData->itemType));
 
-        getPassRes.isSuccess = false;
-        user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+        GetPassFail();
         return;
     }
 

@@ -95,15 +95,12 @@ bool MySQLManager::UpdatePassItem(char* passId_, uint32_t userPk_, uint16_t pass
         MYSQL_BIND invenBind[3] = {};
         invenBind[0].buffer_type = MYSQL_TYPE_LONG;
         invenBind[0].buffer = &userPk_;
-        invenBind[0].is_unsigned = true;
 
         invenBind[1].buffer_type = MYSQL_TYPE_LONG;
         invenBind[1].buffer = &itemCode;
-        invenBind[1].is_unsigned = true;
 
         invenBind[2].buffer_type = MYSQL_TYPE_LONG;
         invenBind[2].buffer = &daysOrCounts_;
-        invenBind[2].is_unsigned = true;
 
         if (mysql_stmt_bind_param(invenStmt, invenBind) != 0 || mysql_stmt_execute(invenStmt) != 0 || mysql_stmt_affected_rows(invenStmt) == 0) {
             std::cerr << "[UpdatePassItem] Execute invenStmt Error" << std::endl;
@@ -357,7 +354,7 @@ bool MySQLManager::GetPassInfo(std::vector<std::pair<std::string, PassInfo>>& pa
 
     MYSQL* ConnPtr = GetConnection();
     if (!ConnPtr) {
-        std::cerr << "[GetPassItemData] dbPool is empty. Failed to get DB connection." << '\n';
+        std::cerr << "[GetPassInfo] dbPool is empty. Failed to get DB connection." << '\n';
         return false;
     }
 
@@ -371,14 +368,14 @@ bool MySQLManager::GetPassInfo(std::vector<std::pair<std::string, PassInfo>>& pa
     const char* Query = query_s.c_str();
 
     if (mysql_query(ConnPtr, Query) != 0) {
-        std::cerr << "[GetPassItemData] Query Failed : " << mysql_error(ConnPtr) << std::endl;
+        std::cerr << "[GetPassInfo] Query Failed : " << mysql_error(ConnPtr) << std::endl;
         return false;
     }
 
     try {
         Result = mysql_store_result(ConnPtr);
         if (Result == nullptr) {
-            std::cerr << "[GetPassItemData] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
+            std::cerr << "[GetPassInfo] Failed to store result : " << mysql_error(ConnPtr) << std::endl;
             return false;
         }
 
@@ -397,7 +394,7 @@ bool MySQLManager::GetPassInfo(std::vector<std::pair<std::string, PassInfo>>& pa
         return true;
     }
     catch (const std::exception& e) {
-        std::cerr << "[GetPassItemData] Exception Error : " << e.what() << std::endl;
+        std::cerr << "[GetPassInfo] Exception Error : " << e.what() << std::endl;
         return false;
     }
 }
@@ -1019,17 +1016,16 @@ bool MySQLManager::BuyItem(uint16_t itemCode, uint16_t daysOrCounts_, uint16_t i
     MYSQL_BIND invenBind[3] = {};
     invenBind[0].buffer_type = MYSQL_TYPE_LONG;
     invenBind[0].buffer = (char*)&userPk_;
-    invenBind[0].is_unsigned = true;
 
     invenBind[1].buffer_type = MYSQL_TYPE_LONG;
     invenBind[1].buffer = (char*)&itemCode;
-    invenBind[1].is_unsigned = true;
 
     invenBind[2].buffer_type = MYSQL_TYPE_LONG;
     invenBind[2].buffer = (char*)&daysOrCounts_;
-    invenBind[2].is_unsigned = true;
 
     if (mysql_stmt_bind_param(invenStmt, invenBind) != 0 || mysql_stmt_execute(invenStmt) != 0 || mysql_stmt_affected_rows(invenStmt) == 0) {
+        std::cout << itemCode << std::endl;
+        std::cerr << "[BuyItem] Inventory Insert Failed: " << mysql_stmt_error(invenStmt) << '\n';
         mysql_stmt_close(invenStmt);
         mysql_rollback(ConnPtr);
         mysql_autocommit(ConnPtr, true);
