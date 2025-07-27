@@ -46,7 +46,7 @@ bool PassRewardManager::LoadFromMySQL(std::vector<std::pair<std::string, PassInf
 		passMap[t.first] = std::move(passRewardData);
 	}
 
-	passDataForSend.passPacketBuffer = std::move(packetBuffer_);
+	passDataForSend.passPacketBuffer = packetBuffer_;
 
 	for (int i = 0; i < passDataVector.size(); ++i) {
 		passVector_[i] = passDataVector[i];

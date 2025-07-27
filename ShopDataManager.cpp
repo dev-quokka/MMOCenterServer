@@ -56,7 +56,7 @@ bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, Sh
 			   std::tie(b.itemType, b.itemCode, b.daysOrCount);
 	});
 
-	shopDataForSend.shopPacketBuffer = std::move(packetBuffer_);
+	shopDataForSend.shopPacketBuffer = packetBuffer_;
 
 	for (int i = 0; i < shopItemVector.size(); ++i) {
 		itemVector_[i] = shopItemVector[i];
