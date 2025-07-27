@@ -5,12 +5,14 @@ ShopDataManager& ShopDataManager::GetInstance() {
     return instance;
 }
 
-bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& shopItemMap_) {
+bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& shopItemMap_, char* packetBuffer_, ShopItemForSend* itemVector_, size_t packetSize_) {
 	
 	if (loadCheck) { // 이미 데이터가 로드되었으므로 중복 호출 방지
 		std::cout << "[ShopDataManager::LoadFromMySQL] LoadFromMySQL already completed." << '\n';
 		return true;
 	}
+
+	std::vector<ShopItemForSend> shopItemVector;
 
 	// 상점 장비 데이터 저장
 	for (auto& [itemId, shopItem] : shopItemMap_) {
@@ -45,8 +47,6 @@ bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, Sh
 				break;
         }
 
-
-
 		shopItemMap[itemId] = tempSendData;
 		shopItemVector.emplace_back(tempSendData);
 	}
@@ -55,6 +55,14 @@ bool ShopDataManager::LoadFromMySQL(std::unordered_map<ShopItemKey, ShopItem, Sh
 		return std::tie(a.itemType, a.itemCode, a.daysOrCount) < 
 			   std::tie(b.itemType, b.itemCode, b.daysOrCount);
 	});
+
+	shopDataForSend.shopPacketBuffer = std::move(packetBuffer_);
+
+	for (int i = 0; i < shopItemVector.size(); ++i) {
+		itemVector_[i] = shopItemVector[i];
+	}
+
+	shopDataForSend.shopPacketSize = packetSize_;
 
 	loadCheck = true;
 	return true;
@@ -69,6 +77,6 @@ const ShopItemForSend* ShopDataManager::GetItem(uint16_t itemId, uint16_t days) 
 	return &(it->second);
 }
 
-const std::vector<ShopItemForSend>& ShopDataManager::GetShopData() const {
-	return shopItemVector;
+const ShopDataForSend& ShopDataManager::GetShopData() const {
+	return shopDataForSend;
 }

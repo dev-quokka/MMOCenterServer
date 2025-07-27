@@ -399,7 +399,7 @@ bool MySQLManager::GetPassInfo(std::vector<std::pair<std::string, PassInfo>>& pa
     }
 }
 
-bool MySQLManager::GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, PassDataForSend, PassDataKeyHash>>& passDataMap_) {
+bool MySQLManager::GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, PassItemForSend, PassDataKeyHash>>& passDataMap_) {
     
     if (passInfoVector_.empty()) {
         std::cerr << "[GetPassItemData] passInfoVector is empty." << '\n';
@@ -442,7 +442,7 @@ bool MySQLManager::GetPassItemData(std::vector<std::pair<std::string, PassInfo>>
         while ((Row = mysql_fetch_row(Result)) != NULL) {
             if (!Row[0] || !Row[1] || !Row[2] || !Row[3] || !Row[4] || !Row[5] || !Row[6]) continue;
 
-            PassDataForSend passItemData;
+            PassItemForSend passItemData;
             passItemData.itemCode = (uint16_t)std::stoi(Row[1]);
             passItemData.passLevel = (uint16_t)std::stoi(Row[2]);
             passItemData.itemCount = (uint16_t)std::stoi(Row[3]);

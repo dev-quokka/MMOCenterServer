@@ -19,3 +19,13 @@ struct ShopItemForSend {
 
 	// 재료 아이템 필요 변수
 };
+
+struct ShopDataForSend {
+	char* shopPacketBuffer;
+	size_t shopPacketSize = 0;
+
+	~ShopDataForSend() {
+		delete[] shopPacketBuffer;
+	}
+};
+

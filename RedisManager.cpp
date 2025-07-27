@@ -21,6 +21,7 @@ void RedisManager::Test_CashCahrge(uint16_t connObjNum_, uint16_t packetSize_, c
     }
 }
 
+
 // ========================== INITIALIZATION =========================
 
 void RedisManager::init(const uint16_t RedisThreadCnt_) {
@@ -86,7 +87,18 @@ void RedisManager::InitShopData() {
 
     if (!mySQLManager->GetShopItemData(shopItemData)) return;
 
-    ShopDataManager::GetInstance().LoadFromMySQL(shopItemData);
+    auto shopItemDataSize = shopItemData.size();
+
+    size_t packetSize = sizeof(SHOP_DATA_RESPONSE) + sizeof(ShopItemForSend) * shopItemDataSize;
+    char* packetBuffer = new char[packetSize];
+
+    auto* shopDataResPacket = reinterpret_cast<SHOP_DATA_RESPONSE*>(packetBuffer);
+    shopDataResPacket->PacketId = static_cast<uint16_t>(PACKET_ID::SHOP_DATA_RESPONSE);
+    shopDataResPacket->PacketLength = static_cast<uint16_t>(packetSize);
+    shopDataResPacket->shopItemSize = shopItemDataSize;
+
+    ShopItemForSend* itemVector = reinterpret_cast<ShopItemForSend*>(packetBuffer + sizeof(SHOP_DATA_RESPONSE));
+    ShopDataManager::GetInstance().LoadFromMySQL(shopItemData, packetBuffer, itemVector, packetSize);
 }
 
 void RedisManager::InitPassData() {
@@ -96,14 +108,29 @@ void RedisManager::InitPassData() {
     if (!mySQLManager->GetPassInfo(passIdVector)) return;
 
     // 각 패스 ID에 해당하는 보상 아이템 데이터 로드
-    std::unordered_map<std::string, std::unordered_map<PassDataKey, PassDataForSend, PassDataKeyHash>> passDataMap;
+    std::unordered_map<std::string, std::unordered_map<PassDataKey, PassItemForSend, PassDataKeyHash>> passDataMap;
     if (!mySQLManager->GetPassItemData(passIdVector, passDataMap)) return;
+
+    size_t passVectorSize = 0;
+    for (auto& [passId, passMap] : passDataMap) {
+        passVectorSize += passMap.size();
+    }
+
+    size_t packetSize = sizeof(PASS_DATA_RESPONSE) + sizeof(PassItemForSend) * passVectorSize;
+    char* packetBuffer = new char[packetSize];
+
+    auto* passDataResPacket = reinterpret_cast<PASS_DATA_RESPONSE*>(packetBuffer);
+    passDataResPacket->PacketId = static_cast<uint16_t>(PACKET_ID::PASS_DATA_RESPONSE);
+    passDataResPacket->PacketLength = static_cast<uint16_t>(packetSize);
+    passDataResPacket->passDataSize = passVectorSize;
+
+    PassItemForSend* passVectorForSend = reinterpret_cast<PassItemForSend*>(packetBuffer + sizeof(PASS_DATA_RESPONSE));
 
     // 패스 레벨별 누적 경험치 정보 로드 (추후 패스별 경험치 테이블이 필요하면 passIdVector를 넘겨 패스별 경험치를 로드하도록 변경)
     std::vector<uint16_t> passExpLimit_;
     if (!mySQLManager->GetPassExpData(passExpLimit_)) return;
 
-    PassRewardManager::GetInstance().LoadFromMySQL(passIdVector, passDataMap, passExpLimit_);
+    PassRewardManager::GetInstance().LoadFromMySQL(passIdVector, passDataMap, passExpLimit_, packetBuffer, passVectorForSend, packetSize);
 }
 
 
@@ -145,6 +172,7 @@ void RedisManager::RedisRun(const uint16_t RedisThreadCnt_) { // Connect Redis S
         InitPassData();
 
         CreateRedisThread(RedisThreadCnt_);
+
     }
     catch (const  sw::redis::Error& err) {
         std::cout << "Redis Connect Error : " << err.what() << std::endl;
@@ -171,9 +199,9 @@ bool RedisManager::CreateRedisThread(const uint16_t RedisThreadCnt_) {
 }
 
 void RedisManager::RedisThread() {
-    DataPacket tempD(0,0);
+    DataPacket tempD(0, 0);
     ConnUser* TempConnUser = nullptr;
-    char tempData[1024] = {0};
+    char tempData[1024] = { 0 };
 
     while (redisRun) {
         if (procSktQueue.pop(tempD)) {
@@ -432,33 +460,15 @@ void RedisManager::SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSiz
 }
 
 void RedisManager::SendShopDataToClient(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
-    const auto& shopVector = ShopDataManager::GetInstance().GetShopData();
-    uint16_t shopVectorSize = static_cast<uint16_t>(shopVector.size());
-    
-    // 전송할 전체 버퍼 크기
-    size_t packetSize = sizeof(SHOP_DATA_RESPONSE) + sizeof(ShopItemForSend) * shopVectorSize;
-    char* packetBuffer = new char[packetSize];
-
-    auto* shopDataResPacket = reinterpret_cast<SHOP_DATA_RESPONSE*>(packetBuffer);
-    shopDataResPacket->PacketId = static_cast<uint16_t>(PACKET_ID::SHOP_DATA_RESPONSE);
-    shopDataResPacket->PacketLength = static_cast<uint16_t>(packetSize);
-    shopDataResPacket->shopItemSize = shopVectorSize;
-
-    ShopItemForSend* itemVector = reinterpret_cast<ShopItemForSend*>(packetBuffer + sizeof(SHOP_DATA_RESPONSE));
-
-    for (int i = 0; i < shopVectorSize; ++i) {
-        itemVector[i] = shopVector[i];
-    }
+    const auto& shopDataForSend = ShopDataManager::GetInstance().GetShopData();
 
     try {
         connUsersManager->FindUser(connObjNum_)->
-            PushSendMsg(static_cast<uint16_t>(packetSize), packetBuffer);
+            PushSendMsg(static_cast<uint16_t>(shopDataForSend.shopPacketSize), shopDataForSend.shopPacketBuffer);
     }
     catch (const std::exception& e) {
         std::cerr << "[SendShopDataToClient] Exception: " << e.what() << '\n';
     }
-
-    delete[] packetBuffer;
 }
 
 void RedisManager::ChannelDisConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
@@ -637,32 +647,15 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
 }
 
 void RedisManager::SendPassDataToClient(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
-    const auto& passVector = PassRewardManager::GetInstance().GetPassData();
-    uint16_t passVectorSize = static_cast<uint16_t>(passVector.size());
-
-    size_t packetSize = sizeof(PASS_DATA_RESPONSE) + sizeof(PassDataForSend) * passVectorSize;
-    char* packetBuffer = new char[packetSize];
-
-    auto* passDataResPacket = reinterpret_cast<PASS_DATA_RESPONSE*>(packetBuffer);
-    passDataResPacket->PacketId = static_cast<uint16_t>(PACKET_ID::PASS_DATA_RESPONSE);
-    passDataResPacket->PacketLength = static_cast<uint16_t>(packetSize);
-    passDataResPacket->passDataSize = passVectorSize;
-
-    PassDataForSend* passVectorForSend = reinterpret_cast<PassDataForSend*>(packetBuffer + sizeof(PASS_DATA_RESPONSE));
-
-    for (int i = 0; i < passVectorSize; i++) {
-        passVectorForSend[i] = passVector[i];
-    }
+    const auto& passDataForSend = PassRewardManager::GetInstance().GetPassData();
 
     try {
         connUsersManager->FindUser(connObjNum_)->
-            PushSendMsg(static_cast<uint16_t>(packetSize), packetBuffer);
+            PushSendMsg(static_cast<uint16_t>(passDataForSend.passPacketSize), passDataForSend.passPacketBuffer);
     }
     catch (const std::exception& e) {
         std::cerr << "[SendPassDataToClient] Exception: " << e.what() << '\n';
     }
-
-    delete[] packetBuffer;
 }
 
 void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {

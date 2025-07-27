@@ -3,7 +3,7 @@
 
 constexpr uint16_t MAX_PASS_ID_LEN = 32;
 
-struct PassDataForSend {
+struct PassItemForSend {
     char itemName[MAX_ITEM_ID_LEN + 1];
     char passId[MAX_PASS_ID_LEN + 1];
     uint16_t itemCode = 0;
@@ -12,4 +12,13 @@ struct PassDataForSend {
     uint16_t daysOrCount = 0;
     uint16_t itemType;
     uint16_t passCurrencyType;
+};
+
+struct PassDataForSend {
+    char* passPacketBuffer;
+    size_t passPacketSize = 0;
+
+    ~PassDataForSend() {
+        delete[] passPacketBuffer;
+    }
 };

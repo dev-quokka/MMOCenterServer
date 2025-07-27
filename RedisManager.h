@@ -33,8 +33,7 @@ public:
 
     // ======================= TEST =======================
     void Test_CashCahrge(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
-
-
+    
     // ====================== INITIALIZATION =======================
     void init(const uint16_t RedisThreadCnt_);
     void SetManager(ConnUsersManager* connUsersManager_, InGameUserManager* inGameUserManager_);

@@ -26,7 +26,7 @@ public:
 	bool GetMaterialItemData(std::unordered_map<ItemDataKey, std::unique_ptr<ItemData>, ItemDataKeyHash>& itemData_);
 	bool GetShopItemData(std::unordered_map<ShopItemKey, ShopItem, ShopItemKeyHash>& shopItemData_);
 	bool GetPassInfo(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_);
-	bool GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, PassDataForSend, PassDataKeyHash>>& passDataMap_);
+	bool GetPassItemData(std::vector<std::pair<std::string, PassInfo>>& passInfoVector_, std::unordered_map<std::string, std::unordered_map<PassDataKey, PassItemForSend, PassDataKeyHash>>& passDataMap_);
 	bool GetPassExpData(std::vector<uint16_t>& passExpLimit_);
 
 
