@@ -14,6 +14,13 @@ struct PassItemForSend {
     uint16_t passCurrencyType;
 };
 
+struct UserPassDataForSync {
+    char passId[MAX_PASS_ID_LEN + 1];
+    uint16_t passLevel = 0;
+    uint16_t passExp = 0;
+    uint16_t passCurrencyType = 0;  
+};
+
 struct PassDataForSend {
     char* passPacketBuffer;
     size_t passPacketSize = 0;

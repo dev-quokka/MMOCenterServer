@@ -8,10 +8,15 @@ void RedisManager::Test_CashCahrge(uint16_t connObjNum_, uint16_t packetSize_, c
     ccRes.PacketId = (uint16_t)PACKET_ID::CASH_CHARGE_COMPLETE_RESPONSE;
     ccRes.PacketLength = sizeof(CASH_CHARGE_COMPLETE_RESPONSE);
 
+    if (testCashCharge->chargedCash > 1000000) { // 캐시 최대 충전 가능량(1000000) 넘어가면 실패 전송 및 해킹 위험 로그 출력
+        std::cout << "[Test_CashCahrge] 캐시 충전량 초과. 유저 PK : " << user->GetPk() << '\n';
+        user->PushSendMsg(sizeof(ccRes), (char*)&ccRes);
+    }
+
     std::string currencyTypeKey = "userinfo:{" + std::to_string(user->GetPk()) + "}";
 
     try {
-        ccRes.chargedCash = redis->hincrby("userinfo:{" + std::to_string(user->GetPk()) + "}", "usercash", testCashCharge->chargedCash);
+        ccRes.chargedCash = redis->hincrby("userinfo:{" + std::to_string(user->GetPk()) + "}", "cash", testCashCharge->chargedCash);
         ccRes.isSuccess = true;
         user->PushSendMsg(sizeof(ccRes), (char*)&ccRes);
     }
@@ -232,6 +237,9 @@ USERINFO RedisManager::GetUpdatedUserInfo(uint16_t userPk_) {
         tempUser.raidScore = std::stoul(userData["raidScore"]);
         tempUser.exp = std::stoul(userData["exp"]);
         tempUser.level = static_cast<uint16_t>(std::stoi(userData["level"]));
+        tempUser.gold = std::stoul(userData["gold"]);
+        tempUser.cash = std::stoul(userData["cash"]);
+        tempUser.mileage = std::stoul(userData["mileage"]);
     }
     catch (const sw::redis::Error& e) {
         std::cerr << "Redis error: " << e.what() << std::endl;
@@ -360,6 +368,10 @@ std::vector<MATERIALS> RedisManager::GetUpdatedMaterials(uint16_t userPk_) {
     return tempMtv;
 }
 
+std::vector<UserPassDataForSync> RedisManager::GetUpdatedPassData(uint16_t userPk_) {
+    // 
+}
+
 
 // ======================================================= CENTER SERVER =======================================================
 
@@ -418,10 +430,19 @@ void RedisManager::UserDisConnect(uint16_t connObjNum_) {
     auto tempUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
     auto tempPk = tempUser->GetPk();
 
+    std::string tag = "{" + std::to_string(tempPk) + "}";
+    std::string userInfokey = "userinfo:" + tag;
+
     try {
-        redis->hset("userinfo:{" + std::to_string(tempPk) + "}", "userstate", "offline"); // Set user status to "offline" in Redis Cluster
+        auto pipe = redis->pipeline(tag);
+
+        redis->hset(userInfokey, "userstate", "offline"); // Set user status to "offline" in Redis Cluster
+        redis->expire(userInfokey, std::chrono::seconds(1800)); // ttl 30분 설정
+
+        pipe.exec();
+
         mySQLManager->LogoutSync(tempPk, GetUpdatedUserInfo(tempPk), 
-            GetUpdatedEquipment(tempPk), GetUpdatedConsumables(tempPk), GetUpdatedMaterials(tempPk));
+            GetUpdatedEquipment(tempPk), GetUpdatedConsumables(tempPk), GetUpdatedMaterials(tempPk), GetUpdatedPassData(tempPk));
     }
     catch (const sw::redis::Error& e) {
         std::cerr << "Redis error : " << e.what() << std::endl;
@@ -462,13 +483,8 @@ void RedisManager::SendServerUserCounts(uint16_t connObjNum_, uint16_t packetSiz
 void RedisManager::SendShopDataToClient(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     const auto& shopDataForSend = ShopDataManager::GetInstance().GetShopData();
 
-    try {
-        connUsersManager->FindUser(connObjNum_)->
-            PushSendMsg(static_cast<uint16_t>(shopDataForSend.shopPacketSize), shopDataForSend.shopPacketBuffer);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[SendShopDataToClient] Exception: " << e.what() << '\n';
-    }
+    connUsersManager->FindUser(connObjNum_)->
+        PushSendMsg(static_cast<uint16_t>(shopDataForSend.shopPacketSize), shopDataForSend.shopPacketBuffer);
 }
 
 void RedisManager::ChannelDisConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
@@ -553,9 +569,9 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
         shopBuyRes.isSuccess = false;
         user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
     }
-
-    auto tempItemType = itemInfo->itemType;
-    shopBuyRes.passCurrencyType = itemInfo->itemType;
+    
+    auto tempItemType = itemInfo->currencyType;
+    shopBuyRes.currencyType = itemInfo->itemType;
 
     auto BuyItemFail = [&]() {
         shopBuyRes.isSuccess = false;
@@ -692,16 +708,16 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
 
     // 유저 패스 경험치 증가 요청
     try {
-        auto passLevelVal = redis->hget(passKey, "userPassLevel");
+        auto passLevelVal = redis->hget(passKey, "passLevel");
         if (!passLevelVal) {
-            std::cerr << "[PassExpUp] Redis key not found(userPassLevel) : " << passKey << '\n';
+            std::cerr << "[PassExpUp] Redis key not found(passLevel) : " << passKey << '\n';
             PassExpUpFail();
             return;
         }
 
-        auto passExpVal = redis->hget(passKey, "userPassExp");
+        auto passExpVal = redis->hget(passKey, "passExp");
         if (!passExpVal) {
-            std::cerr << "[PassExpUp] Redis key not found(userPassExp) : " << passKey << '\n';
+            std::cerr << "[PassExpUp] Redis key not found(passExp) : " << passKey << '\n';
             PassExpUpFail();
             return;
         }
@@ -709,7 +725,7 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
         tempPassLevelandExp = PassRewardManager::GetInstance().PassExpUp(expUpReqPacket->acqPassExp, std::stoi(*passLevelVal), std::stoi(*passExpVal));
     }
     catch (const sw::redis::Error& e) {
-        std::cerr << "[PassExpUp] Redis key not found(userPassExp) : " << passKey << '\n';
+        std::cerr << "[PassExpUp] Redis key not found(passExp) : " << passKey << '\n';
         PassExpUpFail();
         return;
     }
@@ -721,8 +737,8 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
         try {
             auto pipe = redis->pipeline(std::to_string(tempUserPk));
 
-            pipe.hset(passKey, "userPassExp", std::to_string(currentUserExp))
-                .hincrby(passKey, "userPassLevel", tempPassLevelandExp.first);
+            pipe.hset(passKey, "passExp", std::to_string(currentUserExp))
+                .hincrby(passKey, "passLevel", tempPassLevelandExp.first);
 
             pipe.exec();
 
@@ -741,7 +757,7 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
     }
     else { // 경험치만 증가
         try {
-            if (redis->hincrby(passKey, "userPassExp", expUpReqPacket->acqPassExp)) {
+            if (redis->hincrby(passKey, "passExp", expUpReqPacket->acqPassExp)) {
 
                 expUpResPacket.isSuccess = true;
                 strcpy_s(expUpResPacket.passId, expUpReqPacket->passId);
@@ -792,7 +808,7 @@ void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char*
 
     // 유저 현재 패스 레벨과 요청한 패스 레벨 체크
     try {
-        auto val = redis->hget(passKey, "userPassLevel");
+        auto val = redis->hget(passKey, "passLevel");
         if (!val) {
             std::cerr << "[GetPassItem] Redis key not found : " << passKey << '\n';
             GetPassFail();
@@ -845,6 +861,7 @@ void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char*
     }
 
     getPassRes.isSuccess = true;
+    getPassRes.passItemForSend = *tempPassData;
     user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
 }
 

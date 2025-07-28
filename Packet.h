@@ -137,7 +137,7 @@ struct SHOP_BUY_ITEM_REQUEST : PACKET_HEADER {
 
 struct SHOP_BUY_ITEM_RESPONSE : PACKET_HEADER {
 	uint32_t remainMoney;
-	uint16_t passCurrencyType;
+	uint16_t currencyType;
 	bool isSuccess = false;
 };
 
@@ -156,13 +156,14 @@ struct PASS_EXP_UP_RESPONSE : PACKET_HEADER {
 };
 
 struct GET_PASS_ITEM_REQUEST : PACKET_HEADER {
-	char itemName[MAX_ITEM_ID_LEN + 1];
 	char passId[MAX_PASS_ID_LEN + 1];
 	uint16_t passLevel;
 	uint16_t passCurrencyType;
 };
 
 struct GET_PASS_ITEM_RESPONSE : PACKET_HEADER {
+	PassItemForSend passItemForSend;
+	uint16_t position = 0;
 	bool isSuccess = false;
 };
 

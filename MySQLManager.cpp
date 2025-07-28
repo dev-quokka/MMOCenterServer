@@ -524,7 +524,7 @@ bool MySQLManager::GetPassExpData(std::vector<uint16_t>& passExpLimit_) {
 // ======================= SYNCRONIZATION =======================
 
 bool MySQLManager::LogoutSync(uint32_t userPk_, USERINFO userInfo_, std::vector<EQUIPMENT> userEquip_, 
-    std::vector<CONSUMABLES> userConsum_, std::vector<MATERIALS> userMat_) {
+    std::vector<CONSUMABLES> userConsum_, std::vector<MATERIALS> userMat_, std::vector<UserPassDataForSync> userPassDataForSync_) {
     semaphore.acquire();
 
     MYSQL* ConnPtr = GetConnection();
@@ -545,6 +545,7 @@ bool MySQLManager::LogoutSync(uint32_t userPk_, USERINFO userInfo_, std::vector<
         else if (!SyncEquipment(userPk_, userEquip_)) { std::cout << "SyncEquipment failed" << '\n'; }
         else if (!SyncConsumables(userPk_, userConsum_)) { std::cout << "SyncConsumables failed" << '\n'; }
         else if (!SyncMaterials(userPk_, userMat_)) { std::cout << "SyncMaterials failed" << '\n'; }
+        else if (!SyncPassInfo(userPk_, userPassDataForSync_)) { std::cout << "SyncPassInfo failed" << '\n'; }
         else {
             if (mysql_commit(ConnPtr) == 0) { // If commit is successful, exit
                 mysql_autocommit(ConnPtr, true);
@@ -585,7 +586,9 @@ bool MySQLManager::SyncUserInfo(uint32_t userPk_, USERINFO userInfo_) {
     try {
         std::string query_s = "UPDATE USERS left join Ranking r on USERS.name = r.name SET USERS.name = '" +
             userInfo_.userId + "', USERS.exp = " + std::to_string(userInfo_.exp) +
-            ", USERS.level = " + std::to_string(userInfo_.level) + ", USERS.last_login = current_timestamp" +
+            ", USERS.level = " + std::to_string(userInfo_.level) + 
+            ", USERS.gold = " + std::to_string(userInfo_.gold) + ", USERS.cash = " + std::to_string(userInfo_.cash) +
+            ", USERS.mileage = " + std::to_string(userInfo_.mileage) + ", USERS.last_login = current_timestamp" +
             ", USERS.server = " + std::to_string(0) + ", USERS.channel = " + std::to_string(0) +
             ",r.score = " + std::to_string(userInfo_.raidScore) +
             " WHERE USERS.id = " + std::to_string(userPk_);
@@ -769,6 +772,59 @@ bool MySQLManager::SyncMaterials(uint32_t userPk_, std::vector<MATERIALS> userMa
     std::cout << "Successfully Synchronized Materials with MySQL" << std::endl;
     return true;
 }
+
+bool MySQLManager::SyncPassInfo(uint32_t userPk_, std::vector<UserPassDataForSync>& userPassDataForSync_) {
+    semaphore.acquire();
+
+    MYSQL* ConnPtr = GetConnection();
+    if (!ConnPtr) {
+        std::cerr << "[SyncPassInfo] dbPool is empty. Failed to get DB connection." << '\n';
+        return false;
+    }
+
+    auto tempAutoConn = AutoConn(ConnPtr, dbPool, dbPoolMutex, semaphore);
+
+    try {
+        std::ostringstream query_s;
+        query_s << "UPDATE PassUserData SET ";
+
+        std::ostringstream level_case, exp_case, where;
+        level_case << "userPassLevel = CASE ";
+        exp_case << "userPassExp = CASE ";
+
+        where << "WHERE userPk = " << std::to_string(userPk_) << " AND passId IN (";
+
+        bool first = true;
+
+        for (const auto& passData : userPassDataForSync_) {
+            level_case << "WHEN passId = '" << passData.passId << "' THEN " << passData.passLevel << " ";
+            exp_case << "WHEN passId = '" << passData.passId << "' THEN " << passData.passExp << " ";
+
+            if (!first) where << ", ";
+            where << "'" << passData.passId << "'";
+            first = false;
+        }
+
+        level_case << "END, ";
+        exp_case << "END ";
+        where << ");";
+
+        query_s << level_case.str() << exp_case.str() << where.str();
+
+        if (mysql_query(ConnPtr, query_s.str().c_str()) != 0) {
+            std::cerr << "[SyncPassInfo] MySQL Batch UPDATE Error : " << mysql_error(ConnPtr) << std::endl;
+            return false;
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "[SyncPassInfo] Exception during sync : " << e.what() << std::endl;
+        return false;
+    }
+
+    std::cout << "Successfully Synchronized PassInfo with MySQL" << std::endl;
+    return true;
+}
+
 
 bool MySQLManager::MySQLSyncEqipmentEnhace(uint32_t userPk_, uint16_t itemPosition_, uint16_t enhancement_) {
     semaphore.acquire();

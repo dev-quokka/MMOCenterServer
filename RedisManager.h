@@ -62,7 +62,7 @@ private:
     std::vector<EQUIPMENT> GetUpdatedEquipment(uint16_t userPk_);
     std::vector<CONSUMABLES> GetUpdatedConsumables(uint16_t userPk_);
     std::vector<MATERIALS> GetUpdatedMaterials(uint16_t userPk_);
-
+    std::vector<UserPassDataForSync> GetUpdatedPassData(uint16_t userPk_);
     
     // ======================= CENTER SERVER =======================
     void UserConnect(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_);
