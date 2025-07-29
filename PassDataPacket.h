@@ -21,6 +21,12 @@ struct UserPassDataForSync {
     uint16_t passCurrencyType = 0;  
 };
 
+struct PassLevelOrExpUpCheck {
+    uint16_t currentUserLevel = 1;
+    uint16_t currentUserExp = 0;
+    uint16_t levelupCount = 0; // 레디스 set이 아닌, hincrby하기 위한 변수
+};
+
 struct PassDataForSend {
     char* passPacketBuffer;
     size_t passPacketSize = 0;

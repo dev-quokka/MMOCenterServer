@@ -23,6 +23,6 @@ const PassItemForSend* PassRewardData::GetPassItemData(uint16_t passLevel_, uint
 	return &it->second;
 }
 
-const uint16_t PassRewardData::GetPassMaxLevel(uint16_t passLevel_) const {
+const uint16_t PassRewardData::GetPassMaxLevel() const {
 	return passInfo.passMaxLevel;
 }

@@ -113,6 +113,7 @@ private:
 
     // 80 bytes
     std::unordered_map<uint16_t, RECV_PACKET_FUNCTION> packetIDTable;
+    std::unordered_map<std::string, std::vector<uint16_t>> missionMap;
 
     // 32 bytes
     std::vector<std::thread> redisThreads;

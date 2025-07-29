@@ -136,16 +136,16 @@ struct SHOP_BUY_ITEM_REQUEST : PACKET_HEADER {
 };
 
 struct SHOP_BUY_ITEM_RESPONSE : PACKET_HEADER {
+	ShopItemForSend shopItemForSend;
 	uint32_t remainMoney;
 	uint16_t currencyType;
+	uint16_t position = 1;
 	bool isSuccess = false;
 };
 
 struct PASS_EXP_UP_REQUEST : PACKET_HEADER {
 	char passId[MAX_PASS_ID_LEN + 1];
-	uint16_t passLevel;
-	uint16_t passCurrencyType;
-	uint16_t acqPassExp;
+	uint16_t missionNum; // 수행할 미션 번호
 };
 
 struct PASS_EXP_UP_RESPONSE : PACKET_HEADER {
@@ -163,7 +163,11 @@ struct GET_PASS_ITEM_REQUEST : PACKET_HEADER {
 
 struct GET_PASS_ITEM_RESPONSE : PACKET_HEADER {
 	PassItemForSend passItemForSend;
-	uint16_t position = 0;
+	char passId[MAX_PASS_ID_LEN + 1];
+	uint16_t passLevel;
+	uint16_t passCurrencyType;
+	uint16_t position = 1;
+	bool passAcq = false;
 	bool isSuccess = false;
 };
 

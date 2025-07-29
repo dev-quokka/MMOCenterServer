@@ -28,13 +28,13 @@ bool MySQLManager::UpdatePassItem(char* passId_, uint32_t userPk_, uint16_t pass
 
     MYSQL_STMT* stmt = mysql_stmt_init(ConnPtr);
 
-    std::string query = "UPDATE PassUserRewardData SET rewardBits = rewardBits | ? WHERE userPk = ? AND passId = ? AND ( rewardBits & ?  ) = 0";
+    std::string query = "UPDATE PassUserRewardData SET rewardBits = rewardBits | ? WHERE userPk = ? AND passId = ? AND passCurrencyType = ? AND ( rewardBits & ?  ) = 0";
     if (mysql_stmt_prepare(stmt, query.c_str(), query.length()) != 0) {
         std::cerr << "[UpdatePassItem] Prepare Error : " << mysql_stmt_error(stmt) << std::endl;
         return false;
     }
 
-    MYSQL_BIND passBitBind[4] = {};
+    MYSQL_BIND passBitBind[5] = {};
     uint64_t tempBit = 1ULL << (passLevel_ - 1);
     unsigned long passIdLength = strlen(passId_);
 
@@ -49,8 +49,11 @@ bool MySQLManager::UpdatePassItem(char* passId_, uint32_t userPk_, uint16_t pass
     passBitBind[2].buffer_length = passIdLength;
     passBitBind[2].length = &passIdLength;
 
-    passBitBind[3].buffer_type = MYSQL_TYPE_LONGLONG;
-    passBitBind[3].buffer = &tempBit;
+    passBitBind[3].buffer_type = MYSQL_TYPE_LONG;
+    passBitBind[3].buffer = &passCurrencyType_;
+
+    passBitBind[4].buffer_type = MYSQL_TYPE_LONGLONG;
+    passBitBind[4].buffer = &tempBit;
 
     if (mysql_stmt_bind_param(stmt, passBitBind) != 0 || mysql_stmt_execute(stmt) != 0) {
         std::cerr << "[UpdatePassItem] Bind or Exec Error : " << mysql_stmt_error(stmt) << std::endl;

@@ -17,6 +17,7 @@ bool PassRewardManager::LoadFromMySQL(std::vector<std::pair<std::string, PassInf
 
 	for (auto& pdm : passDataMap_) {
 		const std::string& tempPassId = pdm.first;
+		passIdVector.emplace_back(tempPassId);
 
 		for (auto& [passKey, passItem] : pdm.second) {
 			auto tempItemInfo = ItemDataManager::GetInstance().GetItemData(passItem.itemCode, passItem.itemType);
@@ -55,7 +56,7 @@ bool PassRewardManager::LoadFromMySQL(std::vector<std::pair<std::string, PassInf
 	passDataForSend.passPacketSize = packetSize_;
 
 	passExpLimit = std::move(passExpLimit_);
-
+	
 	loadCheck = true;
 	return true;
 }
@@ -80,7 +81,14 @@ const PassItemForSend* PassRewardManager::GetPassItemDataByPassId(std::string& p
 	return nullptr;
 }
 
-const std::pair<uint16_t, uint16_t> PassRewardManager::PassExpUp(uint16_t acqPassExp_, uint16_t userLevel, uint16_t currentPassExp_) {
+const PassLevelOrExpUpCheck PassRewardManager::PassExpUp(std::string passId_, uint16_t acqPassExp_, uint16_t userLevel, uint16_t currentPassExp_) {
+	
+	PassLevelOrExpUpCheck passLevelOrExpUpCheck;
+
+	auto passIter = passMap.find(passId_);
+	if (passIter == passMap.end()) return { 0,0 };
+	uint16_t passMaxLevel = passIter->second.GetPassMaxLevel();
+
 	currentPassExp_ += acqPassExp_;
 
 	uint16_t levelUpCount = 0;
@@ -88,7 +96,17 @@ const std::pair<uint16_t, uint16_t> PassRewardManager::PassExpUp(uint16_t acqPas
 	while(passExpLimit[userLevel + levelUpCount] <= currentPassExp_) { // 레벨 업 체크
 		currentPassExp_ -= passExpLimit[userLevel + levelUpCount];
 		levelUpCount++;
+
+		if (userLevel + levelUpCount == passMaxLevel) return { passMaxLevel, 0, levelUpCount }; // 최대 레벨 달성시 최대레벨, 0 반환
 	}
 
-	return { levelUpCount , currentPassExp_ }; // {레벨 증가량, 현재 경험치}	
+	passLevelOrExpUpCheck.currentUserLevel = userLevel + levelUpCount;
+	passLevelOrExpUpCheck.currentUserExp = currentPassExp_;
+	passLevelOrExpUpCheck.levelupCount = levelUpCount;
+
+	return passLevelOrExpUpCheck;
+}
+
+const std::vector<std::string>& PassRewardManager::GetPassIdVector() {
+	return passIdVector;
 }

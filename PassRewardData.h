@@ -10,7 +10,7 @@ public:
 
     const PassItemForSend* GetPassItemData(uint16_t passLevel_, uint16_t passCurrencyType_) const;
 
-    const uint16_t GetPassMaxLevel(uint16_t passLevel_) const;
+    const uint16_t GetPassMaxLevel() const;
 
 private:
     std::unordered_map<PassDataKey, PassItemForSend, PassDataKeyHash> passDataMap;

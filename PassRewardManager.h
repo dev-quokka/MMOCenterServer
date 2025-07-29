@@ -18,7 +18,9 @@ public:
     const PassItemForSend* GetPassItemDataByPassId(std::string& passId_, uint16_t passLevel_, uint16_t passCurrencyType_) const;
     // const uint32_t GetPassLevelUpExp(std::string& passId_, uint16_t passLevel_) const;
 
-    const std::pair<uint16_t, uint16_t> PassExpUp(uint16_t acqPassExp_, uint16_t userLevel, uint16_t currentPassExp_);
+    const std::vector<std::string>& GetPassIdVector();
+
+    const PassLevelOrExpUpCheck PassExpUp(std::string passId_, uint16_t acqPassExp_, uint16_t userLevel, uint16_t currentPassExp_);
 
 private:
     PassRewardManager() = default;
@@ -29,6 +31,7 @@ private:
 
     std::unordered_map<std::string, PassRewardData> passMap;
 
+    std::vector<std::string> passIdVector;
     std::vector<uint16_t> passExpLimit; // 패스 레벨 별 필요 경험치양
 
     PassDataForSend passDataForSend;

@@ -2,28 +2,36 @@
 
 void RedisManager::Test_CashCahrge(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_){
     auto testCashCharge = reinterpret_cast<CASH_CHARGE_COMPLETE_REQUEST*>(pPacket_);
+    auto tempInGameUser = inGameUserManager->GetInGameUserByObjNum(connObjNum_);
     ConnUser* user = connUsersManager->FindUser(connObjNum_);
 
     CASH_CHARGE_COMPLETE_RESPONSE ccRes;
     ccRes.PacketId = (uint16_t)PACKET_ID::CASH_CHARGE_COMPLETE_RESPONSE;
     ccRes.PacketLength = sizeof(CASH_CHARGE_COMPLETE_RESPONSE);
 
-    if (testCashCharge->chargedCash > 1000000) { // 캐시 최대 충전 가능량(1000000) 넘어가면 실패 전송 및 해킹 위험 로그 출력
-        std::cout << "[Test_CashCahrge] 캐시 충전량 초과. 유저 PK : " << user->GetPk() << '\n';
+    if (!mySQLManager->CashCharge(user->GetPk(), testCashCharge->chargedCash)) { // MySQL 캐시 충전 실패
         user->PushSendMsg(sizeof(ccRes), (char*)&ccRes);
+        return;
     }
 
     std::string currencyTypeKey = "userinfo:{" + std::to_string(user->GetPk()) + "}";
 
-    try {
+    try { // 충전된 금액 Redis에 업데이트
         ccRes.chargedCash = redis->hincrby("userinfo:{" + std::to_string(user->GetPk()) + "}", "cash", testCashCharge->chargedCash);
-        ccRes.isSuccess = true;
-        user->PushSendMsg(sizeof(ccRes), (char*)&ccRes);
     }
     catch (const sw::redis::Error& e) {
         std::cerr << "Redis error : " << e.what() << std::endl;
         user->PushSendMsg(sizeof(ccRes), (char*)&ccRes);
+        return;
     }
+
+    // 캐시 충전한 유저와 충전량 로그 출력
+    std::cout << "[Test_CashCahrge] 유저 ID : " << tempInGameUser->GetId()
+        << " / 충전량 : " << std::to_string(testCashCharge->chargedCash)
+        << " / 현재 캐시 :  " << std::to_string(ccRes.chargedCash) << '\n';
+
+    ccRes.isSuccess = true;
+    user->PushSendMsg(sizeof(ccRes), (char*)&ccRes);
 }
 
 
@@ -111,6 +119,15 @@ void RedisManager::InitPassData() {
     // 현재 날짜 기준으로 진행 중인 패스 ID 및 최대 레벨 조회
     std::vector<std::pair<std::string, PassInfo>> passIdVector; // { 패스 ID, 패스 최대 레벨 }
     if (!mySQLManager->GetPassInfo(passIdVector)) return;
+
+    std::vector<uint16_t> missionExpVector(6,0); // 미션 개수 +1
+    for (int i = 1; i < 6; ++i) {
+        missionExpVector[i] = i;
+    }
+
+    for (auto& piv : passIdVector) { // 미션 데이터 채우기
+        missionMap[piv.first] = missionExpVector;
+    }
 
     // 각 패스 ID에 해당하는 보상 아이템 데이터 로드
     std::unordered_map<std::string, std::unordered_map<PassDataKey, PassItemForSend, PassDataKeyHash>> passDataMap;
@@ -369,7 +386,30 @@ std::vector<MATERIALS> RedisManager::GetUpdatedMaterials(uint16_t userPk_) {
 }
 
 std::vector<UserPassDataForSync> RedisManager::GetUpdatedPassData(uint16_t userPk_) {
-    // 
+
+    auto tempPassIdVector = PassRewardManager::GetInstance().GetPassIdVector(); // std::vector<std::string> 구조
+    std::vector<UserPassDataForSync> tempUserPassData;
+
+    for (auto& passId : tempPassIdVector) {
+        std::string passKey = "pass:{" + std::to_string(userPk_) + "}:" + passId;
+        std::unordered_map<std::string, std::string> tempPassMap;
+
+        try {
+            redis->hgetall(passKey, std::inserter(tempPassMap, tempPassMap.begin()));
+
+            UserPassDataForSync updfs;
+            strncpy_s(updfs.passId, passId.c_str(), MAX_PASS_ID_LEN+1);
+            updfs.passLevel = static_cast<uint16_t>(std::stoi(tempPassMap["passLevel"]));
+            updfs.passExp = static_cast<uint16_t>(std::stoi(tempPassMap["passExp"]));
+            updfs.passCurrencyType = static_cast<uint16_t>(std::stoi(tempPassMap["passCurrencyType"]));
+            tempUserPassData.emplace_back(updfs);
+        }
+        catch (const sw::redis::Error& e) {
+            std::cerr << "[GetUpdatedPassData] Redis error for key : " << e.what() << std::endl;
+        }
+    }
+
+    return tempUserPassData;
 }
 
 
@@ -570,22 +610,22 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
         user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
     }
     
-    auto tempItemType = itemInfo->currencyType;
-    shopBuyRes.currencyType = itemInfo->itemType;
+    auto tempItemCurrencyType = itemInfo->currencyType;
+    shopBuyRes.currencyType = itemInfo->currencyType;
 
     auto BuyItemFail = [&]() {
         shopBuyRes.isSuccess = false;
         user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
     };
 
-    if (currencyTypeMap.find(tempItemType) == currencyTypeMap.end()) {
+    if (currencyTypeMap.find(tempItemCurrencyType) == currencyTypeMap.end()) {
         std::cerr << "[BuyItemFromShop] Unknown currency type" << '\n';
         BuyItemFail();
         return;
     }
 
     uint32_t userMoney = 0;
-    auto moneyType = currencyTypeMap.at(tempItemType);
+    auto moneyType = currencyTypeMap.at(tempItemCurrencyType);
 
     try {
         auto val = redis->hget(currencyTypeKey, moneyType);
@@ -658,8 +698,27 @@ void RedisManager::BuyItemFromShop(uint16_t connObjNum_, uint16_t packetSize_, c
 
     // 아이템 구매 성공
     shopBuyRes.isSuccess = true;
+    shopBuyRes.shopItemForSend = *itemInfo;
     shopBuyRes.remainMoney = (userMoney - itemInfo->itemPrice);
     user->PushSendMsg(sizeof(shopBuyRes), (char*)&shopBuyRes);
+
+
+
+
+    // 출력 테스트용
+    auto tempInGameUserID = inGameUserManager->GetInGameUserByObjNum(connObjNum_)->GetId();
+
+    std::string itemType;
+    switch (itemInfo->itemType) {
+    case 0: itemType = "장비"; break;
+    case 1: itemType = "소비"; break;
+    case 2: itemType = "재료"; break;
+    }
+
+    std::cout << "[유저 ID : " << tempInGameUserID
+        << "] 아이템 타입 : " << itemType
+        << " / 아이템 코드 : " << shopBuyRes.shopItemForSend.itemCode
+        << " / 남은 " + moneyType + " : " << shopBuyRes.remainMoney << '\n';
 }
 
 void RedisManager::SendPassDataToClient(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
@@ -676,18 +735,14 @@ void RedisManager::SendPassDataToClient(uint16_t connObjNum_, uint16_t packetSiz
 
 void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
     auto expUpReqPacket = reinterpret_cast<PASS_EXP_UP_REQUEST*>(pPacket_);
-
     auto tempPassId = (std::string)expUpReqPacket->passId;
 
     ConnUser* user = connUsersManager->FindUser(connObjNum_);
     auto tempUserPk = user->GetPk();
-    auto* tempPassData = PassRewardManager::GetInstance().GetPassItemDataByPassId(tempPassId, expUpReqPacket->passLevel, expUpReqPacket->passCurrencyType);
 
     PASS_EXP_UP_RESPONSE expUpResPacket;
     expUpResPacket.PacketId = (uint16_t)PACKET_ID::PASS_EXP_UP_RESPONSE;
     expUpResPacket.PacketLength = sizeof(PASS_EXP_UP_RESPONSE);
-
-    auto tempPassCurrencyType = static_cast<PassCurrencyType>(tempPassData->passCurrencyType);
 
     auto PassExpUpFail = [&]() {
         expUpResPacket.isSuccess = false;
@@ -695,18 +750,12 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
         user->PushSendMsg(sizeof(expUpResPacket), (char*)&expUpResPacket);
     };
 
-    if (PassCurrencyTypeMap.find(tempPassCurrencyType) == PassCurrencyTypeMap.end()) {
-        std::cerr << "[PassExpUp] Unknown passCurrency type" << '\n';
-        PassExpUpFail();
-        return;
-    }
-
-    std::string passCurrencyType = PassCurrencyTypeMap.at(tempPassCurrencyType);
-    std::string passKey = "pass:{" + std::to_string(tempUserPk) + "}:" + tempPassId + ":" + passCurrencyType;
-
-    std::pair<uint16_t, uint16_t> tempPassLevelandExp; // {레벨 증가량, 현재 경험치}
+    std::string passKey = "pass:{" + std::to_string(tempUserPk) + "}:" + tempPassId;
+    PassLevelOrExpUpCheck tempPassLevelandExp;
 
     // 유저 패스 경험치 증가 요청
+    uint32_t userPassLevel;
+    uint32_t userPassExp;
     try {
         auto passLevelVal = redis->hget(passKey, "passLevel");
         if (!passLevelVal) {
@@ -714,6 +763,7 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
             PassExpUpFail();
             return;
         }
+        userPassLevel = std::stoi(*passLevelVal);
 
         auto passExpVal = redis->hget(passKey, "passExp");
         if (!passExpVal) {
@@ -721,8 +771,9 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
             PassExpUpFail();
             return;
         }
+        userPassExp = std::stoi(*passExpVal);
 
-        tempPassLevelandExp = PassRewardManager::GetInstance().PassExpUp(expUpReqPacket->acqPassExp, std::stoi(*passLevelVal), std::stoi(*passExpVal));
+        tempPassLevelandExp = PassRewardManager::GetInstance().PassExpUp(tempPassId, missionMap[tempPassId][expUpReqPacket->missionNum], userPassLevel, userPassExp);
     }
     catch (const sw::redis::Error& e) {
         std::cerr << "[PassExpUp] Redis key not found(passExp) : " << passKey << '\n';
@@ -730,15 +781,15 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
         return;
     }
 
-    auto currentUserLevel = expUpReqPacket->passLevel + tempPassLevelandExp.first;
-    auto currentUserExp = tempPassLevelandExp.second;
+    auto currentUserLevel = tempPassLevelandExp.currentUserLevel;
+    auto currentUserExp = tempPassLevelandExp.currentUserExp;
 
-    if (tempPassLevelandExp.first != 0) { // 레벨업
+    if (tempPassLevelandExp.levelupCount != 0) { // 레벨업
         try {
             auto pipe = redis->pipeline(std::to_string(tempUserPk));
 
             pipe.hset(passKey, "passExp", std::to_string(currentUserExp))
-                .hincrby(passKey, "passLevel", tempPassLevelandExp.first);
+                .hincrby(passKey, "passLevel", tempPassLevelandExp.levelupCount);
 
             pipe.exec();
 
@@ -757,19 +808,14 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
     }
     else { // 경험치만 증가
         try {
-            if (redis->hincrby(passKey, "passExp", expUpReqPacket->acqPassExp)) {
+            redis->hset(passKey, "passExp", std::to_string(currentUserExp));
 
-                expUpResPacket.isSuccess = true;
-                strcpy_s(expUpResPacket.passId, expUpReqPacket->passId);
-                expUpResPacket.passLevel = currentUserLevel;
-                expUpResPacket.passExp = currentUserExp;
+            expUpResPacket.isSuccess = true;
+            strcpy_s(expUpResPacket.passId, expUpReqPacket->passId);
+            expUpResPacket.passLevel = currentUserLevel;
+            expUpResPacket.passExp = currentUserExp;
 
-                user->PushSendMsg(sizeof(PASS_EXP_UP_RESPONSE), (char*)&expUpResPacket);
-            }
-            else { 
-                PassExpUpFail();
-                return;
-            }
+            user->PushSendMsg(sizeof(PASS_EXP_UP_RESPONSE), (char*)&expUpResPacket);
         }
         catch (const sw::redis::Error& e) {
             std::cerr << "[PassExpUp] Redis error: " << e.what() << std::endl;
@@ -777,6 +823,14 @@ void RedisManager::PassExpUp(uint16_t connObjNum_, uint16_t packetSize_, char* p
             return;
         }
     }
+
+    // 출력 테스트용
+    auto tempInGameUserID = inGameUserManager->GetInGameUserByObjNum(connObjNum_)->GetId();
+
+    std::cout << "[유저 ID : " << tempInGameUserID
+        << "] 패스 ID : " << tempPassId
+        << " / 패스 레벨 : " << currentUserLevel
+        << " / 패스 경험치 : " << currentUserExp << '\n';
 }
 
 void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char* pPacket_) {
@@ -790,21 +844,12 @@ void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char*
     getPassRes.PacketId = (uint16_t)PACKET_ID::GET_PASS_ITEM_RESPONSE;
     getPassRes.PacketLength = sizeof(GET_PASS_ITEM_RESPONSE);
 
-    auto tempPassCurrencyType = static_cast<PassCurrencyType>(tempPassData->passCurrencyType);
-
     auto GetPassFail = [&]() {
         getPassRes.isSuccess = false;
         user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
     };
 
-    if (PassCurrencyTypeMap.find(tempPassCurrencyType) == PassCurrencyTypeMap.end()) {
-        std::cerr << "[GetPassItem] Unknown passCurrency type" << '\n';
-        GetPassFail();
-        return;
-    }
-
-    std::string passCurrencyType = PassCurrencyTypeMap.at(tempPassCurrencyType);
-    std::string passKey = "pass:{" + std::to_string(user->GetPk()) + "}:" + tempPassId + ":" + passCurrencyType;
+    std::string passKey = "pass:{" + std::to_string(user->GetPk()) + "}:" + tempPassId;
 
     // 유저 현재 패스 레벨과 요청한 패스 레벨 체크
     try {
@@ -825,7 +870,7 @@ void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char*
         GetPassFail();
         return;
     }
-    
+
     std::string tag = "{" + std::to_string(user->GetPk()) + "}";
     std::string invenKey;
 
@@ -855,14 +900,36 @@ void RedisManager::GetPassItem(uint16_t connObjNum_, uint16_t packetSize_, char*
 
     if (!dbSuccess) { // 해당 패스 아이템 이미 받았거나 업데이트 실패 (레디스에 추가한 아이템 제거)
         redis->hdel(invenKey, std::to_string(tempPassData->itemType));
-
         GetPassFail();
         return;
     }
 
     getPassRes.isSuccess = true;
     getPassRes.passItemForSend = *tempPassData;
+
+    strncpy_s(getPassRes.passId, passReqPacket->passId, MAX_PASS_ID_LEN + 1);
+    getPassRes.passLevel = passReqPacket->passLevel;
+    getPassRes.passCurrencyType = passReqPacket->passCurrencyType;
+    getPassRes.passAcq = true;
+
     user->PushSendMsg(sizeof(getPassRes), (char*)&getPassRes);
+
+
+
+
+    // 출력 테스트용
+    auto tempInGameUserID = inGameUserManager->GetInGameUserByObjNum(connObjNum_)->GetId();
+
+    std::string currencyType;
+    switch (tempPassData->passCurrencyType) {
+    case 0: currencyType = "무료"; break;
+    case 1: currencyType = "유료"; break;
+    }
+
+    std::cout << "[유저 ID : " << tempInGameUserID 
+        << "] 패스 ID : " << tempPassId
+        << " / 패스 레벨 : " << tempPassData->passLevel
+        << " / 결제 유형 : " << currencyType << '\n';
 }
 
 
